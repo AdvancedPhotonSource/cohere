@@ -84,7 +84,7 @@ Adding new trigger
 
 Adding new algorithm
 ====================
-| Currently
+| Currently two algorithms are supported: ER and HIO.
 
 Conda Build
 ===========
