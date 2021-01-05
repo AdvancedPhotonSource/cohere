@@ -39,9 +39,8 @@ Initialization
 ::
 
     source init.sh       // for linux
-    source init_mac.sh   //for mac
 
-| The script prompts for path to ArrayFire and libconfig installation directories. 
+| The script prompts for path to ArrayFire installation directory. 
 | The script does the following:
 - sets the compilation library and include directory to the entered directories
 - compiles 
@@ -53,7 +52,7 @@ Initialization
 - cohere/src_py/cyth/bridge_cpu.pyx
 - cohere/src_py/cyth/bridge_cuda.pyx
 - cohere/src_py/cyth/bridge_opencl.pyx
-| correct lib directory(s) and correct include directory(s)
+| correct lib directory and correct include directory
 | compile and install, and set the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in this session and in bin/setenv.sh script manually
 
 compile and install
@@ -88,28 +87,27 @@ Adding new algorithm
 
 Conda Build
 ===========
-- In the cdi directory create "lib" and "include" directories. Copy content of <arrayfire installation directory>/lib64 and content of <libconfig installation directory>/lib to cdi/lib directory. Copy content of <arrayfire installation directory>/include and content of <libconfig installation directory>/include to cdi/include directory. 
+- In the cdi directory create "lib" and "include" directories. Copy content of <arrayfire installation directory>/lib64 to lib directory. Copy content of <arrayfire installation directory>/include to include directory. 
+
+- Copy development scripts/files
+::
+
+    cp dev/linux/* .     // for linux
+    cp dev/mac/* .       //for mac
 
 - change version in dev/meta.yaml and setup.py files
 
-- compile the code and remove build directory:
+- for Linux build move cohere_activate.sh and cohere_deactivate.sh to lib directory:
 ::
 
-    python dev/setup.py build_ext --inplace
-    rm -rf build/
+    mv cohere_activate.sh lib
+    mv cohere_deactivate.sh lib
 
 - compress the libraries:
 ::
 
     tar -czvf af_lc_lib.tar.gz lib
 
-- copy (temporary) files to cdi directory:
-::
-
-    cp dev/meta.yaml .
-    cp dev/build.sh .
-    cp dev/setup.py .
-| when running build for Mac remove the "gputil" line form meta.yaml file in requirements/run section.
 
 - run conda build:
 ::
