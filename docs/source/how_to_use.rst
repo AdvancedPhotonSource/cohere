@@ -2,14 +2,26 @@
 
 Use
 ===
-| The scripts in cdi/bin directory provide a complete interface to run entire processing associated with experiment, i.e. data preparation, data formatting, reconstruction, and image visualizasion. The preparation and visualizasion scripts are written for the APS 34-ID-C beamline.
-| For users that want to develop own scrips, the scripts in cdi/bin directory can be used as a starting point. This might be the case if the scripts are customized for a new beamline with regard to preparing data and visualizing image. These scripts can be obtained from GitHub at https://github.com/advancedPhotonSource/cdi/bin
+| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cdisupp. The cdisupp package, is a supplemental git repository that contains executable python scripts for every stage a CDI phase retrieval, from raw data processing to final images. A directory with sample configuration files for each stage, and a complete example including experimental data, experiment data, and configuration files to phase the data. The next section provides instruction on how to install the scripts. Part of the supplemental package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline instruments.
 
-.. _scripts:
+Installing Scripts
+##################
+| There are three ways to get the cdisupp package onto your local computer, or remote computer if you are working this way.
+
+- The cdisupp package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cdisupp and clicking the green “Code” button and selecting “Download ZIP” as shown below.
+
+- Alternatively one can clone the repository using git. This will create the cdisupp-main directory containing all of the cdisupp content. It will also then have version control allowing you to keep track of changes as you practice running the programs, should you want to. (https://www.atlassian.com/git/tutorials/comparing-workflows).
+git clone https://github.com/advancedPhotonSource/cdisupp cdisupp-main 
+
+- Another way to get the cdisupp package on your machine is with the wget command:
+     ::
+
+        wget https://github.com/AdvancedPhotonSource/cdisupp/archive/main.zip
+        unzip main.zip
 
 Scripts
 ####### 
-| Below is a list of scripts with description and explanation how to run:
+| In this documentation it is assumed the scripts are invoked from cdisupp directory. Below is a list of scripts with description and explanation how to run:
 
 - create_experiment.py
 
@@ -17,7 +29,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/create_experiment.py <id> <scan range> <working_dir> --specfile <specfile>
+        python scripts/create_experiment.py <id> <scan range> <working_dir> --specfile <specfile>
 
   The parameters are as follows:
      * id: an arbitrary literal value assign to this experiment
@@ -31,7 +43,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/setup_34idc.py <id> <scan range> <conf_dir> --specfile <specfile> --copy_prep
+        python scripts/setup_34idc.py <id> <scan range> <conf_dir> --specfile <specfile> --copy_prep
 
   The parameters are as follows:
      * id: an arbitrary literal value assign to this experiment
@@ -47,7 +59,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/run_prep_34idc.py <experiment_dir>
+        python scripts/run_prep_34idc.py <experiment_dir>
 
   The parameters are as follows:
      - experiment directory: directory of the experiment space
@@ -58,7 +70,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/format_data.py <experiment_dir>
+        python scripts/format_data.py <experiment_dir>
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -70,7 +82,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/run_rec.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
+        python scripts/run_rec.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
 
   The parameters are as follows:
      * processor: the library used when running reconstruction. Possible options:
@@ -89,7 +101,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/run_disp.py <experiment_dir> --image_file <image_file>
+        python scripts/run_disp.py <experiment_dir> --image_file <image_file>
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -101,7 +113,7 @@ Scripts
   Running this script:
   ::
 
-        python bin/everything.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
+        python scripts/everything.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -114,5 +126,5 @@ Scripts
   Running this script:
   ::
 
-        python bin/cdi_window.py
+        python scripts/cdi_window.py
 
