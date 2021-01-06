@@ -14,7 +14,7 @@ Installing Scripts
 - Alternatively one can clone the repository using git. This will create the cdisupp directory containing all of the cdisupp content. 
      ::
 
-        git clone https://github.com/advancedPhotonSource/cdisupp cdisupp-main
+        git clone https://github.com/advancedPhotonSource/cdisupp
 
 
 - Another way to get the cdisupp package on your machine is with the wget command:
