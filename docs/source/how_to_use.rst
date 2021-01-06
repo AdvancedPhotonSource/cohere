@@ -2,7 +2,7 @@
 
 Use
 ===
-| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cdisupp. The cdisupp package, is a supplemental git repository that contains executable python scripts for every stage a CDI phase retrieval, from raw data processing to final images. A directory with sample configuration files for each stage, and a complete example including experimental data, experiment data, and configuration files to phase the data. The next section provides instruction on how to install the scripts. Part of the supplemental package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline instruments.
+| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cdisupp. The cdisupp package, is a supplemental git repository that contains executable python scripts for every stage a CDI phase retrieval, from raw data processing to final images. A directory with sample configuration files for each stage, and a complete example including experimental data, experiment data, and configuration files to phase the data. The next section provides instruction on how to install the scripts. Part of the supplemental package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline specifics.
 
 Installing Scripts
 ##################
