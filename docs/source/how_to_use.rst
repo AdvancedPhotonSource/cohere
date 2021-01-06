@@ -2,16 +2,20 @@
 
 Use
 ===
-| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cdisupp. The cdisupp package, is a supplemental git repository that contains executable python scripts for every stage a CDI phase retrieval, from raw data processing to final images. A directory with sample configuration files for each stage, and a complete example including experimental data, experiment data, and configuration files to phase the data. The next section provides instruction on how to install the scripts. Part of the supplemental package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline specifics.
+| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cdisupp. The cdisupp package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline specifics. 
+In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
 
 Installing Scripts
 ##################
-| There are three ways to get the cdisupp package onto your local computer, or remote computer if you are working this way.
+| There are three ways to get the cdisupp package onto your local computer, or remote computer.
 
 - The cdisupp package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cdisupp and clicking the green “Code” button and selecting “Download ZIP” as shown below.
 
-- Alternatively one can clone the repository using git. This will create the cdisupp-main directory containing all of the cdisupp content. It will also then have version control allowing you to keep track of changes as you practice running the programs, should you want to. (https://www.atlassian.com/git/tutorials/comparing-workflows).
-git clone https://github.com/advancedPhotonSource/cdisupp cdisupp-main 
+- Alternatively one can clone the repository using git. This will create the cdisupp directory containing all of the cdisupp content. 
+     ::
+
+        git clone https://github.com/advancedPhotonSource/cdisupp cdisupp-main
+
 
 - Another way to get the cdisupp package on your machine is with the wget command:
      ::
