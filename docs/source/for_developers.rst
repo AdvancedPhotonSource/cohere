@@ -5,20 +5,30 @@ develop
 
 Installation for development
 ============================
+Creating environment
+++++++++++++++++++++
+| The best practice is to create coda environment allocated for the development:
+::
+
+    conda create -n cohere3.7.6 python=3.7.6
+    conda activate cohere
+
+
 Pre-requisites
 ++++++++++++++
-| The development is to be in conda environment with the packages listed below installed. Also required are c++ libraries listed below.
-- libraries:
-   - ArrayFire library version 3.5.0 or higher
-   - Libconfig library version 1.5 or higher
+| After activating conda environment install the packages/libraries listed below.
 - Python packages installation:
+   - conda install Cython
    - pip install tifffile
    - pip install pylibconfig2
    - pip install GPUtil
    - pip install pyparsing
    - pip install mayavi
    - pip install xrayutilities
-   - psutil
+   - pip install psutil
+
+| Install ArrayFire library version 3.6.2 (available at http://arrayfire.s3.amazonaws.com/index.html#!/3.6.2%2F). 
+| During installation respond y/y, so the 'arrayfire' directory will be created in <cwd>, where <cwd> is the current directory. The arrayfire installation directory is be <cwd>/arrayfire.
 
 Initialization
 ++++++++++++++
@@ -38,7 +48,7 @@ Initialization
 | Initialize with interactive script. 
 ::
 
-    source init.sh       // for linux
+    source init.sh
 
 | The script prompts for path to ArrayFire installation directory. 
 | The script does the following:
@@ -48,23 +58,23 @@ Initialization
 - sets the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in this session
 - sets the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in the setenv.sh script 
 
-| If the libraries are at different location than the installation (for example moved to lib directory), then the init script will not work. In this case edit the following files:
-- cohere/src_py/cyth/bridge_cpu.pyx
-- cohere/src_py/cyth/bridge_cuda.pyx
-- cohere/src_py/cyth/bridge_opencl.pyx
-| correct lib directory and correct include directory
-| compile and install, and set the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in this session and in bin/setenv.sh script manually
+| If the libraries are at different location than the installation (for example moved to lib directory), then the init script will not work. In this case edit setup.py file to correct lib directory and include directory. 
+| Compile and install:
+
+::
+
+    python setup.py install
+
+| and set the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in this session and in setenv.sh script manually
 
 compile and install
 +++++++++++++++++++
-| After changing code run the following commands from 'cdi' directory:
+| After changing code run the following command from 'cdi' directory:
 ::
 
-    python dev/setup.py build_ext --inplace 
-    python dev/setup.py install
-| If only python code was modified only the second command is needed
+    python setup.py install
 
-Running environment
+Activating environment
 ===================
 | When running in development environment the libraries are not loaded into conda location. Therefore the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH must include path to arrayfire libraries.
 | Run the following command to set the environment variable when opening a new terminal:
