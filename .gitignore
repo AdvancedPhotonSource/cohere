@@ -1,5 +1,6 @@
 build/*
-bridge*.cpp
+dist/*
+bridge_*.cpp
 core
 *.so
 *.pyx
