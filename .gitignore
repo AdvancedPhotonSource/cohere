@@ -3,7 +3,6 @@ dist/*
 bridge_*.cpp
 core
 *.so
-*.pyx
 *.o
 *.swp
 __pycache__
