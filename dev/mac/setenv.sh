@@ -1,3 +1,3 @@
 #!/bin/sh
 
-export DYLD_LIBRARY_PATH=$af_dir/lib
+export DYLD_LIBRARY_PATH=AF_DIR/lib

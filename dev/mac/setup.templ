@@ -9,8 +9,8 @@ exts = [
     extra_compile_args = ["-std=c++11"],
     language='c++11',
     libraries = ['afopencl', ],
-    library_dirs = ['lib',],
-    include_dirs = ['cohere/include', 'include',],
+    library_dirs = ['AF_DIR/lib',],
+    include_dirs = ['cohere/include', 'AF_DIR/include',],
     language_level = 3
     ),
 
@@ -19,8 +19,8 @@ exts = [
     extra_compile_args = ["-std=c++11"],
     language='c++11',
     libraries = ['afcpu', ],
-    library_dirs = ['lib',],
-    include_dirs = ['cohere/include', 'include',],
+    library_dirs = ['AF_DIR/lib',],
+    include_dirs = ['cohere/include', 'AF_DIR/include',],
     language_level = 3
     ),
     ]
