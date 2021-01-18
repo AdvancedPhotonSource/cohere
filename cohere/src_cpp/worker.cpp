@@ -184,7 +184,7 @@ int Reconstruction::Iterate()
         af::array ratio = Utils::GetRatio(aver_a, abs(ds_image));
         ds_image *= ratio/aver_iter;
     }
-    ds_image *= support->GetSupportArray();
+//    ds_image *= support->GetSupportArray();
     VectorizeSupport();
     if (partialCoherence != NULL)
     {
