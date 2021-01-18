@@ -32,11 +32,11 @@ Pre-requisites
 
 Initialization
 ++++++++++++++
-| Clone the latest cdi repository from GitHub:
+| Clone the latest cohere repository from GitHub:
 ::
 
-    git clone https://github.com/advancedPhotonSource/cdi
-    cd cdi
+    git clone https://github.com/advancedPhotonSource/cohere
+    cd cohere
 
 | Copy development scripts
 ::
@@ -69,7 +69,7 @@ Initialization
 
 compile and install
 +++++++++++++++++++
-| After changing code run the following command from 'cdi' directory:
+| After changing code run the following command from 'cohere' directory:
 ::
 
     python setup.py install
@@ -97,7 +97,7 @@ Adding new algorithm
 
 Conda Build
 ===========
-- In the cdi directory create "lib" and "include" directories. Copy content of <arrayfire installation directory>/lib64 to lib directory. Copy content of <arrayfire installation directory>/include to include directory. 
+- In the cohere directory create "lib" and "include" directories. Copy content of <arrayfire installation directory>/lib64 to lib directory. Copy content of <arrayfire installation directory>/include to include directory. 
 
 - Copy development scripts/files
 ::
