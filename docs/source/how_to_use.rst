@@ -2,30 +2,35 @@
 
 Use
 ===
-| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cdisupp. The cdisupp package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline specifics. 
+| The user scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-scripts. The cohere-scripts package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User can easily add own code that would encapsulate user's beamline specifics. 
 In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
 
 Installing Scripts
 ##################
-| There are three ways to get the cdisupp package onto your local computer, or remote computer.
+| There are three ways to get the cohere-scripts package onto your local computer, or remote computer.
 
-- The cdisupp package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cdisupp and clicking the green “Code” button and selecting “Download ZIP” as shown below.
+1. The cohere-scripts package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-scripts and clicking the green “Code” button and selecting “Download ZIP” as shown below.
 
-- Alternatively one can clone the repository using git. This will create the cdisupp directory containing all of the cdisupp content. 
+2. Alternatively one can clone the repository using git. This will create the cohere-scripts directory containing all of the cohere-scripts content. In this code below we clone it to cohere-scripts-main directory.
      ::
 
-        git clone https://github.com/advancedPhotonSource/cdisupp
+        git clone https://github.com/advancedPhotonSource/cohere-scripts cohere-scripts-main
 
-
-- Another way to get the cdisupp package on your machine is with the wget command:
+3. Another way to get the cohere-scripts package on your machine is with the wget command:
      ::
 
-        wget https://github.com/AdvancedPhotonSource/cdisupp/archive/main.zip
+        wget https://github.com/AdvancedPhotonSource/cohere-scripts/archive/main.zip
         unzip main.zip
+
+| After the package is installed change directory to cohere-scripts-main and run setup.py script:
+     ::
+
+        cd cohere-scripts-main
+        python setup.py
 
 Scripts
 ####### 
-| In this documentation it is assumed the scripts are invoked from cdisupp directory. Below is a list of scripts with description and explanation how to run:
+| In this documentation it is assumed the scripts are invoked from cohere-scripts directory. Below is a list of scripts with description and explanation how to run:
 
 - create_experiment.py
 
