@@ -12,14 +12,75 @@ Parameters
 
     data_dir = "/path/to/data_dir/data_dir"
 
+- alien_alg:
+| optional, name of method used to remove aliens. Possible options are: 'block_aliens', 'alien_file', and 'AutoAlien1'. The 'block_aliens' algorithm will zero out defined blocks, 'alien_file' method will use given file as a mask, and 'AutoAlien1' will use auto mechanism to remove aliens. Each of these algorithms require different parameters, explained below.
+| example:
+::
+
+    alien_alg = "AutoAlien1"
+
 - aliens:
-| optional, used when the data contains regions with intensity produced by interference. The regions needs to be zeroed out. The aliens can be defined as regions each defined by coordinates of starting point, and ending point (i.e. ((xb0,yb0,zb0,xe0,ye0,ze0),(xb1,yb1,zb1,xe1,ye1,ze1),...(xbn,ybn,zbn,xen,yen,zen))) or the user can produce a file in npy format that contains table of zeros and ones, where zero means to remove the pixel. The user might choose to remove the aliens by setting the "amp_threshold" parameter higher
+| Needed when the 'block_aliens' method is configured. Used when the data contains regions with intensity produced by interference. The regions needs to be zeroed out. The aliens can be defined as regions each defined by coordinates of starting point, and ending point (i.e. ((xb0,yb0,zb0,xe0,ye0,ze0),(xb1,yb1,zb1,xe1,ye1,ze1),...(xbn,ybn,zbn,xen,yen,zen))).
 | example:
 ::
 
     aliens = ((170,220,112,195,245,123), (50,96,10,60,110,20))
-        or
-    aliens = "/path/to/mask_file/mask_file"
+
+- alien_file:
+| Needed when the 'alien_file' method is configured. User can produce a file in npy format that contains table of zeros and ones, where zero means to set the pixel to zero, and one to leave it. 
+| example:
+::
+
+    alien_file = "/path/to/mask_file/AlienImg.npy"
+
+- AA1_size_threshold:
+| used in the 'AutoAliens1' method. If not given it will default to 0.01.  The AutoAlien1 algorithm will calculate relative  sizes of all clusters with respect to the biggest cluster. The clusters with relative size smaller than the given threshold will be possibly deemed aliens. It also depends on asymmetry.
+| example:
+::
+
+    AA1_size_threshold = 0.01
+
+- AA1_asym_threshold:
+| used in the 'AutoAliens1' method. If not given it will default to 1.75. The AutoAlien1 algorithm will calculate average asymmetry of all clusters. The clusters with average asymmetry greater than the given threshold will be possibly deemed aliens. It also depends on relative size.
+| example:
+::
+
+    AA1_asym_threshold = 1.75
+
+- AA1_min_pts:
+| used in the 'AutoAliens1' method. If not given it will default to 5. Defines minimum non zero points in neighborhood to count the area of data as cluster.
+| example:
+::
+
+    AA1_min_pts = 5
+
+- AA1_eps:
+| used in the 'AutoAliens1' method. If not given it will default to 1.1. Used in the clustering algorithm.
+| example:
+::
+
+    AA1_eps = 1.1
+
+- AA1_amp_threshold:
+| mandatory in the 'AutoAliens1' method. Used to zero data points below that threshold.
+| example:
+::
+
+    AA1_amp_threshold = 6 
+
+- AA1_save_arrs
+| used in the 'AutoAliens1' method, optional. If given and set to True multiple results of alien analysis will be saved in files.
+| example:
+::
+
+    AA1_save_arrs = True 
+
+- AA1_expandcleanedsigma:
+| used in the 'AutoAliens1' method, optional. If given the algorithm will apply last step of cleaning the data using the configured sigma.
+| example:
+::
+
+    AA1_expandcleanedsigma = 5.0
 
 - amp_threshold:
 | mandatory, min data threshold.  Values below this are set to 0. The threshold is applied after removing aliens.
