@@ -78,6 +78,7 @@ public:
 
     static std::vector<d_type> ToVector(af::array );
     static af::array ToArray(std::vector<d_type>, af::dim4 );
+    static std::vector<d_type> CenterOfMass(af::array arr);
 };
 
 #endif /* util_hpp */

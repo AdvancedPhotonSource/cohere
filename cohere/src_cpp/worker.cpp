@@ -272,6 +272,10 @@ void Reconstruction::ToDirect()
 
 void Reconstruction::Twin()
 {
+    // put the image in the center
+    std::vector<d_type> com = Utils::CenterOfMass(ds_image);
+    ds_image = af::shift(ds_image, ceil(com[0]), ceil(com[1]), ceil(com[2]));
+
     dim4 dims = data.dims();
     std::vector<int> twin_halves = params->GetTwinHalves();
     af::array temp = constant(0, dims, u32);

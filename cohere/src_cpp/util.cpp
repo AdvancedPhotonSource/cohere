@@ -234,3 +234,43 @@ af::array Utils::ToArray(std::vector<d_type> vec, af::dim4 dims)
     af::array arr(dims, &vec[0]);
     return arr;
 }
+
+std::vector<d_type> Utils::CenterOfMass(af::array arr)
+{
+    af::array grid = af::array();
+    std::vector<d_type> com;
+    std::vector<int> arr_dims;
+    std::vector<int> tile_dims;
+
+    af::array abs_arr = af::abs(arr);
+    d_type normalizer = sum<d_type>(abs_arr);
+    
+    dim4 dims = abs_arr.dims();
+    for (int i = 0; i<4; i++)
+    {
+        tile_dims.push_back(dims[i]);
+        arr_dims.push_back(1);
+    }
+    int nd = 3;
+    while (dims[nd] == 1)
+    {
+        nd = nd -1;
+    }
+    
+    for (int dir = 0; dir <= nd; dir++)
+    {
+        //swap
+        tile_dims[dir] = 1;
+        arr_dims[dir] = dims[dir];
+        grid = af::iota(dim4(arr_dims[0], arr_dims[1], arr_dims[2], arr_dims[3]),
+                            dim4(tile_dims[0], tile_dims[1], tile_dims[2], tile_dims[3]));
+        d_type shift = sum<d_type>(grid * abs_arr)/normalizer;
+        com.push_back(shift);
+        //swap back
+        arr_dims[dir] = 1;
+        tile_dims[dir] = dims[dir];
+    }
+    arr_dims.clear();
+    tile_dims.clear();
+    return com;
+}
