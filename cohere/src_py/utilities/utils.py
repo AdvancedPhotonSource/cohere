@@ -935,6 +935,104 @@ def get_gpu_distribution(runs, available):
     return distributed
 
 
+def estimate_no_proc(arr_size, factor):
+    """
+    Estimates number of processes the prep can be run on. Determined by number of available cpus and size of array
+
+    Parameters
+    ----------
+    arr_size : int
+        size of array
+    factor : int
+        an estimate of how much memory is required to process comparing to array size
+
+    Returns
+    -------
+    number of processes
+    """
+    from multiprocessing import cpu_count
+    import psutil
+
+    ncpu = cpu_count()
+    freemem = psutil.virtual_memory().available
+    nmem = freemem / (factor * arr_size)
+    # decide what limits, ncpu or nmem
+    if nmem > ncpu:
+        return ncpu
+    else:
+        return int(nmem)
+
+
+# supposedly this is faster than np.roll or scipy interpolation shift.
+# https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
+def fast_shift(arr, shifty, fill_val=0):
+    """
+    Shifts array by given numbers for shift in each dimension.
+
+    Parameters
+    ----------
+    arr : array
+        array to shift
+    shifty : list
+        a list of integer to shift the array in each dimension
+    fill_val : float
+        values to fill emptied space
+    Returns
+    -------
+    result : array
+        shifted array
+    """
+    dims = arr.shape
+    result = np.ones_like(arr)
+    result *= fill_val
+    result_slices = []
+    arr_slices = []
+    for n in range(len(dims)):
+        if shifty[n] > 0:
+            result_slices.append(slice(shifty[n], dims[n]))
+            arr_slices.append(slice(0, -shifty[n]))
+        elif shifty[n] < 0:
+            result_slices.append(slice(0, shifty[n]))
+            arr_slices.append(slice(-shifty[n], dims[n]))
+        else:
+            result_slices.append(slice(0, dims[n]))
+            arr_slices.append(slice(0, dims[n]))
+    result_slices = tuple(result_slices)
+    arr_slices = tuple(arr_slices)
+    result[result_slices] = arr[arr_slices]
+    return result
+
+
+def shift_to_ref_array(fft_ref, array):
+    """
+    Returns an array shifted to align with ref, only single pixel resolution pass fft of ref array to save doing that a lot.
+
+    Parameters
+    ----------
+    fft_ref : array
+        Fourier transform of reference array
+    array : array
+        array to align with reference array
+
+    Returns
+    -------
+    shifted_array : array
+        array shifted to be aligned with reference array
+    """
+    # get cross correlation and pixel shift
+    fft_array = np.fft.fftn(array)
+    cross_correlation = np.fft.ifftn(fft_ref * np.conj(fft_array))
+    corelated = np.array(cross_correlation.shape)
+    amp = np.abs(cross_correlation)
+    intshift = np.unravel_index(amp.argmax(), corelated)
+    shifted = np.array(intshift)
+    pixelshift = np.where(shifted >= corelated / 2, shifted - corelated, shifted)
+    shifted_arr = fast_shift(array, pixelshift)
+    del cross_correlation
+    del fft_array
+    return shifted_arr
+
+
 #https://stackoverflow.com/questions/51503672/decorator-for-timeit-timeit-method/51503837#51503837
 from functools import wraps
 from time import time
@@ -946,6 +1044,6 @@ def measure(func):
             return func(*args, **kwargs)
         finally:
             end_ = int(round(time() * 1000)) - start
-            print(f"Total execution time: {end_ if end_ > 0 else 0} ms")
+            print("Total execution time: {end_ if end_ > 0 else 0} ms")
     return _time_it
 
