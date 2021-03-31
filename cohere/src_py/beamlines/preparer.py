@@ -43,7 +43,8 @@ class PrepData:
         """
         if len(dirs) == 1:
             arr = self.read_scan(dirs[0])
-            self.write_prep_arr(arr)
+            if arr is not None:
+                self.write_prep_arr(arr)
             return
 
         try:
@@ -59,6 +60,8 @@ class PrepData:
         else:
             first_dir = dirs.pop(0)
             refarr = self.read_scan(first_dir)
+            if refarr is None:
+                return
             sumarr = np.zeros_like(refarr)
             sumarr = sumarr + refarr
             self.fft_refarr = np.fft.fftn(refarr)
