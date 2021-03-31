@@ -43,22 +43,22 @@ class PrepData:
         """
         if len(dirs) == 1:
             arr = self.read_scan(dirs[0])
-            self.write_prep_arr(arr)
+            if arr is not None:
+                self.write_prep_arr(arr)
             return
 
-        try:
-            separate_scans = self.separate_scans
-        except:
-            separate_scans = False
-
-        if separate_scans:
+        if self.separate_scans:
+            self.dirs = dirs
+            self.scans = indexes
             with Pool(processes=min(len(dirs), cpu_count())) as pool:
-                pool.map_async(self.read_write, range(len(self.scans)))
+                pool.map_async(self.read_write, range(len(dirs)))
                 pool.close()
                 pool.join()
         else:
             first_dir = dirs.pop(0)
             refarr = self.read_scan(first_dir)
+            if refarr is None:
+                return
             sumarr = np.zeros_like(refarr)
             sumarr = sumarr + refarr
             self.fft_refarr = np.fft.fftn(refarr)
@@ -70,9 +70,9 @@ class PrepData:
             # since process takes 10-12 arrays, divide nscans/15 (to be safe) and make that many
             # chunks to pool.  Also ask between pools how much ram is avaiable and modify nproc.
 
-            while (len(self.dirs) > 0):
+            while (len(dirs) > 0):
                 nproc = ut.estimate_no_proc(arr_size, 15)
-                chunklist = self.dirs[0:min(len(dirs), nproc)]
+                chunklist = dirs[0:min(len(dirs), nproc)]
                 poollist = [dirs.pop(0) for i in range(len(chunklist))]
                 with Pool(processes=nproc) as pool:
                     res = pool.map_async(self.read_align, poollist)
