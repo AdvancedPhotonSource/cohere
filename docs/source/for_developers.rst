@@ -26,6 +26,8 @@ Pre-requisites
    - pip install mayavi
    - pip install xrayutilities
    - pip install psutil
+   - conda install pyqt
+   - pip instal sklearn
 
 | Install ArrayFire library version 3.6.2 (available at http://arrayfire.s3.amazonaws.com/index.html#!/3.6.2%2F). 
 | During installation respond y/y, so the 'arrayfire' directory will be created in <cwd>, where <cwd> is the current directory. The arrayfire installation directory is be <cwd>/arrayfire.

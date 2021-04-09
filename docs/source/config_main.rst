@@ -33,3 +33,10 @@ Parameters
 
     specfile = "/path/to/specfile/Staff20.spec"
                                         
+- beamline:
+| optional (if not configured, the preparation and visualization scripts are not available), beamline where the experiment was conducted.
+| example:
+::
+
+    beamline = "aps_34idc"
+

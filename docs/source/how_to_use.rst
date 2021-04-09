@@ -12,18 +12,21 @@ Installing Scripts
 1. The cohere-scripts package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-scripts and clicking the green “Code” button and selecting “Download ZIP” as shown below.
 
 2. Alternatively one can clone the repository using git. This will create the cohere-scripts directory containing all of the cohere-scripts content. In this code below we clone it to cohere-scripts-main directory.
-     ::
+   
+  ::
 
         git clone https://github.com/advancedPhotonSource/cohere-scripts cohere-scripts-main
 
 3. Another way to get the cohere-scripts package on your machine is with the wget command:
-     ::
+   
+  ::
 
         wget https://github.com/AdvancedPhotonSource/cohere-scripts/archive/main.zip
         unzip main.zip
 
-| After the package is installed change directory to cohere-scripts-main and run setup.py script:
-     ::
+| After the package is installed change directory to cohere-scripts-main and run setup.py script. The setup.py script modifies paths from relative to absolute in the provided example configuration.:
+   
+  ::
 
         cd cohere-scripts-main
         python setup.py
@@ -38,13 +41,14 @@ Scripts
   Running this script:
   ::
 
-        python scripts/create_experiment.py <id> <scan range> <working_dir> --specfile <specfile>
+        python scripts/create_experiment.py <id> <scan range> <working_dir> --specfile <specfile> --beamline <beamline>
 
   The parameters are as follows:
      * id: an arbitrary literal value assign to this experiment
      * scan range: scans that will be included in the data. This can be a single scan or range separated with "-"
      * working_dir: a directory where the experiment will be created
-     * specfile: optional, but typically used
+     * specfile: optional, but typically used for beamline aps_34idc
+     * beamline: optional, specifies at which beamline the experiment was performed. If not configured, the preparation and visualization is not available.
 
 - setup_34idc.py
 
@@ -61,9 +65,9 @@ Scripts
      * specfile: optional, used when specfile configured in <conf_dir>/config file should be replaced by another specfile
      * copy_prep: this is a switch parameter, set to true if the prep_data.tif file should be copied from experiment with the <conf_dir> into the prep directory of the newly created experiment
 
-- run_prep_34idc.py
+- run_prep.py
 
-  To run this script a configuration file "config_prep" must be defined in the <experiment_dir>/conf directory. This script reads raw data, applies correction based on physical properties of the instrument, and optionally aligns and combines multiple scans. The prepared data file is stored in <experiment_dir>/prep/prep_data.tif file.
+  To run this script a configuration file "config_prep" must be defined in the <experiment_dir>/conf directory and the main configuration "config" file must have beamline parameter configured. This script reads raw data, applies correction based on physical properties of the instrument, and optionally aligns and combines multiple scans. The prepared data file is stored in <experiment_dir>/prep/prep_data.tif file.
   note: when separate_scan is configured to true, a prep_data.tiff file is created for each scan.
   Running this script:
   ::
@@ -106,7 +110,7 @@ Scripts
 
 - run_disp.py
 
-  To run this script a configuration file "config_disp" must be defined in the <experiment_dir>/conf directory, and the reconstruction must be completed. This script reads the reconstructed files, and processes them to create .vts files that can be viewed utilizing visualization tools such Paraview. The script will process "image.npy" files that are in the experiment space and in a subdirectory of "resuls_dir" configuration parameter, or a given file is --image_file option is used.
+  To run this script a configuration file "config_disp" must be defined in the <experiment_dir>/conf directory, the main configuration "config" file must have beamline parameter configured, and the reconstruction must be completed. This script reads the reconstructed files, and processes them to create .vts files that can be viewed utilizing visualization tools such Paraview. The script will process "image.npy" files that are in the experiment space and in a subdirectory of "resuls_dir" configuration parameter, or a given file is --image_file option is used.
   Running this script:
   ::
 
@@ -118,7 +122,7 @@ Scripts
 
 - everything.py
 
-  To run this script all configuration files must be defined. This script runs the cosequitive scripts: run_prep_34idc.py, format_data.py, run_rec.py, and run_disp.py. The experiment space must be already defined. 
+  To run this script all configuration files must be defined. This script runs the scripts in the following order: run_prep.py, format_data.py, run_rec.py, and run_disp.py. If the beamline parameter is not defined in the experiment main configuration file "config", the run_prep.py and run_disp.py scripts will be omitted, as they are customized for a beamline. The experiment space must be already defined.
   Running this script:
   ::
 
