@@ -47,9 +47,15 @@ class PrepData:
                 self.write_prep_arr(arr)
             return
 
-        if self.separate_scans:
+        try:
+            separate_scans = self.separate_scans
+        except:
+            separate_scans = False
+
+        if separate_scans:
             self.dirs = dirs
-            self.scans = indexes
+            self.scans = scans
+
             with Pool(processes=min(len(dirs), cpu_count())) as pool:
                 pool.map_async(self.read_write, range(len(dirs)))
                 pool.close()
