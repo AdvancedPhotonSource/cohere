@@ -14,10 +14,10 @@ from libcpp.string cimport string
 cdef extern from "../include/bridge.hpp":
     cdef cppclass Bridge:
         Bridge() except +
-        void StartCalcWithGuess(int, vector[float], vector[float], vector[float], vector[int], string)
-        void StartCalcWithGuessSupport(int, vector[float], vector[float], vector[float], vector[int], vector[int], string)
-        void StartCalcWithGuessSupportCoh(int, vector[float], vector[float], vector[float], vector[int], vector[int], vector[float], vector[int], string)
-        void StartCalc(int, vector[float], vector[int], string)
+        int StartCalcWithGuess(int, vector[float], vector[float], vector[float], vector[int], string)
+        int StartCalcWithGuessSupport(int, vector[float], vector[float], vector[float], vector[int], vector[int], string)
+        int StartCalcWithGuessSupportCoh(int, vector[float], vector[float], vector[float], vector[int], vector[int], vector[float], vector[int], string)
+        int StartCalc(int, vector[float], vector[int], string)
         vector[double] GetImageR()
         vector[double] GetImageI()
         vector[double] GetErrors()
@@ -27,7 +27,6 @@ cdef extern from "../include/bridge.hpp":
         vector[double] GetReciprocalI()
         vector[int] GetFlowV()
         vector[int] GetIterFlowV()
-        int IsSuccess()
         void Cleanup()
 
 
@@ -38,13 +37,13 @@ cdef class PyBridge:
     def __dealloc__(self):
         del self.thisptr
     def start_calc_with_guess(self, device, data_r, guess_r, guess_i, dims, config):
-        self.thisptr.StartCalcWithGuess(device, data_r, guess_r, guess_i, dims, config.encode())
+        return self.thisptr.StartCalcWithGuess(device, data_r, guess_r, guess_i, dims, config.encode())
     def start_calc_with_guess_support(self, device, data_r, guess_r, guess_i, support, dims, config):
-        self.thisptr.StartCalcWithGuessSupport(device, data_r, guess_r, guess_i, support, dims, config.encode())
+        return self.thisptr.StartCalcWithGuessSupport(device, data_r, guess_r, guess_i, support, dims, config.encode())
     def start_calc_with_guess_support_coh(self, device, data_r, guess_r, guess_i, support, dims, coh, coh_dims, config):
-        self.thisptr.StartCalcWithGuessSupportCoh(device, data_r, guess_r, guess_i, support, dims, coh, coh_dims, config.encode())
+        return self.thisptr.StartCalcWithGuessSupportCoh(device, data_r, guess_r, guess_i, support, dims, coh, coh_dims, config.encode())
     def start_calc(self, device, data_r, dims, config):
-        self.thisptr.StartCalc(device, data_r, dims, config.encode())
+        return self.thisptr.StartCalc(device, data_r, dims, config.encode())
     def get_image_r(self):
         return self.thisptr.GetImageR()
     def get_image_i(self):
@@ -63,8 +62,6 @@ cdef class PyBridge:
         return self.thisptr.GetFlowV()
     def get_iter_flow(self):
         return self.thisptr.GetIterFlowV()
-    def is_success(self):
-        return self.thisptr.IsSuccess()
     def cleanup(self):
         self.thisptr.Cleanup()
 

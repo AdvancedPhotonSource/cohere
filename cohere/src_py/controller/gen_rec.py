@@ -337,7 +337,7 @@ class Generation:
             breed_dirs.append(os.path.join(breed_dir, str(i)))
             iterable.append((dirs[i], breed_dirs[i]))
 
-	# copy the alpha to the first breeding sub-dir
+    # copy the alpha to the first breeding sub-dir
         if not os.path.exists(breed_dirs[0]):
             os.makedirs(breed_dirs[0])
 
@@ -431,7 +431,7 @@ def reconstruction(proc, conf_file, datafile, dir, devices):
                temp_dirs = gen_obj.breed(temp_dir, save_dirs)
                 
             gen_obj.next_gen()
-	# remove temp dir
+    # remove temp dir
         if os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir)
     else:

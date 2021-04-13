@@ -27,13 +27,13 @@ Manager::~Manager()
     delete rec;
 }
 
-void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<int> dim, std::string const & config)
+int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<int> dim, std::string const & config)
 {
     if(!( access( config.c_str(), F_OK ) == 0) )
     {
             printf("Configuration file %s not found\n", config.c_str());
             error_code = -3;
-            return;
+            return error_code;
     }
 
     info();
@@ -47,7 +47,7 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
         {
             printf("no gpu with id %d, check configuration\n", device);
             error_code = -2;
-            return;
+            return error_code;
         }
         printf("Set deviceId %d\n", getDevice());
     }
@@ -72,6 +72,27 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
     {
         guess = randu(data.dims(), c32, r);
     }
+    // verify and reload if not loaded
+    if (anyTrue<bool>(isNaN(data)))
+    {
+        af::array real_d1(af_dims, &data_buffer_r[0]);
+        data = abs(real_d1);
+        real_d = af::array();
+    }
+    if (anyTrue<bool>(isNaN(guess)))
+    {
+        guess = af::array();
+        af::randomEngine r1(AF_RANDOM_ENGINE_MERSENNE, getpid() * time(0));
+        if (typeid(test1) == typeid(test2))
+        {
+            guess = randu(data.dims(), c64, r1);
+        }
+        else
+        {
+            guess = randu(data.dims(), c32, r1);
+        }
+    }
+
     af::array null_array = array();
 
     rec = new Reconstruction(data, guess, params, null_array, null_array);
@@ -87,10 +108,11 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
     else    
     {
         timer::stop();
-    }       
+    }
+    return error_code;
 }
 
-void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> dim, const std::string & config)
+int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> dim, const std::string & config)
 {
     bool first = false;
     Params * params = new Params(config.c_str(), dim, first);
@@ -104,7 +126,7 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
         {
             printf("no gpu with id %d, check configuration\n", device);
             error_code = -2;
-            return;
+            return error_code ;
         }
         info();
     }
@@ -133,10 +155,11 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
     else    
     {
         timer::stop();
-    }       
+    }
+    return error_code;
 }
 
-void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, const std::string & config)
+int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, const std::string & config)
 {
     bool first = false;
     Params * params = new Params(config.c_str(), dim, first);
@@ -150,7 +173,7 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
         {// leave to the os to assign device
             printf("no gpu with id %d, check configuration\n", device);
             error_code = -2;
-            return;
+            return error_code;
         }
         info();
     }
@@ -181,9 +204,10 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
     {
         timer::stop();
     }
+    return error_code;
 }
 
-void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, std::vector<d_type> coh_vector, std::vector<int> coh_dim, const std::string & config)
+int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, std::vector<d_type> coh_vector, std::vector<int> coh_dim, const std::string & config)
 {
     bool first = false;
     Params * params = new Params(config.c_str(), dim, first);
@@ -197,7 +221,7 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
         {
             printf("no gpu with id %d, check configuration\n", device);
             error_code = -2;
-            return;
+            return error_code ;
         }
         info();
     }
@@ -227,6 +251,7 @@ void Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vect
     {
         timer::stop();
     }
+    return error_code;
 }
 
 std::vector<d_type> Manager::GetImageR()
@@ -296,9 +321,4 @@ std::vector<int> Manager::GetFlowV()
 std::vector<int> Manager::GetIterFlowV()
 {
     return rec->GetIterFlowVector();
-}
-
-int Manager::IsSuccess()
-{
-    return error_code;
 }
