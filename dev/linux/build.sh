@@ -1,9 +1,0 @@
-python setup.py install --prefix=$PREFIX
-
-tar -xzvf af_lc_lib.tar.gz -C $PREFIX
-
-mkdir -p "$PREFIX/etc/conda/activate.d"
-mv $PREFIX/lib/cohere_activate.sh $PREFIX/etc/conda/activate.d
-
-mkdir -p "$PREFIX/etc/conda/deactivate.d"
-mv $PREFIX/lib/cohere_deactivate.sh $PREFIX/etc/conda/deactivate.d
