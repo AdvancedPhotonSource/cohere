@@ -63,7 +63,9 @@ def single_rec_process(proc, conf, data, coh_dims, req_metric, dirs):
         prev_image, prev_support, prev_coh = ut.read_results(prev)
 
     image, support, coh, errs, flow, iter_array = calc.fast_module_reconstruction(proc, gpu, conf, data, coh_dims, prev_image, prev_support, prev_coh)
- 
+
+    if image is None:
+        return None
     metric = ut.get_metric(image, errs)
     ut.save_results(image, support, coh, errs, flow, iter_array, save_dir, metric)
     return metric[req_metric]
@@ -152,6 +154,11 @@ def multi_rec(save_dir, proc, data, conf, config_map, devices, prev_dirs, metric
         pool.join()
         pool.terminate()
 
+    # remove the unsuccessful reconstructions
+    for i, e in reversed(list(enumerate(evals))):
+        if e is None:
+            evals.pop(i)
+            save_dirs.pop(i)
     # return only error from last iteration for each reconstruction
     return save_dirs, evals
 
