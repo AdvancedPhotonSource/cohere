@@ -27,10 +27,10 @@ Pre-requisites
    - pip install xrayutilities
    - pip install psutil
    - conda install pyqt
-   - pip instal sklearn
+   - pip install sklearn
 
 | Install ArrayFire library version 3.6.2 (available at http://arrayfire.s3.amazonaws.com/index.html#!/3.6.2%2F). 
-| During installation respond y/y, so the 'arrayfire' directory will be created in <cwd>, where <cwd> is the current directory. The arrayfire installation directory is be <cwd>/arrayfire.
+| During installation respond y/y, so the 'arrayfire' directory will be created in <cwd>, where <cwd> is the current directory. The arrayfire installation directory will be <cwd>/arrayfire.
 
 Initialization
 ++++++++++++++
@@ -76,6 +76,8 @@ compile and install
 
     python setup.py install
 
+| Sometimes if the version number in setup.py script did not change, the install may not update. in this case remove build and distribute directories before running the setup.py script.
+
 Activating environment
 ===================
 | When running in development environment the libraries are not loaded into conda location. Therefore the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH must include path to arrayfire libraries.
@@ -107,18 +109,7 @@ Conda Build
     cp dev/linux/* .     // for linux
     cp dev/mac/* .       //for mac
 
-- change version in dev/meta.yaml and setup.py files
-
-- for Linux build move cohere_activate.sh and cohere_deactivate.sh to lib directory:
-::
-
-    mv cohere_activate.sh lib
-    mv cohere_deactivate.sh lib
-
-- compress the libraries:
-::
-
-    tar -czvf af_lc_lib.tar.gz lib
+- change version in meta.yaml and setup.py files to the new version
 
 
 - run conda build:
