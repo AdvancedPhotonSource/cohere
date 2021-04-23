@@ -54,7 +54,7 @@ class PrepData:
 
         if separate_scans:
             self.dirs = dirs
-            self.scans = scans
+            self.scans = indexes
 
             with Pool(processes=min(len(dirs), cpu_count())) as pool:
                 pool.map_async(self.read_write, range(len(dirs)))
