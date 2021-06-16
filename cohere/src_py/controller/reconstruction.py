@@ -109,7 +109,12 @@ def reconstruction(proc, conf_file, datafile, dir, dev):
     -------
     nothing
     """
-    data = ut.read_tif(datafile)
+    print('datafile', datafile)
+    if datafile.endswith('tif'):
+        data = ut.read_tif(datafile)
+    elif datafile.endswith('npy'):
+        data = np.load(datafile)
+
     print ('data shape', data.shape)
 
     try:
