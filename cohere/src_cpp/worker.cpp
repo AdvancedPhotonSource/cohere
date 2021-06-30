@@ -21,7 +21,6 @@ See LICENSE file.
 #include "util.hpp"
 #include "resolution.hpp"
 
-
 Reconstruction::Reconstruction(af::array image_data, af::array guess, Params* parameters, af::array support_array, af::array coherence_array)
 {
     num_points = 0;
@@ -272,11 +271,10 @@ void Reconstruction::ToDirect()
 
 void Reconstruction::Twin()
 {
+    dim4 dims = data.dims();
     // put the image in the center
     std::vector<d_type> com = Utils::CenterOfMass(ds_image);
-    ds_image = af::shift(ds_image, ceil(com[0]), ceil(com[1]), ceil(com[2]));
-
-    dim4 dims = data.dims();
+    ds_image = af::shift(ds_image, int( int(dims[0])/2-com[0]), int( int(dims[1])/2-com[1]), int( int(dims[2])/2-com[2]));
     std::vector<int> twin_halves = params->GetTwinHalves();
     af::array temp = constant(0, dims, u32);
     int x_start = (twin_halves[0] == 0) ? 0 : int(dims[0]/2);
@@ -285,7 +283,7 @@ void Reconstruction::Twin()
     int y_end = (twin_halves[1] == 0) ? int(dims[1]/2 -1) : dims[1]-1;
     temp( af::seq(x_start, x_end), af::seq(y_start, y_end), span, span) = 1;
     ds_image = ds_image * temp;
-//     printf("Twin\n");
+	//     printf("Twin\n");
 }
 
 void Reconstruction::Average()
