@@ -84,8 +84,8 @@ class CXDViz:
             self.clear_direct_arrays()
 
         if coh is not None:
-            coh = ut.get_zero_padded_centered(coh, image.shape)
             coh = np.fft.fftshift(np.fft.fftn(np.fft.fftshift(coh)))
+            coh = ut.get_zero_padded_centered(coh, image.shape)
             arrays = {"cohAmp": np.abs(coh), "cohPh": np.angle(coh)}
             self.add_ds_arrays(arrays)
             self.write_directspace(os.path.join(save_dir, 'coherence'))

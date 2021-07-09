@@ -30,7 +30,7 @@ public:
     // The config parameter defines configuration file.
     int StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> dim, const std::string & config);
 
-    int StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support, std::vector<int> dim, const std::string & config);
+    int StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support, std::vector<int> dim, const std::string & config, int start_coh);
 
     int StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support, std::vector<int> dim, std::vector<d_type> coh, std::vector<int> coh_dim, const std::string & config);
 
@@ -39,7 +39,7 @@ public:
     // This method takes data, for the reconstruction algorithm. To perform the reconstruction the code will generate 
     // the guess parameter. The dim parameter conveys data dimensions, since the data is passed in a c-like buffer.
     // The config parameter defines configuration file.
-    int StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<int> dim, std::string const & config);
+    int StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<int> dim, std::string const & config, int start_coh);
 
     // This method starts calculations. The Manager uses workers to perform the calculations. The parameters define
     // calculations type. 

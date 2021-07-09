@@ -21,7 +21,7 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['fast_module_reconstruction',]
 
 
-def fast_module_reconstruction(proc, device, conf, data, coh_dims, image=None, support=None, coherence=None):
+def fast_module_reconstruction(proc, device, conf, data, coh_dims, image=None, support=None, coherence=None, first_pcdi=0):
     """
     This function calls a bridge method corresponding to the requested processor type. The bridge method is an access
     to the CFM (Calc Fast Module). When reconstruction is completed the function retrieves results from the CFM.
@@ -86,7 +86,7 @@ def fast_module_reconstruction(proc, device, conf, data, coh_dims, image=None, s
     dims = data.shape[::-1]
     data_l = data.flatten().tolist()
     if image is None:
-        ec = fast_module.start_calc(device, data_l, dims, conf)
+        ec = fast_module.start_calc(device, data_l, dims, conf, first_pcdi)
         # retry once if error code is -2 (NAN found), as the GPU might not load correctly on initial reconstruction
         if ec == -2:
             ec = fast_module.start_calc(device, data_l, dims, conf)
@@ -96,13 +96,12 @@ def fast_module_reconstruction(proc, device, conf, data, coh_dims, image=None, s
     elif coherence is None:
         image = image.flatten()
         support = support.flatten()
-        ec = fast_module.start_calc_with_guess_support(device, data_l, image.real.tolist(), image.imag.tolist(), support.tolist(), dims, conf)
+        ec = fast_module.start_calc_with_guess_support(device, data_l, image.real.tolist(), image.imag.tolist(), support.tolist(), dims, conf, first_pcdi)
     else:
         image = image.flatten()
         support = support.flatten()
         coh_dims1 = (coh_dims[2], coh_dims[1], coh_dims[0])
         coherence = coherence.flatten()
-
         ec = fast_module.start_calc_with_guess_support_coh(device, data_l, image.real.tolist(), image.imag.tolist(), support.tolist(), dims, coherence.tolist(), coh_dims, conf)
 
     if ec < 0:

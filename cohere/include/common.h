@@ -50,6 +50,7 @@ const int FIRST_RUN_ONLY = 1;
 const int FOR_ALL_RUNS = 2;
 const int MODIFIED_AFTER_FIRST = 3;
 const int CUSTOM = 4;
+const int TRIGGER = 5;
 
 typedef struct flow_item_def {const char* item_name;
                            int type;
@@ -78,7 +79,7 @@ const flow_item_def flow_def[] = {
   flow_item_def("shrink_wrap_trigger",   MODIFIED_AFTER_FIRST, "ShrinkWrapTrigger"),
   flow_item_def("phase_support_trigger", FIRST_RUN_ONLY,       "PhaseTrigger"),
   flow_item_def("to_reciprocal_space",   NOT_TRIGGER,          "ToReciprocal"),
-  flow_item_def("pcdi_trigger",          MODIFIED_AFTER_FIRST, "PcdiTrigger"),
+  flow_item_def("pcdi_trigger",          TRIGGER,              "PcdiTrigger"),
   flow_item_def("pcdi",                  CUSTOM,               "Pcdi"),
   flow_item_def("no_pcdi",               CUSTOM,               "NoPcdi"),
   flow_item_def("garbage_trigger",       NOT_TRIGGER,          "Gc"),

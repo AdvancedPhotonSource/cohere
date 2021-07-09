@@ -15,9 +15,9 @@ cdef extern from "../include/bridge.hpp":
     cdef cppclass Bridge:
         Bridge() except +
         int StartCalcWithGuess(int, vector[float], vector[float], vector[float], vector[int], string)
-        int StartCalcWithGuessSupport(int, vector[float], vector[float], vector[float], vector[int], vector[int], string)
+        int StartCalcWithGuessSupport(int, vector[float], vector[float], vector[float], vector[int], vector[int], string, int)
         int StartCalcWithGuessSupportCoh(int, vector[float], vector[float], vector[float], vector[int], vector[int], vector[float], vector[int], string)
-        int StartCalc(int, vector[float], vector[int], string)
+        int StartCalc(int, vector[float], vector[int], string, int)
         vector[double] GetImageR()
         vector[double] GetImageI()
         vector[double] GetErrors()
@@ -38,12 +38,12 @@ cdef class PyBridge:
         del self.thisptr
     def start_calc_with_guess(self, device, data_r, guess_r, guess_i, dims, config):
         return self.thisptr.StartCalcWithGuess(device, data_r, guess_r, guess_i, dims, config.encode())
-    def start_calc_with_guess_support(self, device, data_r, guess_r, guess_i, support, dims, config):
-        return self.thisptr.StartCalcWithGuessSupport(device, data_r, guess_r, guess_i, support, dims, config.encode())
+    def start_calc_with_guess_support(self, device, data_r, guess_r, guess_i, support, dims, config, start_coh):
+        return self.thisptr.StartCalcWithGuessSupport(device, data_r, guess_r, guess_i, support, dims, config.encode(), start_coh)
     def start_calc_with_guess_support_coh(self, device, data_r, guess_r, guess_i, support, dims, coh, coh_dims, config):
         return self.thisptr.StartCalcWithGuessSupportCoh(device, data_r, guess_r, guess_i, support, dims, coh, coh_dims, config.encode())
-    def start_calc(self, device, data_r, dims, config):
-        return self.thisptr.StartCalc(device, data_r, dims, config.encode())
+    def start_calc(self, device, data_r, dims, config, start_coh):
+        return self.thisptr.StartCalc(device, data_r, dims, config.encode(), start_coh)
     def get_image_r(self):
         return self.thisptr.GetImageR()
     def get_image_i(self):

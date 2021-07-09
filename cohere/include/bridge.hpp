@@ -23,11 +23,11 @@ public:
 
     int StartCalcWithGuess(int device, std::vector<float> data_buffer_r, std::vector<float> guess_buffer_r, std::vector<float> guess_buffer_i, std::vector<int> dim, const std::string & config);
 
-    int StartCalcWithGuessSupport(int device, std::vector<float> data_buffer_r, std::vector<float> guess_buffer_r, std::vector<float> guess_buffer_i, std::vector<int> support_buffer, std::vector<int> dim, const std::string & config);
+    int StartCalcWithGuessSupport(int device, std::vector<float> data_buffer_r, std::vector<float> guess_buffer_r, std::vector<float> guess_buffer_i, std::vector<int> support_buffer, std::vector<int> dim, const std::string & config, int start_coh);
 
     int StartCalcWithGuessSupportCoh(int device, std::vector<float> data_buffer_r, std::vector<float> guess_buffer_r, std::vector<float> guess_buffer_i, std::vector<int> support_buffer, std::vector<int> dim, std::vector<float> coh_buffer, std::vector<int> coh_dim, const std::string & config);
 
-    int StartCalc(int device, std::vector<float> data_buffer_r, std::vector<int> dim, std::string const & config);
+    int StartCalc(int device, std::vector<float> data_buffer_r, std::vector<int> dim, std::string const & config, int start_coh);
 
     std::vector<d_type> GetReciprocalR();
     std::vector<d_type> GetReciprocalI();

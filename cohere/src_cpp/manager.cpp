@@ -27,7 +27,7 @@ Manager::~Manager()
     delete rec;
 }
 
-int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<int> dim, std::string const & config)
+int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<int> dim, std::string const & config, int start_coh)
 {
     if(!( access( config.c_str(), F_OK ) == 0) )
     {
@@ -53,7 +53,12 @@ int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vecto
     }
 
     bool first = true;
-    Params * params = new Params(config, dim, first);
+    bool first_pcdi = false;
+    if (start_coh > 0)
+    {
+        first_pcdi = true;
+    }
+    Params * params = new Params(config, dim, first, first_pcdi, false);
     
     dim4 af_dims = Utils::Int2Dim4(dim);
     af::array real_d(af_dims, &data_buffer_r[0]);
@@ -114,55 +119,18 @@ int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vecto
 
 int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> dim, const std::string & config)
 {
-    bool first = false;
-    Params * params = new Params(config.c_str(), dim, first);
-    
-    if (device >= 0)
-    {
-        try{
-            setDevice(device);
-        }
-        catch (...)
-        {
-            printf("no gpu with id %d, check configuration\n", device);
-            error_code = -2;
-            return error_code ;
-        }
-        info();
-    }
-
-    dim4 af_dims = Utils::Int2Dim4(dim);
-    af::array real_d(af_dims, &data_buffer_r[0]);
-    //saving abs(data)
-    af::array data = abs(real_d);
-
-    af::array real_g(af_dims, &guess_buffer_r[0]);
-    af::array imag_g(af_dims, &guess_buffer_i[0]);
-    af::array guess = complex(real_g, imag_g);
-       
-    af::array null_array = array();
-
-    rec = new Reconstruction(data, guess, params, null_array, null_array);
-    rec->Init(first);
-    printf("initialized\n");
-
-    timer::start();
-    error_code = rec->Iterate();
-    if (error_code == 0)
-    {       
-        printf("iterate function took %g seconds\n", timer::stop());
-    }
-    else    
-    {
-        timer::stop();
-    }
-    return error_code;
+    printf("function not used, need to remove\n");
 }
 
-int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, const std::string & config)
+int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, const std::string & config, int start_coh)
 {
     bool first = false;
-    Params * params = new Params(config.c_str(), dim, first);
+    bool first_pcdi = false;
+    if (start_coh > 0)
+    {
+        first_pcdi = true;
+    }
+    Params * params = new Params(config.c_str(), dim, first, first_pcdi, false);
     
     if (device >= 0)
     {
@@ -210,7 +178,7 @@ int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vecto
 int Manager::StartCalc(int device, std::vector<d_type> data_buffer_r, std::vector<d_type> guess_buffer_r, std::vector<d_type> guess_buffer_i, std::vector<int> support_vector, std::vector<int> dim, std::vector<d_type> coh_vector, std::vector<int> coh_dim, const std::string & config)
 {
     bool first = false;
-    Params * params = new Params(config.c_str(), dim, first);
+    Params * params = new Params(config.c_str(), dim, first, false, true);
     
     if (device >= 0)
     {

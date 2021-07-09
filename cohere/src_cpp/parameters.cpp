@@ -19,7 +19,7 @@ See LICENSE file.
 #include "sstream"
 #include "mutex"
 
-Params::Params(std::string const & config_file, std::vector<int> data_dim, bool first)
+Params::Params(std::string const & config_file, std::vector<int> data_dim, bool first, bool first_pcdi, bool pcdi)
 {
     is_resolution = false;
     is_pcdi = false;
@@ -142,7 +142,7 @@ Params::Params(std::string const & config_file, std::vector<int> data_dim, bool 
         is_resolution = true;
     }
     // std::vector<int> pcdi_tr_iter;
-    if (parms.count("pcdi_trigger"))
+    if (parms.count("pcdi_trigger") && (first_pcdi || pcdi))
     {
         std::vector<std::string> tmp = ParseList(parms["pcdi_trigger"]);
         for (int i = 0; i < int(tmp.size()); i++)
@@ -165,7 +165,7 @@ Params::Params(std::string const & config_file, std::vector<int> data_dim, bool 
             used_flow_seq.push_back(i);
         }
         else
-        {
+        { 
             if (type == CUSTOM)
             {
                 if (strcmp(flow_item, "er") == 0)
@@ -174,18 +174,25 @@ Params::Params(std::string const & config_file, std::vector<int> data_dim, bool 
                 }
                 else if (strcmp(flow_item, "hio") == 0)
                 {
-                    used_flow_seq.push_back(i);
+                   used_flow_seq.push_back(i);
                 }
                 else if (strcmp(flow_item, "no_pcdi") == 0)
                 {
-                    if (!is_pcdi || first)
+                    if (!is_pcdi || (is_pcdi && first_pcdi))
                     {
-                        used_flow_seq.push_back(i);
+                       used_flow_seq.push_back(i);
                     }
                 }
                 else if (is_pcdi)
                 {
                     used_flow_seq.push_back(i);
+                }
+            }
+            else if (type == TRIGGER)
+            {
+                if (is_pcdi && (strcmp(flow_item, "pcdi_trigger") == 0))
+                {
+                     used_flow_seq.push_back(i);
                 }
             }
             else if (first)
@@ -247,7 +254,7 @@ Params::Params(std::string const & config_file, std::vector<int> data_dim, bool 
             }
             else if (strcmp(flow_item, "pcdi") == 0)
             {
-                int start_pcdi = first ? pcdi_tr_iter[0] : 0;
+                int start_pcdi = first_pcdi ? pcdi_tr_iter[0] : 0;
                 for (int i = start_pcdi; i < number_iterations; i ++)
                 {
                     flow[offset + i] = 1;
@@ -255,6 +262,8 @@ Params::Params(std::string const & config_file, std::vector<int> data_dim, bool 
             }
             else if (strcmp(flow_item, "no_pcdi") == 0)
             {
+             //   int start_pcdi = first_pcdi ? pcdi_tr_iter[0] : 0;
+             //   int stop_pcdi = is_pcdi ? start_pcdi : number_iterations;
                 int stop_pcdi = is_pcdi ? pcdi_tr_iter[0] : number_iterations;
                 for (int i = 0; i < stop_pcdi; i ++)
                 {

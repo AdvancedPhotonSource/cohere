@@ -19,6 +19,8 @@ import multiprocessing as mp
 import shutil
 from functools import partial
 import time
+from shutil import copyfile
+
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
@@ -214,7 +216,7 @@ class Generation:
             shutil.move(dir, dest)
 
 
-    def breed_one(self, alpha, breed_mode, dirs):
+    def breed_one(self, alpha, breed_mode, incl_coh, dirs):
         """
         Aligns the image to breed from with the alpha image, and applies breed formula, to obtain a 'child' image.
 
@@ -300,9 +302,11 @@ class Generation:
         threshold = self.ga_support_thresholds[self.current_gen]
         new_support = ut.shrink_wrap(beta, threshold, sigma)
         np.save(os.path.join(breed_dir, 'support.npy'), new_support)
+        if incl_coh and os.path.isfile(os.path.join(parent_dir, 'coherence.npy')):
+            shutil.copyfile(os.path.join(parent_dir, 'coherence.npy'), os.path.join(breed_dir, 'coherence.npy'))
+            
         
-
-    def breed(self, breed_dir, dirs):
+    def breed(self, breed_dir, dirs, incl_coh):
         """
         Breeds next generation.
         
@@ -330,6 +334,7 @@ class Generation:
             del dirs[-self.worst_remove_no[self.current_gen]:]
         alpha = np.load(os.path.join(dirs[0], 'image.npy'))
         alpha = gut.zero_phase(alpha, 0)
+
         # assign breed directory for each bred child
         iterable = []
         breed_dirs = []
@@ -343,9 +348,11 @@ class Generation:
 
         shutil.copyfile(os.path.join(dirs[0], 'image.npy'), os.path.join(breed_dirs[0], 'image.npy'))
         shutil.copyfile(os.path.join(dirs[0], 'support.npy'), os.path.join(breed_dirs[0], 'support.npy'))
+        if incl_coh and os.path.isfile(os.path.join(dirs[0], 'coherence.npy')):
+            shutil.copyfile(os.path.join(dirs[0], 'coherence.npy'), os.path.join(breed_dirs[0], 'coherence.npy'))
 
         no_processes = min(len(dirs), mp.cpu_count())
-        func = partial(self.breed_one, alpha, breed_mode)
+        func = partial(self.breed_one, alpha, breed_mode, incl_coh)
         with mp.Pool(processes = no_processes) as pool:
             pool.map_async(func, iterable[1:])
             pool.close()
@@ -415,6 +422,15 @@ def reconstruction(proc, conf_file, datafile, dir, devices):
         print ('generations not configured')
         return
 
+    try:
+        gen_pcdi_start = config_map.gen_pcdi_start
+    except:
+        gen_pcdi_start = 0
+    try:
+        pcdi_trigger = config_map.pcdi_trigger
+    except:
+        pcdi_trigger = None
+    is_pcdi = pcdi_trigger is not None
     # init starting values
     # if multiple reconstructions configured (typical for genetic algorithm), use "reconstruction_multi" module
     if reconstructions > 1:
@@ -426,13 +442,19 @@ def reconstruction(proc, conf_file, datafile, dir, devices):
             gen_data = gen_obj.get_data(data)
             gen_save_dir = os.path.join(save_dir, 'g_' + str(g))
             m = gen_obj.metrics[g]
-            save_dirs, evals = rec.multi_rec(gen_save_dir, proc, gen_data, conf_file, config_map, devices, temp_dirs, m)
+            first_pcdi = 0
+            if is_pcdi and g == gen_pcdi_start:
+                first_pcdi = 1
+            save_dirs, evals = rec.multi_rec(gen_save_dir, proc, gen_data, conf_file, config_map, devices, temp_dirs, m, first_pcdi)
             
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
             gen_obj.order(save_dirs, evals)
             if g < generations - 1 and len(save_dirs) > 1:
-               temp_dirs = gen_obj.breed(temp_dir, save_dirs)
+                incl_coh = False
+                if is_pcdi and g >= gen_pcdi_start:
+                    incl_coh = True
+                temp_dirs = gen_obj.breed(temp_dir, save_dirs, incl_coh)
                 
             gen_obj.next_gen()
     # remove temp dir

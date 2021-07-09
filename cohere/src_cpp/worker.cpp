@@ -176,7 +176,6 @@ int Reconstruction::Iterate()
             (this->*iter_flow[current_iteration][i])();
         }
     }
-
     if (aver_v.size() > 0)
     {
         af::array aver_a(ds_image.dims(), &aver_v[0]);
@@ -240,7 +239,7 @@ void Reconstruction::Pcdi()
     current_error =  GetNorm(abs(converged)(converged > 0)-iter_data(converged > 0))/GetNorm(iter_data);
     state->RecordError(current_error);
     rs_amplitudes *= ratio;
- //    printf("Pcdi %d\n", (uint)(getpid()));
+//     printf("Pcdi %d\n", (uint)(getpid()));
 }
 
 void Reconstruction::NoPcdi()
@@ -260,7 +259,7 @@ void Reconstruction::Gc()
 void Reconstruction::SetPcdiPrevious()
 {
     partialCoherence->SetPrevious(abs(rs_amplitudes));
-  //   printf("SetPcdiPrevious\n");
+//     printf("SetPcdiPrevious\n");
 }
 
 void Reconstruction::ToDirect()

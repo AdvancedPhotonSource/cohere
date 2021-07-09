@@ -25,7 +25,7 @@ __all__ = ['single_rec_process',
            'reconstruction']
 
 
-def single_rec_process(proc, conf, data, coh_dims, req_metric, dirs):
+def single_rec_process(proc, conf, data, coh_dims, req_metric, first_pcdi, dirs):
     """
     This function runs a single reconstruction process.
 
@@ -62,7 +62,7 @@ def single_rec_process(proc, conf, data, coh_dims, req_metric, dirs):
     else:
         prev_image, prev_support, prev_coh = ut.read_results(prev)
 
-    image, support, coh, errs, flow, iter_array = calc.fast_module_reconstruction(proc, gpu, conf, data, coh_dims, prev_image, prev_support, prev_coh)
+    image, support, coh, errs, flow, iter_array = calc.fast_module_reconstruction(proc, gpu, conf, data, coh_dims, prev_image, prev_support, prev_coh, first_pcdi)
 
     if image is None:
         return None
@@ -89,7 +89,7 @@ def assign_gpu(*args):
     gpu = q.get()
 
 
-def multi_rec(save_dir, proc, data, conf, config_map, devices, prev_dirs, metric='chi'):
+def multi_rec(save_dir, proc, data, conf, config_map, devices, prev_dirs, metric='chi', first_pcdi=1):
 
     """
     This function controls the multiple reconstructions.
@@ -144,7 +144,7 @@ def multi_rec(save_dir, proc, data, conf, config_map, devices, prev_dirs, metric
     except:
         coh_dims = None
         
-    func = partial(single_rec_process, proc, conf, data, coh_dims, metric)
+    func = partial(single_rec_process, proc, conf, data, coh_dims, metric, first_pcdi)
     q = Queue()
     for device in devices:
         q.put(device)
@@ -219,12 +219,14 @@ def reconstruction(proc, conf_file, datafile, dir, devices):
                     image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
                     if image is not None:
                         prev_dirs.append(sub)
+                first_pcdi = 0
             except:
                 print("continue_dir not configured")
                 return None
     except:
         for _ in range(reconstructions):
             prev_dirs.append(None)
+        first_pcdi = 1
 
     try:
         save_dir = config_map.save_dir
@@ -232,5 +234,5 @@ def reconstruction(proc, conf_file, datafile, dir, devices):
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results'))
 
-    save_dirs, evals = multi_rec(save_dir, proc, data, conf_file, config_map, devices, prev_dirs)
+    save_dirs, evals = multi_rec(save_dir, proc, data, conf_file, config_map, devices, prev_dirs, first_pcdi)
 

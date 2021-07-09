@@ -22,7 +22,7 @@ __all__ = ['single_rec',
            'reconstruction']
 
 
-def single_rec(proc, data, conf, config_map, dev, image, support, coh):
+def single_rec(proc, data, conf, config_map, dev, image, support, coh, first_pcdi):
 
     """
     This function starts reconstruction and returns results.
@@ -74,7 +74,7 @@ def single_rec(proc, data, conf, config_map, dev, image, support, coh):
         coh_dims = tuple(config_map.partial_coherence_roi)
     except:
         coh_dims = None
-    image, support, coh, er, flow, iter_array = calc.fast_module_reconstruction(proc, dev, conf, data, coh_dims, image, support, coh)
+    image, support, coh, er, flow, iter_array = calc.fast_module_reconstruction(proc, dev, conf, data, coh_dims, image, support, coh, first_pcdi)
 
     # errs contain errors for each iteration
     return image, support, coh, er, flow, iter_array
@@ -144,8 +144,11 @@ def reconstruction(proc, conf_file, datafile, dir, dev):
         image = None
         support = None
         coh = None
+        first_pcdi = 1
+    else:
+        first_pcdi = 0
 
-    image, support, coh, errs, flow, iter_array = single_rec(proc, data, conf_file, config_map, dev[0], image, support, coh)
+    image, support, coh, errs, flow, iter_array = single_rec(proc, data, conf_file, config_map, dev[0], image, support, coh, first_pcdi)
     if image is None:
         return
 
