@@ -291,3 +291,9 @@ GA
 
     ga_low_resolution_sigmas = (2.0, 1.5)
 
+- gen_pcdi_start:
+| optional, a number indicating at which generation the pcdi feature will start to be active. If not defined, and the pcdi feature is active, it will start at the first generation.
+| example:
+::
+
+    gen_pcdi_start = 3
