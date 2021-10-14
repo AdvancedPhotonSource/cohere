@@ -314,7 +314,7 @@ class aflib3(aflib):
             sigmas = [dim / (2.0 * math.pi * sigma) for dim in dims]
         else:
             sigmas = sigma
-        sigmas =
+
         dist = aflib3.gaussian(dims, sigmas)
 
         filter = af.fft_convolve(arr, dist)
