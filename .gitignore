@@ -1,6 +1,5 @@
 build/*
 dist/*
-bridge_*.cpp
 core
 *.so
 *.o
