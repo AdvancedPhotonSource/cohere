@@ -31,17 +31,17 @@ def set_lib(pkg, ndim=None):
     global devlib
     if pkg == 'af':
         if ndim == 1:
-            devlib = importlib.import_module('pycohere.lib.aflib').aflib1
+            devlib = importlib.import_module('cohere.lib.aflib').aflib1
         elif ndim == 2:
-            devlib = importlib.import_module('pycohere.lib.aflib').aflib2
+            devlib = importlib.import_module('cohere.lib.aflib').aflib2
         elif ndim == 3:
-            devlib = importlib.import_module('pycohere.lib.aflib').aflib3
+            devlib = importlib.import_module('cohere.lib.aflib').aflib3
         else:
             raise NotImplementedError
     elif pkg == 'cp':
-        devlib = importlib.import_module('pycohere.lib.cplib').cplib
+        devlib = importlib.import_module('cohere.lib.cplib').cplib
     elif pkg == 'np':
-        devlib = importlib.import_module('pycohere.lib.nplib').nplib
+        devlib = importlib.import_module('cohere.lib.nplib').nplib
     calc.set_lib(devlib, pkg=='af')
 
 

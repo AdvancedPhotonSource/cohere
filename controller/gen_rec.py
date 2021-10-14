@@ -37,17 +37,17 @@ def set_lib(pkg, ndim=None):
     global dvclib
     if pkg == 'af':
         if ndim == 1:
-            dvclib = importlib.import_module('pycohere.lib.aflib').aflib1
+            dvclib = importlib.import_module('cohere.lib.aflib').aflib1
         elif ndim == 2:
-            dvclib = importlib.import_module('pycohere.lib.aflib').aflib2
+            dvclib = importlib.import_module('cohere.lib.aflib').aflib2
         elif ndim == 3:
-            dvclib = importlib.import_module('pycohere.lib.aflib').aflib3
+            dvclib = importlib.import_module('cohere.lib.aflib').aflib3
         else:
             raise NotImplementedError
     elif pkg == 'cp':
-        dvclib = importlib.import_module('pycohere.lib.cplib').cplib
+        dvclib = importlib.import_module('cohere.lib.cplib').cplib
     elif pkg == 'np':
-        dvclib = importlib.import_module('pycohere.lib.nplib').nplib
+        dvclib = importlib.import_module('cohere.lib.nplib').nplib
     calc.set_lib(dvclib, pkg=='af')
 
 
