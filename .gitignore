@@ -6,3 +6,5 @@ core
 *.swp
 __pycache__
 .idea/
+*.egg
+*.egg-info
