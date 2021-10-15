@@ -270,7 +270,7 @@ class Rec:
             self.ds_image *= get_norm(self.ds_image) * max_data
 
             # the line below are for testing to set the initial guess to support
-            self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
+            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
 
             self.ds_image *= self.support_obj.get_support()
 
