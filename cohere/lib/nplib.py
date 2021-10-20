@@ -45,13 +45,8 @@ class nplib(cohlib):
         import time
         import os
 
-        # rng = np.random.default_rng(time.time()* 10000 * os.getpid() + os.getpid())
-        if len(shape) == 1:
-            return np.random.rand(shape[0])
-        elif len(shape) == 2:
-            return np.random.rand(shape[0], shape[1])
-        elif len(shape) == 3:
-            return np.random.rand(shape[0], shape[1], shape[2])
+        rng = np.random.default_rng(time.time()* 10000 * os.getpid() + os.getpid())
+        return rng.random.rand(*shape)
 
     def fftshift(arr):
         return np.fft.fftshift(arr)
