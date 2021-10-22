@@ -44,14 +44,37 @@ class Params:
             self.data_dir = conf.data_dir
         if conf.lookup('save_dir') is not None:
             self.save_dir = conf.save_dir
-        if conf.lookup('cont') is not None and conf.cont is True:
-            self.cont = True
-            if conf.lookup('continue_dir') is not None:
-                self.continue_dir = conf.continue_dir
+
+        if conf.lookup('init_guess') is not None:
+            self.init_guess = conf.init_guess
+            if self.init_guess == 'continue':
+                if conf.lookup('continue_dir') is not None:
+                    self.continue_dir = conf.continue_dir
+                else:
+                    return ('missing continue_dir parameter in config file')
+            elif self.init_guess == 'AI_guess':
+                if conf.lookup('AI_threshold') is not None:
+                    self.AI_threshold = conf.AI_threshold
+                else:
+                    self.AI_threshold = conf.support_threshold
+                if conf.lookup('AI_sigma') is not None:
+                    self.AI_sigma = conf.AI_sigma
+                else:
+                    self.AI_sigma = conf.support_sigma
             else:
-                return ('missing continue_dir parameter in config file')
+                self.init_guess = 'random'
         else:
-            self.cont = False
+            self.init_guess = 'random'
+
+        # if conf.lookup('cont') is not None and conf.cont is True:
+        #     self.cont = True
+        #     if conf.lookup('continue_dir') is not None:
+        #         self.continue_dir = conf.continue_dir
+        #     else:
+        #         return ('missing continue_dir parameter in config file')
+        # else:
+        #     self.cont = False
+
         if conf.lookup('reconstructions') is not None:
             self.reconstructions = conf.reconstructions
         else:

@@ -40,7 +40,7 @@ def set_lib(pkg, ndim=None):
     calc.set_lib(devlib, pkg=='af')
 
 
-def reconstruction(lib, conf_file, datafile, dir, dev):
+def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     Controls single reconstruction.
 
@@ -74,33 +74,42 @@ def reconstruction(lib, conf_file, datafile, dir, dev):
     if er_msg is not None:
         return er_msg
 
-    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-        if datafile.endswith('tif') or datafile.endswith('tiff'):
-            try:
-                data = ut.read_tif(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        elif datafile.endswith('npy'):
-            try:
-                data = np.load(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        else:
-            print ('no data file found')
+    if datafile.endswith('tif') or datafile.endswith('tiff'):
+        try:
+            data = ut.read_tif(datafile)
+        except:
+            print ('could not load data file', datafile)
             return
-        print('data shape', data.shape)
+    elif datafile.endswith('npy'):
+        try:
+            data = np.load(datafile)
+        except:
+            print ('could not load data file', datafile)
+            return
+    else:
+        print ('no data file found')
+        return
+
+    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
         set_lib('af', len(data.shape))
         if lib != 'af':
             devlib.set_backend(lib)
     else:
         set_lib(lib)
 
-    if not pars.cont:
-        continue_dir = None
-    else:
+    # if not pars.cont:
+    #     continue_dir = None
+    # else:
+    #     continue_dir = pars.continue_dir
+    if pars.init_guess == 'continue':
         continue_dir = pars.continue_dir
+    elif pars.init_guess == 'AI_guess':
+        import cohere.controller.AI_guess as ai
+        ai_dir = os.path.join(dir, 'AI_guess')
+        ai.run_AI(data, pars.AI_threshold, pars.AI_sigma, ai_dir)
+        continue_dir = ai_dir
+    else:
+        continue_dir = None
 
     try:
         save_dir = pars.save_dir
@@ -110,7 +119,11 @@ def reconstruction(lib, conf_file, datafile, dir, dev):
 
     worker = calc.Rec(pars, datafile)
 
-    if worker.init_dev(dev[0]) < 0:
+    if dev is None:
+        device = pars.device
+    else:
+        device = dev[0]
+    if worker.init_dev(device) < 0:
         return
 
     worker.init(continue_dir)
