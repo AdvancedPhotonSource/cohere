@@ -140,6 +140,12 @@ class aflib(cohlib):
             dims[i] = shape[i]
         return af.constant(fill_value, dims[0], dims[1], dims[2], dims[3])
 
+    def expand_dims(arr, axis):
+        return arr
+
+    def squeeze(arr):
+        return arr
+
     def gaussian(shape, sigmas, **kwargs):
         raise NotImplementedError
 

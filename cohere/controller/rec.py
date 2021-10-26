@@ -92,7 +92,7 @@ class Support:
         self.params = params
         self.dims = dims
 
-        if dir is None or not os.path.isfile(os.path.join(dir, 'support')):
+        if dir is None or not os.path.isfile(os.path.join(dir, 'support.npy')):
             support_area = params.support_area
             init_support = []
             for i in range(len(support_area)):
@@ -103,7 +103,7 @@ class Support:
             center = devlib.full(init_support, 1)
             self.support = dvut.pad_around(center, self.dims, 0)
         else:
-            self.support = devlib.load(os.path.join(dir, 'support'))
+            self.support = devlib.load(os.path.join(dir, 'support.npy'))
 
         # The sigma can change if resolution trigger is active. When it
         # changes the distribution has to be recalculated using the given sigma
@@ -200,14 +200,12 @@ class Rec:
     def init(self, dir=None, gen=None):
         if self.ds_image is not None:
             first_run = False
-            pass
         elif dir is None or not os.path.isfile(os.path.join(dir, 'image.npy')):
             self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
             first_run = True
         else:
             self.ds_image = devlib.load(os.path.join(dir, 'image.npy'))
             first_run = False
-
         iter_functions = [self.next,
                           self.resolution_trigger,
                           self.shrink_wrap_trigger,

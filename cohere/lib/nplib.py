@@ -1,7 +1,6 @@
 from cohere.lib.cohlib import cohlib
 import numpy as np
-import scipy
-from scipy import ndimage
+from scipy.ndimage import convolve, gaussian_filter, center_of_mass
 
 
 class nplib(cohlib):
@@ -45,8 +44,12 @@ class nplib(cohlib):
         import time
         import os
 
-        rng = np.random.default_rng(time.time()* 10000 * os.getpid() + os.getpid())
-        return rng.random.rand(*shape)
+        # return np.random.rand(*shape)
+        #rng = np.random.default_rng((int(time.time()* 10000000) + os.getpid()))
+        np.random.seed((int(time.time()  * os.getpid()) + os.getpid()) % 2**31)
+        r = np.random.rand(*shape)
+        return r
+        #return rng.random(*shape).astype(float)
 
     def fftshift(arr):
         return np.fft.fftshift(arr)
@@ -65,7 +68,7 @@ class nplib(cohlib):
         return np.fft.ifftn(arr)
 
     def fftconvolve(arr1, arr2):
-        return scipy.ndimage.convolve(arr1, arr2)
+        return convolve(arr1, arr2)
 
     def where(cond, x, y):
         return np.where(cond, x, y)
@@ -128,6 +131,12 @@ class nplib(cohlib):
     def full(shape, fill_value, **kwargs):
         return np.full(shape, fill_value)
 
+    def expand_dims(arr, axis):
+        return np.expand_dims(arr, axis)
+
+    def squeeze(arr):
+        return np.squeeze(arr)
+
     def gaussian(shape, sigmas, **kwargs):
         grid = np.full(shape, 1.0)
         for i in range(len(shape)):
@@ -150,10 +159,10 @@ class nplib(cohlib):
         return grid / grid_total
 
     def gaussian_filter(arr, sigma, **kwargs):
-        return ndimage.gaussian_filter(arr, sigma)
+        return gaussian_filter(arr, sigma)
 
     def center_of_mass(inarr):
-        return ndimage.center_of_mass(np.absolute(inarr))
+        return center_of_mass(np.absolute(inarr))
 
     def meshgrid(*xi):
         return np.meshgrid(*xi)

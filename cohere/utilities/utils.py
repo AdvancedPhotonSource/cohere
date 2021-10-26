@@ -307,6 +307,10 @@ def adjust_dimensions(arr, pads):
     adjusted : ndarray
         the padded/cropped array
     """
+    # up the dimensions to 3D
+    for _ in range(len(arr.shape), 3):
+        np.expand_dims(arr,0)
+
     old_dims = arr.shape
     start = []
     stop = []
@@ -321,7 +325,7 @@ def adjust_dimensions(arr, pads):
             start.append(first)
             stop.append(last)
 
-    cropped = arr[start[0]:stop[0], start[1]:stop[1], start[2]:stop[2]]
+    cropped = arr[start[0]:stop[0], start[1]:stop[1], start[2]:stop[2]]  #for 1D and 2D it was upped to 3D
     dims = cropped.shape
     c_vals = []
     new_pad = []
@@ -338,7 +342,7 @@ def adjust_dimensions(arr, pads):
         c_vals.append((0.0, 0.0))
     adjusted = np.pad(cropped, new_pad, 'constant', constant_values=c_vals)
 
-    return adjusted
+    return np.squeeze(adjusted)
 
 
 def flip(m, axis):

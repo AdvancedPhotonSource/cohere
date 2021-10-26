@@ -118,6 +118,12 @@ class cohlib:
     def tile(arr, rep):
         pass
 
+    def expand_dims(arr, axis):
+        pass
+
+    def squeeze(arr):
+        pass
+
     def gaussian_filter(arr, sigma, **kwargs):
         pass
 
