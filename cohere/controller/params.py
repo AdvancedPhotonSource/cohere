@@ -66,15 +66,6 @@ class Params:
         else:
             self.init_guess = 'random'
 
-        # if conf.lookup('cont') is not None and conf.cont is True:
-        #     self.cont = True
-        #     if conf.lookup('continue_dir') is not None:
-        #         self.continue_dir = conf.continue_dir
-        #     else:
-        #         return ('missing continue_dir parameter in config file')
-        # else:
-        #     self.cont = False
-
         if conf.lookup('reconstructions') is not None:
             self.reconstructions = conf.reconstructions
         else:

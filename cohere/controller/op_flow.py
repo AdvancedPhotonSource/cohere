@@ -58,18 +58,23 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
 
     pcdi_start = None
+    is_res = False
     for i in range(len(flow_items_list)):
         if flow_items_list[i] == 'next' or flow_items_list[i] == 'to_reciprocal_space' or flow_items_list[
             i] == 'to_direct_space':
             flow_arr[i, :] = 1
-        elif flow_items_list[i] == 'resolution_trigger' and first_run:
-            if config_map.lookup('resolution_trigger') is not None and len(config_map.resolution_trigger) == 3:
+        elif flow_items_list[i] == 'resolution_trigger':
+            if first_run and config_map.lookup('resolution_trigger') is not None and len(config_map.resolution_trigger) == 3:
                 flow_arr[i] = trigger_row(config_map.resolution_trigger, iter_no)
+                is_res = True
+        elif flow_items_list[i] == 'reset_resolution':
+            if is_res:
+                flow_arr[i] = trigger_row([config_map.resolution_trigger[-1],], iter_no)
         elif flow_items_list[i] == 'shrink_wrap_trigger':
             if config_map.lookup('shrink_wrap_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.shrink_wrap_trigger, iter_no)
-        elif flow_items_list[i] == 'phase_support_trigger' and first_run:
-            if config_map.lookup('phase_support_trigger') is not None:
+        elif flow_items_list[i] == 'phase_support_trigger':
+            if first_run and config_map.lookup('phase_support_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.phase_support_trigger, iter_no)
         elif flow_items_list[i] == 'new_func_trigger':
             if config_map.lookup('new_func_trigger') is not None:
@@ -110,8 +115,8 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                 flow_arr[i, : -1] = flow_arr[pcdi_row, 1:]
         elif flow_items_list[i] == 'er' or flow_items_list[i] == 'hio' or flow_items_list[i] == 'new_alg':
             flow_arr[i] = algorithm_row(flow_items_list[i], algorithm_sequence)
-        elif flow_items_list[i] == 'twin_trigger' and first_run:
-            if config_map.lookup('twin_trigger') is not None:
+        elif flow_items_list[i] == 'twin_trigger':
+            if first_run and config_map.lookup('twin_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.twin_trigger, iter_no)
         elif flow_items_list[i] == 'average_trigger':
             if config_map.lookup('average_trigger') is not None and curr_gen is not None and curr_gen == config_map.ga_generations -1:

@@ -208,6 +208,7 @@ class Rec:
             first_run = False
         iter_functions = [self.next,
                           self.resolution_trigger,
+                          self.reset_resolution,
                           self.shrink_wrap_trigger,
                           self.phase_support_trigger,
                           self.to_reciprocal_space,
@@ -366,13 +367,10 @@ class Rec:
 
     def next(self):
         self.iter = self.iter + 1
-        # the sigma used when recalculating support and data can be modified
-        # by resolution trigger. So set the params to the configured values at the beginning
-        # of iteration, and if resolution is used it will modify the items
-        self.sigma = self.params.shrink_wrap_gauss_sigma
-        self.iter_data = self.data
+
 
     def resolution_trigger(self):
+        print('res')
         if self.params.ll_dets is not None:
             sigmas = [dim * self.params.ll_dets[self.iter] for dim in self.dims]
             distribution = devlib.gaussian(self.dims, sigmas)
@@ -384,6 +382,11 @@ class Rec:
 
         if self.params.ll_sigmas is not None:
             self.sigma = self.params.ll_sigmas[self.iter]
+
+    def reset_resolution(self):
+        self.iter_data = self.data
+        self.sigma = self.params.shrink_wrap_gauss_sigma
+        print('last res')
 
     def shrink_wrap_trigger(self):
         self.support_obj.update_amp(self.ds_image, self.sigma, self.params.shrink_wrap_threshold)
