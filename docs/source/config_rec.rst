@@ -67,12 +67,12 @@ General
 
     ((3, ("ER",20), ("HIO", 180)), (1,("ER",20)))
 
-- beta:
+- hio_beta:
 | optional, default is .9. A parameter used in hio algorithm.
 | example:
 ::
 
-    beta = .9
+    hio_beta = .9
 
 Twin
 ++++
@@ -110,26 +110,26 @@ Shrink wrap
 
     shrink_wrap_type = "GAUSS"
 
-- support_threshold:
+- shrink_wrap_threshold:
 | optional, defaults to 0.1. A threshold value used in the gauss distribution.
 | example:
 ::
 
-    support_threshold = 0.1
+    shrink_wrap_threshold = 0.1
 
-- support_sigma:
+- shrink_wrap_gauss_sigma:
 | optional, defaults to 1.0. A sigma value used in the gauss distribution.
 | example:
 ::
 
-    support_sigma = 1.0
+    shrink_wrap_gauss_sigma = 1.0
 
-- support_area:
+- initial_support_area:
 | optional, defaults to (.5,.5,.5). The list define dimensions of initial support area. If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support array is centered.
 | example:
 ::
 
-    support_area = (.5,.5,.5)
+    initial_support_area = (.5,.5,.5)
 
 Phase constrain
 +++++++++++++++
@@ -142,58 +142,58 @@ Phase constrain
 
     phase_support_trigger = (0, 1, 310)
 
-- phase_min:
+- phm_phase_min:
 | optional, defaults too -1.57. Defines lower bound phase.
 | example:
 ::
 
-    phase_min = -1.57
+    phm_phase_min = -1.57
 
-- phase_max:
+- phm_phase_max:
 | optional, defaults too 1.57. Defines upper bound phase.
 | example:
 ::
 
-    phase_max = 1.57
+    phm_phase_max = 1.57
 
 Partial coherence
 +++++++++++++++++
 | Partial coherence triggers recalculation of coherence array for the amplitudes in reciprocal space. After first coherence array is determined, it is used for convolution in subsequent iteration.
 
-- pcdi_trigger:
+- pc_trigger:
 | defines when to update coherence using the parameters below.
 | example:
 ::
 
-    pcdi_trigger = (50, 50)
+    pc_trigger = (50, 50)
 
-- partial_coherence_type:
+- pc_type:
 | mandatory, partial coherence algorithm. Currently "LUCY" is supported.
 | example:
 ::
 
-    partial_coherence_type = "LUCY"
+    pc_type = "LUCY"
 
-- partial_coherence_iteration_num:
+- pc_LUCY_iterations:
 | optional, defaults to 20. a number of iteration inside LUCY algorithm.
 | example:
 ::
 
-    partial_coherence_iteration_num = 20
+    pc_LUCY_iterations = 20
 
-- partial_coherence_normalize:
+- pc_normalize:
 | optional, defaults to true. Internal.
 | example:
 ::
 
-    partial_coherence_normalize = true
+    pc_normalize = true
 
-- partial_coherence_roi:
+- pc_LUCY_kernel:
 | mandatory, coherence array area. 
 | example:
 ::
 
-    partial_coherence_roi = (32,32,32)
+    pc_LUCY_kernel = (16, 16, 16)
 
 Low resolution
 ++++++++++++++
@@ -205,19 +205,19 @@ Low resolution
 
     resolution_trigger = (0, 1, 320)
 
-- iter_res_sigma_range:
+- lowpass_filter_sw_sigma_range:
 | used when applying low resolution to replace support sigma at low resolution iterations. The sigmas are linespaced across the defined range for low resolution iterations. If only one number given, the last sigma will default to support_sigma.
 | example:
 ::
 
-    iter_res_sigma_range = (2.0)
+    lowpass_filter_sw_sigma_range = (2.0)
 
-- iter_res_det_range:
+- lowpass_filter_range:
 | used when applying low resolution to calculate data gauss multiplier. The det values are linespaced for low resolution iterations from first value to last.  The multiplier array is a gauss distribution calculated with sigma of linespaced det across the low resolution iterations. If only one number is given, the last det will default to 1.
 | example:
 ::
 
-    iter_res_det_range = (.7)
+    lowpass_filter_range = (.7)
 
 averaging
 +++++++++
@@ -240,12 +240,12 @@ progress
 
 GA
 ++
-- generations:              
+- ga_generations:
 | optional, number of generations. When defined, and the number is greater than 1, the genetic algorithm (GA) is activated
 | example:
 ::
 
-    generations = 3
+    ga_generations = 3
 
 - ga_metrics:
 | optional, a list of metrics that should be used to rank the reconstruction results for subsequent generations. If not defined, or shorter that number of generations, the metric defaults to "chi".
@@ -270,30 +270,30 @@ GA
 
     ga_cullings = (2,1)
 
-- ga_support_thresholds:
+- ga_shrink_wrap_thresholds:
 | optional, a list of threshold values for each generation. The support is recalculated with this threshold after breeding phase. Defaults to configured value of support_threshold. 
 | example:
 ::
 
-    ga_support_thresholds = (.15, .1)
+    ga_shrink_wrap_thresholds = (.15, .1)
 
-- ga_support_sigmas:
+- ga_shrink_wrap_gauss_sigmas:
 | optional, a list of sigma values for each generation. The support is recalculated with this sigma after breeding phase. Defaults to configured value of support_sigma. 
 | example:
 ::
 
-    ga_support_sigmas = (1.1, 1.0)
+    ga_shrink_wrap_gauss_sigmas = (1.1, 1.0)
 
-- ga_low_resolution_sigmas:
-| optional, a list of sigmas that will be used in subsequent generations to calculate Gauss distribution in the space defined by the size of the data and apply it to the data. In the example given below this feature will be used in first two generations.
+- ga_lowpass_filter_sigmas:
+| optional, a list of sigmas that will be used in subsequent generations to calculate Gauss distribution in the space defined by the size of the data and applied it to the data. In the example given below this feature will be used in first two generations.
 | example:
 ::
 
-    ga_low_resolution_sigmas = (2.0, 1.5)
+    ga_lowpass_filter_sigmas = (2.0, 1.5)
 
-- gen_pcdi_start:
+- ga_gen_pc_start:
 | optional, a number indicating at which generation the pcdi feature will start to be active. If not defined, and the pcdi feature is active, it will start at the first generation.
 | example:
 ::
 
-    gen_pcdi_start = 3
+    ga_gen_pc_start = 3

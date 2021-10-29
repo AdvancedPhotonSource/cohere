@@ -55,13 +55,6 @@ Parameters
 
    separate_scans = false
 
-- Imult:                             
-| Supported only by command line scripts, not GUI. A multiplication factor used to renormalize the whitefield correction. This is not used yet.  Might just normalize to max, or max before correction.
-| example:
-::
-
-    Imult = 10000
-
 - scandirbase:
 |  Supported only by command line scripts.
 | example:
@@ -69,10 +62,17 @@ Parameters
 
    scandirbase = "/path/to/scans/Staff20-1a"
 
-- detector:                  
-| optional, Supported only by command line scripts. If detector is not in specfile one can enter them here. Dont forget the : on the end of the detector name (34idcTIM2:)
+- Imult:
+| Optional, defaults to the average of the whitefield. A multiplication factor used to renormalize the whitefield correction.
 | example:
 ::
 
-    detector = "34idcTIM1:"
+   Imult = 1000000
+
+- detector:                  
+| optional, can be omitted if roi param is specified
+| example:
+::
+
+    detector = "34idcTIM2"
 

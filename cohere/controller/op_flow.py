@@ -74,26 +74,26 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
         elif flow_items_list[i] == 'new_func_trigger':
             if config_map.lookup('new_func_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.new_func_trigger, iter_no)
-        elif flow_items_list[i] == 'pcdi_trigger':
-            if config_map.lookup('pcdi_trigger') is not None:
+        elif flow_items_list[i] == 'pc_trigger':
+            if config_map.lookup('pc_trigger') is not None:
                 calculated_first_run = first_run
                 if curr_gen is not None:
-                    if config_map.lookup('gen_pcdi_start') is None:
-                        gen_pcdi_start = 0
+                    if config_map.lookup('ga_gen_pc_start') is None:
+                        ga_gen_pc_start = 0
                     else:
-                        gen_pcdi_start = config_map.gen_pcdi_start
-                    if curr_gen < gen_pcdi_start:
+                        ga_gen_pc_start = config_map.ga_gen_pc_start
+                    if curr_gen < ga_gen_pc_start:
                         calculated_first_run = None
-                    elif curr_gen == gen_pcdi_start:
+                    elif curr_gen == ga_gen_pc_start:
                         calculated_first_run = True
                     else:
                         calculated_first_run = False
                 if calculated_first_run is None:
                     pcdi_start = None
                 else:
-                    flow_arr[i] = trigger_row(config_map.pcdi_trigger, iter_no)
+                    flow_arr[i] = trigger_row(config_map.pc_trigger, iter_no)
                     if calculated_first_run:
-                        pcdi_start = config_map.pcdi_trigger[0]
+                        pcdi_start = config_map.pc_trigger[0]
                     else:
                         pcdi_start = 0
                     pcdi_row = i
@@ -105,7 +105,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                 flow_arr[i, : pcdi_start] = 1
             else:
                 flow_arr[i, :] = 1
-        elif flow_items_list[i] == 'set_prev_pcdi_trigger':
+        elif flow_items_list[i] == 'set_prev_pc_trigger':
             if pcdi_start is not None:
                 flow_arr[i, : -1] = flow_arr[pcdi_row, 1:]
         elif flow_items_list[i] == 'er' or flow_items_list[i] == 'hio' or flow_items_list[i] == 'new_alg':
@@ -114,7 +114,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
             if config_map.lookup('twin_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.twin_trigger, iter_no)
         elif flow_items_list[i] == 'average_trigger':
-            if config_map.lookup('average_trigger') is not None and curr_gen == config_map.generations -1:
+            if config_map.lookup('average_trigger') is not None and curr_gen is not None and curr_gen == config_map.ga_generations -1:
                 flow_arr[i] = trigger_row(config_map.average_trigger, iter_no)
         elif flow_items_list[i] == 'progress_trigger':
             if config_map.lookup('progress_trigger') is not None:

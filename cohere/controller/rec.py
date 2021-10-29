@@ -44,14 +44,14 @@ class Pcdi:
                 self.kernel = None
 
         self.dims = devlib.dims(data)
-        self.roi_data = dvut.crop_center(devlib.ifftshift(data), self.params.partial_coherence_roi)
-        if self.params.partial_coherence_normalize:
+        self.roi_data = dvut.crop_center(devlib.ifftshift(data), self.params.pc_LUCY_kernel)
+        if self.params.pc_normalize:
             self.sum_roi_data = devlib.sum(devlib.square(self.roi_data))
         if self.kernel is None:
-            self.kernel = devlib.full(self.params.partial_coherence_roi, 0.5, dtype=devlib.dtype(data))
+            self.kernel = devlib.full(self.params.pc_LUCY_kernel, 0.5, dtype=devlib.dtype(data))
 
     def set_previous(self, abs_amplitudes):
-        self.roi_amplitudes_prev = dvut.crop_center(devlib.ifftshift(abs_amplitudes), self.params.partial_coherence_roi)
+        self.roi_amplitudes_prev = dvut.crop_center(devlib.ifftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
 
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
@@ -61,9 +61,9 @@ class Pcdi:
         return converged
 
     def update_partial_coherence(self, abs_amplitudes):
-        roi_amplitudes = dvut.crop_center(devlib.ifftshift(abs_amplitudes), self.params.partial_coherence_roi)
+        roi_amplitudes = dvut.crop_center(devlib.ifftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
         roi_combined_amp = 2 * roi_amplitudes - self.roi_amplitudes_prev
-        if self.params.partial_coherence_normalize:
+        if self.params.pc_normalize:
             amplitudes_2 = devlib.square(roi_combined_amp)
             sum_ampl = devlib.sum(amplitudes_2)
             ratio = self.sum_roi_data / sum_ampl
@@ -71,9 +71,9 @@ class Pcdi:
         else:
             amplitudes = roi_combined_amp
 
-        if self.params.partial_coherence_type == "LUCY":
+        if self.params.pc_type == "LUCY":
             self.lucy_deconvolution(devlib.square(amplitudes), devlib.square(self.roi_data),
-                                    self.params.partial_coherence_iteration_num)
+                                    self.params.pc_LUCY_iterations)
 
     def lucy_deconvolution(self, amplitudes, data, iterations):
         data_mirror = devlib.flip(data)
@@ -93,13 +93,13 @@ class Support:
         self.dims = dims
 
         if dir is None or not os.path.isfile(os.path.join(dir, 'support.npy')):
-            support_area = params.support_area
+            initial_support_area = params.initial_support_area
             init_support = []
-            for i in range(len(support_area)):
-                if type(support_area[0]) == int:
-                    init_support.append(support_area[i])
+            for i in range(len(initial_support_area)):
+                if type(initial_support_area[0]) == int:
+                    init_support.append(initial_support_area[i])
                 else:
-                    init_support.append(int(support_area[i] * dims[i]))
+                    init_support.append(int(initial_support_area[i] * dims[i]))
             center = devlib.full(init_support, 1)
             self.support = dvut.pad_around(center, self.dims, 0)
         else:
@@ -108,7 +108,7 @@ class Support:
         # The sigma can change if resolution trigger is active. When it
         # changes the distribution has to be recalculated using the given sigma
         # At some iteration the low resolution become inactive, and the sigma
-        # is set to support_sigma. The prev_sigma is kept to check if sigma changed
+        # is set to shrink_wrap_gauss_sigma. The prev_sigma is kept to check if sigma changed
         # and thus the distribution must be updated
         self.distribution = None
         self.prev_sigma = 0
@@ -121,7 +121,7 @@ class Support:
 
     def update_phase(self, ds_image):
         phase = devlib.angle(ds_image)
-        phase_condition = (phase > self.params.phase_min) & (phase < self.params.phase_max)
+        phase_condition = (phase > self.params.phm_phase_min) & (phase < self.params.phm_phase_max)
         self.support *= phase_condition
 
 
@@ -212,10 +212,10 @@ class Rec:
                           self.phase_support_trigger,
                           self.to_reciprocal_space,
                           self.new_func_trigger,
-                          self.pcdi_trigger,
+                          self.pc_trigger,
                           self.pcdi_modulus,
                           self.modulus,
-                          self.set_prev_pcdi_trigger,
+                          self.set_prev_pc_trigger,
                           self.to_direct_space,
                           self.er,
                           self.hio,
@@ -242,7 +242,7 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
-        self.sigma = self.params.support_sigma
+        self.sigma = self.params.shrink_wrap_gauss_sigma
         self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pcdi:
             self.pcdi_obj = Pcdi(self.params, self.data, dir)
@@ -251,12 +251,12 @@ class Rec:
         # for non-fast GA the Rec object is created in each generation with the initial data
         if self.saved_data is not None:
             if self.params.low_resolution_generations > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params.ga_low_resolution_sigmas[self.gen])
+                self.data = devlib.gaussian_filter(self.saved_data, self.params.ga_lowpass_filter_sigmas[self.gen])
             else:
                 self.data = self.saved_data
         else:
             if self.gen is not None and self.params.low_resolution_generations > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params.ga_low_resolution_sigmas[self.gen])
+                self.data = devlib.gaussian_filter(self.data, self.params.ga_lowpass_filter_sigmas[self.gen])
 
         if self.params.ll_sigmas is None or not first_run:
             self.iter_data = self.data
@@ -278,8 +278,8 @@ class Rec:
         breed_mode = self.params.breed_modes[self.gen]
         if breed_mode != 'none':
             self.ds_image = dvut.breed(breed_mode, self.prev_dir, self.ds_image)
-            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params.ga_support_thresholds[self.gen],
-                                                       self.params.ga_support_sigmas[self.gen])
+            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params.ga_shrink_wrap_thresholds[self.gen],
+                                                       self.params.ga_shrink_wrap_gauss_sigmas[self.gen])
         return 0
 
     def iterate(self):
@@ -369,7 +369,7 @@ class Rec:
         # the sigma used when recalculating support and data can be modified
         # by resolution trigger. So set the params to the configured values at the beginning
         # of iteration, and if resolution is used it will modify the items
-        self.sigma = self.params.support_sigma
+        self.sigma = self.params.shrink_wrap_gauss_sigma
         self.iter_data = self.data
 
     def resolution_trigger(self):
@@ -386,7 +386,7 @@ class Rec:
             self.sigma = self.params.ll_sigmas[self.iter]
 
     def shrink_wrap_trigger(self):
-        self.support_obj.update_amp(self.ds_image, self.sigma, self.params.support_threshold)
+        self.support_obj.update_amp(self.ds_image, self.sigma, self.params.shrink_wrap_threshold)
 
     def phase_support_trigger(self):
         self.support_obj.update_phase(self.ds_image)
@@ -397,7 +397,7 @@ class Rec:
     def new_func_trigger(self):
         print('in new_func_trigger, new_param', self.params.new_param)
 
-    def pcdi_trigger(self):
+    def pc_trigger(self):
         self.pcdi_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
 
     def pcdi_modulus(self):
@@ -416,7 +416,7 @@ class Rec:
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
-    def set_prev_pcdi_trigger(self):
+    def set_prev_pc_trigger(self):
         self.pcdi_obj.set_previous(devlib.absolute(self.rs_amplitudes))
 
     def to_direct_space(self):
@@ -426,7 +426,7 @@ class Rec:
         self.ds_image = self.ds_image_raw * self.support_obj.get_support()
 
     def hio(self):
-        combined_image = self.ds_image - self.ds_image_raw * self.params.beta
+        combined_image = self.ds_image - self.ds_image_raw * self.params.hio_beta
         support = self.support_obj.get_support()
         self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
 

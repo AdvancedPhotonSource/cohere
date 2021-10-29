@@ -82,12 +82,12 @@ Parameters
 
     AA1_expandcleanedsigma = 5.0
 
-- amp_threshold:
-| mandatory, min data threshold.  Values below this are set to 0. The threshold is applied after removing aliens.
+- intensity_threshold:
+| mandatory, min data threshold.  Intensity values below this are set to 0. The threshold is applied after removing aliens.
 | example:
 ::
 
-    amp_threshold = 25.0
+    intensity_threshold = 25.0
 
 - adjust_dimensions:
 | optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to (x left, x right, y left, y right, z left, z right) The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 or a*2^n, where a is 3, 5, or 9

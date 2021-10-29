@@ -188,7 +188,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results'))
         #    temp_dir = os.path.join(save_dir, 'temp')
 
-    generations = pars.generations
+    generations = pars.ga_generations
 
     # init starting values
     # if multiple reconstructions configured (typical for genetic algorithm), use "reconstruction_multi" module

@@ -20,11 +20,11 @@ Parameters
      experiment_id = "ab"
 
 - scan:
-| optional (but typically needed), a single number or a range defining scans that will be read and combined to create data file
+| optional (but typically needed), a single number, a range, or combination of numbers and ranges separated by comma, defining scans that will be read and combined to create data file
 | example:
 ::
 
-    scan = "2-7"
+    scan = "2-7, 10, 15, 20-22"
 
 - specfile:
 | optional (but typically needed), specfile recorded when the experiment was conducted.

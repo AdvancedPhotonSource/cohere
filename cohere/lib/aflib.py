@@ -323,19 +323,12 @@ class aflib3(aflib):
 
         dist = aflib3.gaussian(dims, sigmas)
 
-        filter = af.fft_convolve(arr, dist)
-        # arr_f = aflib3.ifftshift(af.fft3(aflib3.ifftshift(arr)))
-        # filter = arr_f * dist
-        # filter = aflib3.ifftshift(af.ifft3(aflib3.ifftshift(filter)))
-        # filter = af.real(filter)
-        # filter = af.select(filter >= 0, filter, 0.0)
-        return filter
-
-        # af.display(aflib3.fftshift(aflib3.real(aflib3.fft(aflib3.gaussian((3,4,5),(3.0,4.0,5.0))))))
-
-        # na = np.array([[[1,2,3],[4,5,6],[7,8,9],[10,11,12]], [[1,2,3],[4,5,6],[7,8,9],[10,11,12]]]).astype(float)
-        # #print(na)
-        # a = aflib.from_numpy(na)
-        # af.display(a)
-        # gf = aflib3.gaussian_filter(a, 1.0)
-        # af.display(gf)
+        arr_sum = af.sum(arr)
+        arr_f = aflib3.ifftshift(aflib3.fft(aflib3.ifftshift(arr)))
+        convag = arr_f * dist
+        convag = aflib3.ifftshift(aflib3.ifft(aflib3.ifftshift(convag)))
+        convag = af.real(convag)
+        convag = aflib3.where(convag > 0, convag, 0.0)
+        correction = arr_sum / af.sum(convag)
+        convag *= correction
+        return convag
