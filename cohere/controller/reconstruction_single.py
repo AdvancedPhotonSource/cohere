@@ -11,7 +11,7 @@ This module controls a single reconstruction process.
 import numpy as np
 import os
 import importlib
-import cohere.controller.rec as calc
+import cohere.controller.phasing as calc
 import cohere.utilities.utils as ut
 from cohere.controller.params import Params
 

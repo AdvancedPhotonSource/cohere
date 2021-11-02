@@ -11,13 +11,13 @@ This module controls the genetic algoritm process.
 
 import numpy as np
 import os
-import cohere.controller.reconstruction as single
+import cohere.controller.reconstruction_single as single
 import cohere.controller.reconstruction_multi as multi
 import cohere.utilities.utils as ut
 import multiprocessing as mp
 import shutil
 import importlib
-import cohere.controller.rec as calc
+import cohere.controller.phasing as calc
 from cohere.controller.params import Params
 
 
