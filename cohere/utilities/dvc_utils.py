@@ -14,30 +14,40 @@ def set_lib(dlib, is_af):
 
 
 def crop_center(arr, shape):
-    # up the dimensions to 3D
-    for _ in range(len(arr.shape), 3):
-        arr = dvclib.expand_dims(arr, 0)
-        shape = [1,] + list(shape)
-
     dims = dvclib.dims(arr)
-    principio = [int((dims[i] - shape[i]) / 2) for i in range(3)]
-    finem = [principio[i] + shape[i] for i in range(3)]
-    cropped = arr[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]] # for 1D and 2D it was upped to 3D
-
-    return dvclib.squeeze(cropped)
+    principio = []
+    finem = []
+    for i in range(3):
+        principio.append(int((dims[i] - shape[i]) / 2))
+        finem.append(principio[i] + shape[i])
+    if len(shape) == 1:
+        cropped = arr[principio[0]: finem[0]]
+    elif len(shape) == 2:
+        cropped = arr[principio[0]: finem[0], principio[1]: finem[1]]
+    elif len(shape) == 3:
+        cropped = arr[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]]
+    else:
+        raise NotImplementedError
+    return cropped
 
 
 def pad_around(arr, shape, val=0):
     padded = dvclib.full(shape, val)
-    # up the dimensions to 3D
-    for _ in range(len(arr.shape), 3):
-        arr = dvclib.expand_dims(arr, 0)
-        shape = [1,] + list(shape)
     dims = dvclib.dims(arr)
-    principio = [int((shape[i] - dims[i]) / 2) for i in range(3)]
-    finem = [principio[i] + dims[i] for i in range(3)]
-    padded[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]] = arr # for 1D and 2D it was upped to 3D
-    return dvclib.squeeze(padded)
+    principio = []
+    finem = []
+    for i in range(len(shape)):
+        principio.append(int((shape[i] - dims[i]) / 2))
+        finem.append(principio[i] + dims[i])
+    if len(shape) == 1:
+        padded[principio[0]: finem[0]] = arr
+    elif len(shape) == 2:
+        padded[principio[0]: finem[0], principio[1]: finem[1]] = arr
+    elif len(shape) == 3:
+        padded[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]] = arr
+    else:
+        raise NotImplementedError
+    return padded
 
 
 def gauss_conv_fft(arr, distribution):
