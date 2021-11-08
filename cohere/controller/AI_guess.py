@@ -76,7 +76,10 @@ def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
 
 def Resize(IN, dim):
     ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
-    ft_resize = crop_pad(ft, dim)
+    
+    pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]    
+    ft_resize = ut.adjust_dimensions(ft, pad)
     output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
     return output
 
@@ -99,7 +102,8 @@ def match_oversample_diff(
     diff = ut.binning(diff, change)
     # crop diff to match output shape
     pad_value = np.array(shape) // 2 - np.array(diff.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]    
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]
+    
     output = ut.adjust_dimensions(diff, pad)
     return output, diff.shape
 
@@ -223,7 +227,10 @@ def run_AI(data, threshold, sigma, dir):
     
     # match object size with the input data
     pred_obj = Resize(pred_obj, inshape)
-    guess = crop_pad(pred_obj, data.shape)
+
+    pad_value = np.array(data.shape) // 2 - np.array(pred_obj.shape) // 2
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]
+    guess = ut.adjust_dimensions(pred_obj, pad)
     print('initial guess shape', guess.shape)
 
     np.save(os.path.join(dir, 'image.npy'), guess)
