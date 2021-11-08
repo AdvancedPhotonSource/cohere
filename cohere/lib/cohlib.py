@@ -142,5 +142,3 @@ class cohlib:
     def conj(arr):
         pass
 
-    def save(file, arr):
-        pass
