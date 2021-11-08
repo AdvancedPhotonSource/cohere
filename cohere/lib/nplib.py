@@ -173,7 +173,4 @@ class nplib(cohlib):
     def conj(arr):
         return np.conj(arr)
 
-    def save(file, arr):
-        np.save(file, arr)
-
         # print(nplib.real(nplib.fft(nplib.gaussian((3,4,5),(3.0,4.0,5.0)))))
