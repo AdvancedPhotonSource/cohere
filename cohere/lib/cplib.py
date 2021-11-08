@@ -1,7 +1,7 @@
 from cohere.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
-from cupyx.scipy.ndimage import center_of_mass, convolve, gaussian_filter
+import cupyx.scipy.ndimage
 
 class cplib(cohlib):
     def array(obj):
@@ -65,7 +65,7 @@ class cplib(cohlib):
         return cp.fft.ifftn(arr)
 
     def fftconvolve(arr1, arr2):
-        return convolve(arr1, arr2)
+        return cupyx.scipy.ndimage.convolve(arr1, arr2)
 
     def where(cond, x, y):
         return cp.where(cond, x, y)
@@ -139,14 +139,14 @@ class cplib(cohlib):
         inarr = cp.zeros((n_el))
         inarr[int(n_el / 2)] = 1.0
         inarr = cp.reshape(inarr, shape)
-        gaussian = gaussian_filter(inarr, sigma)
+        gaussian = cupyx.scipy.ndimage.gaussian_filter(inarr, sigma)
         return gaussian / cp.sum(gaussian)
 
     def gaussian_filter(arr, sigma, **kwargs):
-        return gaussian_filter(arr, sigma)
+        return cupyx.scipy.ndimage.gaussian_filter(arr, sigma)
 
     def center_of_mass(inarr):
-        return center_of_mass(cp.absolute(inarr))
+        return cupyx.scipy.ndimage.center_of_mass(cp.absolute(inarr))
 
     def meshgrid(*xi):
         return cp.meshgrid(*xi)

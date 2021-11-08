@@ -12,7 +12,7 @@ import os
 import numpy as np
 import importlib
 import cohere.utilities.utils as ut
-import cohere.controller.rec as calc
+import cohere.controller.phasing as calc
 from multiprocessing import Pool, Queue
 from functools import partial
 from cohere.controller.params import Params
