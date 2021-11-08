@@ -23,7 +23,7 @@ class cplib(cohlib):
         return cp.array(arr.T)
 
     def save(filename, arr):
-        cp.save(filename, arr)
+        cp.save(filename, arr.T)
 
     def load(filename):
         return cp.load(filename)
@@ -156,6 +156,3 @@ class cplib(cohlib):
 
     def conj(arr):
         return cp.conj(arr)
-
-    def save(file, arr):
-        cp.save(file, arr)
