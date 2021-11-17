@@ -40,3 +40,10 @@ Parameters
 
     beamline = "aps_34idc"
 
+- converter_ver:
+| optional, if not configured, it will be auto-updated by scripts to match the latest converter version.
+| example:
+::
+
+    converter_ver = 0
+

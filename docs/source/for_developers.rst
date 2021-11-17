@@ -18,19 +18,17 @@ Pre-requisites
 ++++++++++++++
 | After activating conda environment install the packages/libraries listed below.
 - Python packages installation:
-   - conda install Cython
    - pip install tifffile
    - pip install pylibconfig2
    - pip install GPUtil
    - pip install pyparsing
-   - pip install mayavi
+   - conda install mayavi -c conda-forge
    - pip install xrayutilities
    - pip install psutil
    - conda install pyqt
-   - pip install sklearn
-
-| Install ArrayFire library version 3.6.2 (available at http://arrayfire.s3.amazonaws.com/index.html#!/3.6.2%2F). 
-| During installation respond y/y, so the 'arrayfire' directory will be created in <cwd>, where <cwd> is the current directory. The arrayfire installation directory will be <cwd>/arrayfire.
+   - if running AutoAlien1 algorithm during standard preprocessing: pip install sklearn
+   - if using cupy library: conda install cupy
+   - if using arrayfire: install according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
 
 Initialization
 ++++++++++++++
@@ -40,34 +38,11 @@ Initialization
     git clone https://github.com/advancedPhotonSource/cohere
     cd cohere
 
-| Copy development scripts
-::
-
-    cp dev/linux/* .     // for linux
-    cp dev/mac/* .       //for mac
-
-
-| Initialize with interactive script. 
-::
-
-    source init.sh
-
-| The script prompts for path to ArrayFire installation directory. 
-| The script does the following:
-- sets the compilation library and include directory to the entered directories
-- compiles 
-- installs in conda environment
-- sets the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in this session
-- sets the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in the setenv.sh script 
-
-| If the libraries are at different location than the installation (for example moved to lib directory), then the init script will not work. In this case edit setup.py file to correct lib directory and include directory. 
-| Compile and install:
+| install:
 
 ::
 
     python setup.py install
-
-| and set the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH in this session and in setenv.sh script manually
 
 compile and install
 +++++++++++++++++++
@@ -77,14 +52,6 @@ compile and install
     python setup.py install
 
 | Sometimes if the version number in setup.py script did not change, the install may not update. in this case remove build and distribute directories before running the setup.py script.
-
-Activating environment
-===================
-| When running in development environment the libraries are not loaded into conda location. Therefore the LD_LIBRARY_PATH/DYLD_LIBRARY_PATH must include path to arrayfire libraries.
-| Run the following command to set the environment variable when opening a new terminal:
-::
-
-    source setenv.sh
 
 Adding new trigger
 ==================
@@ -102,12 +69,6 @@ Adding new algorithm
 Conda Build
 ===========
 - In the cohere directory create "lib" and "include" directories. Copy content of <arrayfire installation directory>/lib64 to lib directory. Copy content of <arrayfire installation directory>/include to include directory. 
-
-- Copy development scripts/files
-::
-
-    cp dev/linux/* .     // for linux
-    cp dev/mac/* .       //for mac
 
 - change version in meta.yaml and setup.py files to the new version
 

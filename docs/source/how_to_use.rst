@@ -65,60 +65,64 @@ Scripts
      * specfile: optional, used when specfile configured in <conf_dir>/config file should be replaced by another specfile
      * copy_prep: this is a switch parameter, set to true if the prep_data.tif file should be copied from experiment with the <conf_dir> into the prep directory of the newly created experiment
 
-- run_prep.py
+- beamline_preprocess.py
 
   To run this script a configuration file "config_prep" must be defined in the <experiment_dir>/conf directory and the main configuration "config" file must have beamline parameter configured. This script reads raw data, applies correction based on physical properties of the instrument, and optionally aligns and combines multiple scans. The prepared data file is stored in <experiment_dir>/prep/prep_data.tif file.
   note: when separate_scan is configured to true, a prep_data.tiff file is created for each scan.
   Running this script:
   ::
 
-        python scripts/run_prep_34idc.py <experiment_dir>
+        python scripts/beamline_preprocess.py <experiment_dir>
 
   The parameters are as follows:
      - experiment directory: directory of the experiment space
 
-- format_data.py
+- standard_preprocess.py
 
   To run this script a configuration file "config_data" must be defined in the <experiment_dir>/conf directory, and the "prep_data.tif" file must be present in experiment space. This script reads the prepared data, formats the data according to configured parameters, and produces data.tif file. The file is stored in <experiment_dir>/data/data.tif file.
   Running this script:
   ::
 
-        python scripts/format_data.py <experiment_dir>
+        python scripts/standard_preprocess.py <experiment_dir>
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
 
-- run_rec.py
+- run_reconstruction.py
 
   To run this script a configuration file "config_rec" must be defined in the <experiment_dir>/conf directory, and the "data.tif" file must be present in experiment space. This script reads the data file and runs the reconstruction software. The reconstruction results are saved in <experiment_dir>/results directory.
   note: The results might be saved in different location in experiment space, depending on the use case. Refer to 'Experiment' section for details.
   Running this script:
   ::
 
-        python scripts/run_rec.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
+        python scripts/run_reconstruction.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
 
   The parameters are as follows:
      * processor: the library used when running reconstruction. Possible options:
 
-       + cuda
+       + auto
+       * np
+       * cp
+       * af
+       * cuda
        + opencl
        + cpu
 
-       The "cuda" and "opencl" options will invoke the processing on GPUs, and the "cpu" option   on cpu. The best performance is achieved when running cuda library, followed by opencl. 
+       When the auto option is selected the program will use the fastest library that is available, in this order: cupy, af, numpy. The af option leaves the choice to arrayfire, which will select a library in this order: cuda, opencl, cpu. The cp option will utilize cupy, np will utilize numpy, and af will leave selection to arrayfire. The cuda, opencl, and cpu are arrayfire libraries. The "cuda" and "opencl" options will invoke the processing on GPUs, and the "cpu" option on cpu.
      * experiment directory: directory of the experiment space
      * rec_id: optional parameter, when present, the alternate configuration will be used to run reconstruction
 
-- run_disp.py
+- beamline_visualization.py
 
   To run this script a configuration file "config_disp" must be defined in the <experiment_dir>/conf directory, the main configuration "config" file must have beamline parameter configured, and the reconstruction must be completed. This script reads the reconstructed files, and processes them to create .vts files that can be viewed utilizing visualization tools such Paraview. The script will process "image.npy" files that are in the experiment space and in a subdirectory of "resuls_dir" configuration parameter, or a given file is --image_file option is used.
   Running this script:
   ::
 
-        python scripts/run_disp.py <experiment_dir> --image_file <image_file>
+        python scripts/beamline_visualization.py <experiment_dir> --image_file <image_file>
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
-     * image_file: optional parameter, if given this file will be processed.
+     * image_file: optional parameter, if given, this file will be processed.
 
 - everything.py
 

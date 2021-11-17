@@ -32,19 +32,40 @@ General
 
     save_dir = "/path/to/save_dir/save_dir"
 
-- cont:
-| optional, if set to true the reconstruction starts with previous results stored in continue_dir (next configuration parameter). 
+- init_guess:
+| optional, defines how the initial guess is set. Possible options are: 'random', 'continue', and 'AI_guess'. The chice "random" will generate random guess, "continue" will start from previously saved results, and "AI_guess" will run AI reconstruction that will be an initial guess. Each of these algorithms require different parameters, explained below. The default is 'random'.
 | example:
 ::
 
-    cont = false
+    init_guess = "continue"
 
 - continue_dir:
-| must be defined if the "cont" parameter is set to true. Directory from which initial guess, initial support are read for reconstruction continuation. If the directory contains multiple subdirectories with initial guesses, a thread will start for each subdirectory.
+| must be defined if the init_guess parameter is set to 'continue'. Directory from which initial guess, initial support are read for reconstruction continuation. If the directory contains multiple subdirectories with initial guesses, a thread will start for each subdirectory.
 | example:
 ::
 
     continue_dir = "/path/to/previous_results_dir/previous_results_dir"
+
+- AI_threshold:
+| optional, valid if init_guess is "AI_guess". defines the threshold used in shrink wrap to calculate initial support. Defaults to shrink_wrap_threshold.
+| example:
+::
+
+    AI_threshold = 0.1
+
+- AI_sigma:
+| optional, valid if init_guess is "AI_guess". defines sigma used in shrink wrap to calculate initial support. Defaults to shrink_wrap_sigma.
+| example:
+::
+
+    AI_sigma = 1.0
+
+- AI_trained_model:
+| must be defined, if init_guess is "AI_guess". defines the file of hdf5 format that holds trained model.
+| example:
+::
+
+    AI_trained_model = "/path/to/trained/model/trained_model.hdf5"
 
 - reconstructions:
 | optional, default is 1. Number of reconstructions to start with. Typically used when running genetic algorithm.
