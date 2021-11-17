@@ -149,7 +149,7 @@ def post_process(amp, phi, th=0.1, uw=0):
     return amp_out, phi_out
 
 
-## funcions needed in tensorflow model
+# funcions needed in tensorflow model
 @tf.function
 def combine_complex(amp, phi):
     import tensorflow as tf
@@ -157,12 +157,14 @@ def combine_complex(amp, phi):
         1j * tf.cast(phi, tf.complex64))
     return output
 
+
 @tf.function
 def get_mask(input):
     import tensorflow as tf
 
     mask = tf.where(input >= 0.1, tf.ones_like(input), tf.zeros_like(input))
     return mask
+
 
 @tf.function
 def loss_comb2_scale(Y_true, Y_pred):
@@ -175,6 +177,26 @@ def loss_comb2_scale(Y_true, Y_pred):
     a2 = 1
     loss_value = (a1 * loss_1 + a2 * loss_2) / (a1 + a2)
     return loss_value
+
+
+@tf.function
+def loss_sq(Y_true, Y_pred):
+    top = tf.reduce_sum(tf.math.square(Y_pred - Y_true))
+    bottom = tf.reduce_sum(tf.math.square(Y_true))
+    loss_value = tf.sqrt(top / bottom)
+    return loss_value
+
+
+@tf.function
+def loss_pcc(Y_true, Y_pred):
+    pred = Y_pred - tf.reduce_mean(Y_pred)
+    true = Y_true - tf.reduce_mean(Y_true)
+
+    top = tf.reduce_sum(pred * true)
+    bottom = tf.math.sqrt(tf.reduce_sum(pred**2) * tf.reduce_sum(true**2))
+    loss_value = 1 - top / bottom
+    return loss_value
+
 
 @tf.function
 def ff_propagation(data):
@@ -189,6 +211,7 @@ def ff_propagation(data):
     intensity = tf.math.abs(diff)
     intensity = tf.cast(intensity, tf.float32)
     return intensity
+
 
 @tf.function
 # 3D fourier transform
@@ -230,7 +253,6 @@ def run_AI(data, threshold, sigma, dir):
             'combine_complex': combine_complex,
             'get_mask': get_mask,
             'ff_propagation': ff_propagation
-            
         })
     print('successfully load the model')
 
