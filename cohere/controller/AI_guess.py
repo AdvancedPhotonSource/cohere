@@ -8,8 +8,9 @@ from typing import Union
 # import tensorflow for trained model
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.keras.models import Model,load_model
+from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.activations import sigmoid, tanh
+
 
 def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
     # threshold by left edge value
@@ -20,6 +21,7 @@ def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
     binary = np.zeros_like(fp)
     binary[(np.abs(fp) > zero) & (fp > cut)] = 1
     return binary
+
 
 def select_central_object(fp: np.ndarray) -> np.ndarray:
     import scipy.ndimage as ndimage
@@ -41,6 +43,7 @@ def select_central_object(fp: np.ndarray) -> np.ndarray:
     fp[binary == 0] = 0
     return fp
 
+
 def get_central_object_extent(fp: np.ndarray) -> list:
     fp_cut = threshold_by_edge(np.abs(fp))
     need = select_central_object(fp_cut)
@@ -48,6 +51,7 @@ def get_central_object_extent(fp: np.ndarray) -> list:
     # get extend of cluster
     extent = [np.max(s) + 1 - np.min(s) for s in np.nonzero(need)]
     return extent
+
 
 def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
     """ get oversample ratio
@@ -74,14 +78,17 @@ def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
     ]
     return np.round(oversample, 3)
 
+
 def Resize(IN, dim):
     ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
-    
+
     pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]    
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
+           [pad_value[2], pad_value[2]]]
     ft_resize = ut.adjust_dimensions(ft, pad)
     output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
     return output
+
 
 def match_oversample_diff(
     diff: np.ndarray,
@@ -102,22 +109,25 @@ def match_oversample_diff(
     diff = ut.binning(diff, change)
     # crop diff to match output shape
     pad_value = np.array(shape) // 2 - np.array(diff.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]
-    
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
+           [pad_value[2], pad_value[2]]]
+
     output = ut.adjust_dimensions(diff, pad)
     return output, diff.shape
+
 
 def shift_com(amp, phi):
     from scipy.ndimage.measurements import center_of_mass as com
     from scipy.ndimage.interpolation import shift
 
-    h,w,t = 64,64,64
+    h, w, t = 64, 64, 64
     coms = com(amp)
     deltas = (int(round(h / 2 - coms[0])), int(round(w / 2 - coms[1])),
               int(round(t / 2 - coms[2])))
     amp_shift = shift(amp, shift=deltas, mode='wrap')
     phi_shift = shift(phi, shift=deltas, mode='wrap')
     return amp_shift, phi_shift
+
 
 def post_process(amp, phi, th=0.1, uw=0):
     if uw == 1:
@@ -138,6 +148,7 @@ def post_process(amp, phi, th=0.1, uw=0):
     phi_out = mask * phi_out
     return amp_out, phi_out
 
+
 ## funcions needed in tensorflow model
 @tf.function
 def combine_complex(amp, phi):
@@ -154,13 +165,15 @@ def get_mask(input):
     return mask
 
 @tf.function
-def loss_comb2_scale(Y_true, Y_pred):  
-    Y_pred = Y_pred/(tf.math.reduce_max(Y_pred, axis=(1,2,3), keepdims=True)+1e-6)*tf.math.reduce_max(Y_true, axis=(1,2,3), keepdims=True)
+def loss_comb2_scale(Y_true, Y_pred):
+    Y_pred = Y_pred / (
+        tf.math.reduce_max(Y_pred, axis=(1, 2, 3), keepdims=True) +
+        1e-6) * tf.math.reduce_max(Y_true, axis=(1, 2, 3), keepdims=True)
     loss_1 = tf.math.sqrt(loss_sq(Y_true, Y_pred))
     loss_2 = loss_pcc(Y_true, Y_pred)
     a1 = 1
     a2 = 1
-    loss_value = (a1*loss_1+a2*loss_2)/(a1+a2)
+    loss_value = (a1 * loss_1 + a2 * loss_2) / (a1 + a2)
     return loss_value
 
 @tf.function
@@ -190,6 +203,7 @@ def _fourier_transform(input):
     Fr = K.permute_dimensions(perm_Fr, pattern=[1, 2, 3, 4, 0])
     return Fr
 
+
 def run_AI(data, threshold, sigma, dir):
     print('AI guess')
 
@@ -205,31 +219,44 @@ def run_AI(data, threshold, sigma, dir):
     new_data = new_data[np.newaxis]
 
     # load trained network
-    model = load_model('./cohere/controller/trained_model.hdf5',custom_objects={'loss_comb2_scale': loss_comb2_scale})
+    model = load_model(
+        '/home/yudongyao/cohere/cohere/controller/trained_model.hdf5',
+        custom_objects={
+            'tf': tf,
+            'loss_comb2_scale': loss_comb2_scale,
+            'sigmoid': sigmoid,
+            'tanh': tanh,
+            'math': math,
+            'combine_complex': combine_complex,
+            'get_mask': get_mask,
+            'ff_propagation': ff_propagation
+            
+        })
     print('successfully load the model')
 
     # get the outputs from amplitude and phase layers
     amp_layer_model = Model(inputs=model.input,
                             outputs=model.get_layer('amp').output)
     ph_layer_model = Model(inputs=model.input,
-                        outputs=model.get_layer('phi').output)
+                           outputs=model.get_layer('phi').output)
 
     preds_amp = amp_layer_model.predict(new_data, verbose=1)
 
     preds_phi = ph_layer_model.predict(new_data, verbose=1)
 
-    preds_amp, preds_phi = post_process(preds_amp[0,...,0],
-                                    preds_phi[0,...,0],
-                                    th=0.1,
-                                    uw=0)
+    preds_amp, preds_phi = post_process(preds_amp[0, ..., 0],
+                                        preds_phi[0, ..., 0],
+                                        th=0.1,
+                                        uw=0)
 
     pred_obj = preds_amp * np.exp(1j * preds_phi)
-    
+
     # match object size with the input data
     pred_obj = Resize(pred_obj, inshape)
 
     pad_value = np.array(data.shape) // 2 - np.array(pred_obj.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]], [pad_value[2], pad_value[2]]]
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
+           [pad_value[2], pad_value[2]]]
     guess = ut.adjust_dimensions(pred_obj, pad)
     print('initial guess shape', guess.shape)
 
