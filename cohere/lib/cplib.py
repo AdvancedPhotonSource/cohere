@@ -135,7 +135,10 @@ class cplib(cohlib):
         return cp.squeeze(arr)
 
     def gaussian(shape, sigma, **kwargs):
-        n_el = cp.prod(shape)
+        from functools import reduce
+        import operator
+
+        n_el = reduce(operator.mul, shape)
         inarr = cp.zeros((n_el))
         inarr[int(n_el / 2)] = 1.0
         inarr = cp.reshape(inarr, shape)

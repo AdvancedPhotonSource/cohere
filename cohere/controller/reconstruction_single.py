@@ -105,7 +105,15 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         continue_dir = pars.continue_dir
     elif pars.init_guess == 'AI_guess':
         import cohere.controller.AI_guess as ai
+
+        # The results will be stored in the directory <experiment_dir>/AI_guess
         ai_dir = os.path.join(dir, 'AI_guess')
+        if os.path.exists(ai_dir):
+            for f in os.listdir(ai_dir):
+                os.remove(os.path.join(ai_dir, f))
+        else:
+            os.makedirs(ai_dir)
+
         ai.run_AI(data, pars.AI_threshold, pars.AI_sigma, ai_dir)
         continue_dir = ai_dir
     else:
