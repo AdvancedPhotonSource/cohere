@@ -227,7 +227,7 @@ def _fourier_transform(input):
     return Fr
 
 
-def run_AI(data, threshold, sigma, dir):
+def run_AI(data, threshold, sigma, model_file, dir):
     print('AI guess')
 
     print('original data shape', data.shape)
@@ -243,7 +243,7 @@ def run_AI(data, threshold, sigma, dir):
 
     # load trained network
     model = load_model(
-        '/home/yudongyao/cohere/cohere/controller/trained_model.hdf5',
+        model_file,
         custom_objects={
             'tf': tf,
             'loss_comb2_scale': loss_comb2_scale,

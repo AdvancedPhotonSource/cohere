@@ -61,6 +61,8 @@ class Params:
                     self.AI_sigma = conf.AI_sigma
                 else:
                     self.AI_sigma = conf.shrink_wrap_gauss_sigma
+                if conf.lookup('AI_trained_model') is not None:
+                    self.AI_trained_model = conf.AI_trained_model
             else:
                 self.init_guess = 'random'
         else:

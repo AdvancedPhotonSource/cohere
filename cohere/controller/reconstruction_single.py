@@ -114,7 +114,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         else:
             os.makedirs(ai_dir)
 
-        ai.run_AI(data, pars.AI_threshold, pars.AI_sigma, ai_dir)
+        ai.run_AI(data, pars.AI_threshold, pars.AI_sigma, pars.AI_trained_model, ai_dir)
         continue_dir = ai_dir
     else:
         continue_dir = None
