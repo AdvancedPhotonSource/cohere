@@ -282,7 +282,7 @@ def run_AI(data, threshold, sigma, model_file, dir):
     guess = ut.adjust_dimensions(pred_obj, pad)
     print('initial guess shape', guess.shape)
 
-    np.save(os.path.join(dir, 'image.npy'), guess)
+    np.save(os.path.join(dir, 'image.npy'), guess.T)
 
     support = ut.shrink_wrap(guess, threshold, sigma)
-    np.save(os.path.join(dir, 'support.npy'), support)
+    np.save(os.path.join(dir, 'support.npy'), support.T)
