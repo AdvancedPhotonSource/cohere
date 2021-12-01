@@ -370,7 +370,6 @@ class Rec:
 
 
     def resolution_trigger(self):
-        print('res')
         if self.params.ll_dets is not None:
             sigmas = [dim * self.params.ll_dets[self.iter] for dim in self.dims]
             distribution = devlib.gaussian(self.dims, sigmas)
@@ -386,7 +385,6 @@ class Rec:
     def reset_resolution(self):
         self.iter_data = self.data
         self.sigma = self.params.shrink_wrap_gauss_sigma
-        print('last res')
 
     def shrink_wrap_trigger(self):
         self.support_obj.update_amp(self.ds_image, self.sigma, self.params.shrink_wrap_threshold)
