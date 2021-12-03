@@ -17,13 +17,13 @@ class cplib(cohlib):
         pass
 
     def to_numpy(arr):
-        return cp.asnumpy(arr).T
+        return cp.asnumpy(arr)
 
     def from_numpy(arr):
-        return cp.array(arr.T)
+        return cp.array(arr)
 
     def save(filename, arr):
-        cp.save(filename, arr.T)
+        cp.save(filename, arr)
 
     def load(filename):
         return cp.load(filename)

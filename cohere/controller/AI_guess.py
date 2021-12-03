@@ -230,7 +230,6 @@ def _fourier_transform(input):
 def run_AI(data, threshold, sigma, model_file, dir):
     print('AI guess')
 
-    print('original data shape', data.shape)
     # prepare data to make the oversampling ratio ~3
     wos = 3.0
     orig_os = get_oversample_ratio(data)
@@ -238,7 +237,6 @@ def run_AI(data, threshold, sigma, model_file, dir):
     wanted_os = [wos, wos, wos]
     # match diff os
     new_data, inshape = match_oversample_diff(data, orig_os, wanted_os)
-    print('processed data shape', new_data.shape)
     new_data = new_data[np.newaxis]
 
     # load trained network
@@ -280,9 +278,8 @@ def run_AI(data, threshold, sigma, model_file, dir):
     pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
            [pad_value[2], pad_value[2]]]
     guess = ut.adjust_dimensions(pred_obj, pad)
-    print('initial guess shape', guess.shape)
 
-    np.save(os.path.join(dir, 'image.npy'), guess.T)
+    np.save(os.path.join(dir, 'image.npy'), guess)
 
     support = ut.shrink_wrap(guess, threshold, sigma)
-    np.save(os.path.join(dir, 'support.npy'), support.T)
+    np.save(os.path.join(dir, 'support.npy'), support)
