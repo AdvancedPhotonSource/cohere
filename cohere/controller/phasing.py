@@ -214,7 +214,7 @@ class Rec:
                           self.to_reciprocal_space,
                           self.new_func_trigger,
                           self.pc_trigger,
-                          self.pcdi_modulus,
+                          self.pc_modulus,
                           self.modulus,
                           self.set_prev_pc_trigger,
                           self.to_direct_space,
@@ -229,7 +229,7 @@ class Rec:
         for f in iter_functions:
             flow_items_list.append(f.__name__)
 
-        self.is_pcdi, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
 
         self.flow = []
         (op_no, iter_no) = flow.shape
@@ -245,8 +245,8 @@ class Rec:
         self.prev_dir = dir
         self.sigma = self.params.shrink_wrap_gauss_sigma
         self.support_obj = Support(self.params, self.dims, dir)
-        if self.is_pcdi:
-            self.pcdi_obj = Pcdi(self.params, self.data, dir)
+        if self.is_pc:
+            self.pc_obj = Pcdi(self.params, self.data, dir)
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -312,8 +312,8 @@ class Rec:
             os.makedirs(save_dir)
         devlib.save(os.path.join(save_dir, 'image'), self.ds_image)
         devlib.save(os.path.join(save_dir, 'support'), self.support_obj.get_support())
-        if self.is_pcdi:
-            devlib.save(os.path.join(save_dir, 'coherence'), self.pcdi_obj.kernel)
+        if self.is_pc:
+            devlib.save(os.path.join(save_dir, 'coherence'), self.pc_obj.kernel)
         errs = array('f', self.errs)
         devlib.save(os.path.join(save_dir, 'errors'), errs)
         return 0
@@ -401,11 +401,11 @@ class Rec:
         print('in new_func_trigger, new_param', self.params.new_param)
 
     def pc_trigger(self):
-        self.pcdi_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
+        self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
 
-    def pcdi_modulus(self):
+    def pc_modulus(self):
         abs_amplitudes = devlib.absolute(self.rs_amplitudes).copy()
-        converged = self.pcdi_obj.apply_partial_coherence(abs_amplitudes)
+        converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = get_norm(
             devlib.where((converged > 0), (devlib.absolute(converged) - self.iter_data), 0)) / get_norm(self.iter_data)
@@ -420,7 +420,7 @@ class Rec:
         self.rs_amplitudes *= ratio
 
     def set_prev_pc_trigger(self):
-        self.pcdi_obj.set_previous(devlib.absolute(self.rs_amplitudes))
+        self.pc_obj.set_previous(devlib.absolute(self.rs_amplitudes))
 
     def to_direct_space(self):
         self.ds_image_raw = devlib.fft(self.rs_amplitudes) / devlib.size(self.data)

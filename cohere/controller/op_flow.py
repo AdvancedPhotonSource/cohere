@@ -57,7 +57,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
     iter_no = len(algorithm_sequence)
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
 
-    pcdi_start = None
+    pc_start = None
     is_res = False
     for i in range(len(flow_items_list)):
         if flow_items_list[i] == 'next' or flow_items_list[i] == 'to_reciprocal_space' or flow_items_list[
@@ -94,25 +94,25 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                     else:
                         calculated_first_run = False
                 if calculated_first_run is None:
-                    pcdi_start = None
+                    pc_start = None
                 else:
                     flow_arr[i] = trigger_row(config_map.pc_trigger, iter_no)
                     if calculated_first_run:
-                        pcdi_start = config_map.pc_trigger[0]
+                        pc_start = config_map.pc_trigger[0]
                     else:
-                        pcdi_start = 0
-                    pcdi_row = i
-        elif flow_items_list[i] == 'pcdi_modulus':
-            if pcdi_start is not None:
-                flow_arr[i, pcdi_start:] = 1
+                        pc_start = 0
+                    pc_row = i
+        elif flow_items_list[i] == 'pc_modulus':
+            if pc_start is not None:
+                flow_arr[i, pc_start:] = 1
         elif flow_items_list[i] == 'modulus':
-            if pcdi_start is not None:
-                flow_arr[i, : pcdi_start] = 1
+            if pc_start is not None:
+                flow_arr[i, : pc_start] = 1
             else:
                 flow_arr[i, :] = 1
         elif flow_items_list[i] == 'set_prev_pc_trigger':
-            if pcdi_start is not None:
-                flow_arr[i, : -1] = flow_arr[pcdi_row, 1:]
+            if pc_start is not None:
+                flow_arr[i, : -1] = flow_arr[pc_row, 1:]
         elif flow_items_list[i] == 'er' or flow_items_list[i] == 'hio' or flow_items_list[i] == 'new_alg':
             flow_arr[i] = algorithm_row(flow_items_list[i], algorithm_sequence)
         elif flow_items_list[i] == 'twin_trigger':
@@ -125,7 +125,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
             if config_map.lookup('progress_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.progress_trigger, iter_no)
 
-    return pcdi_start is not None, flow_arr
+    return pc_start is not None, flow_arr
 
 #
 # conf = ut.read_config('/Users/bfrosik/test/a_54-66/conf/config_rec')
