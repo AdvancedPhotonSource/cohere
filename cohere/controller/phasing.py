@@ -306,14 +306,16 @@ class Rec:
         return 0
 
     def save_res(self, save_dir):
+        from array import array
+
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         devlib.save(os.path.join(save_dir, 'image'), self.ds_image)
         devlib.save(os.path.join(save_dir, 'support'), self.support_obj.get_support())
         if self.is_pcdi:
             devlib.save(os.path.join(save_dir, 'coherence'), self.pcdi_obj.kernel)
-        # errs = np.asarray(list(self.errs))
-        # np.save(os.path.join(save_dir, 'errors'), errs)
+        errs = array('f', self.errs)
+        devlib.save(os.path.join(save_dir, 'errors'), errs)
         return 0
 
     def get_metric(self, metric_type):
