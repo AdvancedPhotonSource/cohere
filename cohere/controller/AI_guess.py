@@ -108,9 +108,12 @@ def match_oversample_diff(
 
     diff = ut.binning(diff, change)
     # crop diff to match output shape
-    pad_value = np.array(shape) // 2 - np.array(diff.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
-           [pad_value[2], pad_value[2]]]
+    shape_arr = np.array(shape)
+    diff_shape_arr = np.array(diff.shape)
+    pad_value1 = shape_arr // 2 - diff_shape_arr // 2
+    pad_value2 = shape_arr - diff_shape_arr -pad_value1
+    pad = [[pad_value1[0], pad_value2[0]], [pad_value1[1], pad_value2[1]],
+           [pad_value1[2], pad_value2[2]]]
 
     output = ut.adjust_dimensions(diff, pad)
     return output, diff.shape
