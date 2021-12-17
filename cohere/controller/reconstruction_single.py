@@ -97,10 +97,6 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     else:
         set_lib(lib)
 
-    # if not pars.cont:
-    #     continue_dir = None
-    # else:
-    #     continue_dir = pars.continue_dir
     if pars.init_guess == 'continue':
         continue_dir = pars.continue_dir
     elif pars.init_guess == 'AI_guess':

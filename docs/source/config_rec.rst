@@ -19,25 +19,25 @@ Parameters
 General
 +++++++
 - data_dir:
-| optional, used for specific cases. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The  data is read from <experimenr_dir>/data directory. If the data_dir parameter is configured then the data is read from this directory.
+| optional, used for specific cases, defualt is <experiment_dir>/data. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The standard preprocessed file, named data.tif should be in data_dir when starting reconstruction. If the data_dir parameter is configured then the data is read from this directory, otherwise from <experiment_dir>/data. This parameter is only accepted when running script from a command line. When using GUI, the data_dir is always default.
 | example:
 ::
 
     data_dir = "/path/to/data_dir/data_dir"
 
 - save_dir:
-| optional, used for specific cases. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The  reconstruction results are saved in <experimenr_dir>/results directory. If the save_dir parameter is configured then the data is saved in this directory.
+| optional, used for specific cases, defualt is <experiment_dir>/results. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The  reconstruction results are saved in <experimenr_dir>/results directory. If the save_dir parameter is configured then the reconstruction result is saved in this directory. This parameter is only accepted when running script from a command line.
 | example:
 ::
 
     save_dir = "/path/to/save_dir/save_dir"
 
 - init_guess:
-| optional, defines how the initial guess is set. Possible options are: 'random', 'continue', and 'AI_guess'. The chice "random" will generate random guess, "continue" will start from previously saved results, and "AI_guess" will run AI reconstruction that will be an initial guess. Each of these algorithms require different parameters, explained below. The default is 'random'.
+| optional, defines how the initial guess is set. Possible options are: 'random', 'continue', and 'AI_guess'. The choice "random" will generate random guess, "continue" will start from previously saved results, and "AI_guess" will run AI reconstruction that will be an initial guess. Each of these algorithms require different parameters, explained below. The default is 'random'.
 | example:
 ::
 
-    init_guess = "continue"
+    init_guess = "random"
 
 - continue_dir:
 | must be defined if the init_guess parameter is set to 'continue'. Directory from which initial guess, initial support are read for reconstruction continuation. If the directory contains multiple subdirectories with initial guesses, a thread will start for each subdirectory.
@@ -61,7 +61,7 @@ General
     AI_sigma = 1.0
 
 - AI_trained_model:
-| must be defined, if init_guess is "AI_guess". defines the file of hdf5 format that holds trained model.
+| must be defined, if init_guess is "AI_guess". defines the file in hdf5 format that holds trained model.
 | example:
 ::
 
@@ -82,11 +82,11 @@ General
     device = (0,1,2,7)
 
 - algorithm_sequence:
-| mandatory, defines algorithm applied in each iteration during modulus projection by a sequence of lists. The first number in a list is a repeat, followed by lists of pairs, each pair defining algorithm and number of iterations to run the algorithm.
+| mandatory, defines algorithm applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence might contain single brackets that defines a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with parcial ciherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
 | example:
 ::
 
-    ((3, ("ER",20), ("HIO", 180)), (1,("ER",20)))
+    algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
 
 - hio_beta:
 | optional, default is .9. A parameter used in hio algorithm.
@@ -179,14 +179,14 @@ Phase constrain
 
 Partial coherence
 +++++++++++++++++
-| Partial coherence triggers recalculation of coherence array for the amplitudes in reciprocal space. After first coherence array is determined, it is used for convolution in subsequent iteration.
+| Partial coherence triggers recalculation of coherence array for the amplitudes in reciprocal space. After first coherence array is determined, it is used for convolution in subsequent iteration. The coherence array is updated as defined by the pc_interval.
 
-- pc_trigger:
-| defines when to update coherence using the parameters below.
+- pc_interval:
+| defines iteration interval between coherence update.
 | example:
 ::
 
-    pc_trigger = (50, 50)
+    pc_trigger = 50
 
 - pc_type:
 | mandatory, partial coherence algorithm. Currently "LUCY" is supported.

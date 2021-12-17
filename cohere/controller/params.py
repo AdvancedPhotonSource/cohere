@@ -176,7 +176,7 @@ class Params:
                 else:
                     self.low_resolution_alg = 'GAUSS'
 
-            if conf.lookup('pc_trigger') is not None:
+            if conf.lookup('pc_interval') is not None:
                 if conf.lookup('ga_gen_pc_start') is not None:
                     self.ga_gen_pc_start = conf.ga_gen_pc_start
                 else:
@@ -219,7 +219,7 @@ class Params:
             else:
                 self.new_param = 1
 
-        if conf.lookup('pc_trigger') is not None:
+        if conf.lookup('pc_interval') is not None:
             self.is_pcdi = True
             if conf.lookup('pc_type') is not None:
                 self.pc_type = conf.pc_type

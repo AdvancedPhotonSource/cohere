@@ -128,9 +128,16 @@ def read_config(config):
     if os.path.isfile(config):
         with open(config, 'r') as f:
             config_map = cfg.Config(f.read())
-            return config_map;
+            return config_map
     else:
         return None
+
+
+def get_conf(dict):
+    config_map = cfg.Config()
+    for key, value in dict.items():
+        config_map.setup(key, value)
+    return config_map
 
 
 def get_good_dim(dim):

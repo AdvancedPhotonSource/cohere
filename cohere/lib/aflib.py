@@ -184,6 +184,7 @@ class aflib(cohlib):
         return af.conjg(arr)
 
     def save(file, arr):
+        arr = af.Array(arr)
         nparr = arr.to_ndarray().T
         np.save(file, nparr)
 
