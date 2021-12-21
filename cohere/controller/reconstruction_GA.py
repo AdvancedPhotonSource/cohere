@@ -193,7 +193,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     # init starting values
     # if multiple reconstructions configured (typical for genetic algorithm), use "reconstruction_multi" module
     if reconstructions > 1:
-        if pars.ga_fast:  # NEW the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
+        # the cupy does not run correctly with multiprocessing, but limiting number of runs to available devices will work as temporary fix
+        if pars.ga_fast or lib == 'cp':  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
             reconstructions = min(reconstructions, len(devices))
             workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
             #            for worker in workers:

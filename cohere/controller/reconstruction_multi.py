@@ -231,16 +231,22 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     try:
         reconstructions = pars.reconstructions
+        # temporery fix.limit number of reconstructions to the number of available devices if lib is cupy.
+        if lib == 'cp':
+            reconstructions = len(devices)
     except:
         reconstructions = 1
 
     prev_dirs = []
-    if pars.cont:
+    if pars.init_guess == 'continue':
         continue_dir = pars.continue_dir
         for sub in os.listdir(continue_dir):
             image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
             if image is not None:
                 prev_dirs.append(sub)
+    elif pars.init_guess == 'AI_guess':
+        print('multiple reconstruction do not support AI_guess initial guess')
+        return
     else:
         for _ in range(reconstructions):
             prev_dirs.append(None)
