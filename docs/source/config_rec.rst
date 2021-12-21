@@ -82,7 +82,7 @@ General
     device = (0,1,2,7)
 
 - algorithm_sequence:
-| mandatory, defines algorithm applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence might contain single brackets that defines a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with parcial ciherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
+| mandatory, defines algorithm applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
 | example:
 ::
 
