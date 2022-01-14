@@ -2,8 +2,8 @@
 
 Project home page: https://cohere-legacy.readthedocs.io/
 
-The cohere version 1.x.x is a legacy project. It is functional and available but there will be no new development in this branch. 
-A continuation with new development is carried on in main branch with revisions starting ar 2.0.
+The cohere version 1.x.x is a legacy project. It is functional and available but there will be no new development in this branch. User can access the legacy documentation (link above) to find how to install and use this product.
+A continuation with new development is carried on in main branch with versions starting at 2.0.
 
 The cohere package provides tools for reconstruction of image of a nanoscale structures from data obtained using Bragg Coherent Diffraction Imaging technique.
 
