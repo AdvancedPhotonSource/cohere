@@ -58,7 +58,7 @@ General
 | example:
 ::
 
-    device = (0,1,2,7)
+    device = (0,1,7)
 
 - algorithm_sequence:
 | mandatory, defines algorithm applied in each iteration during modulus projection by a sequence of lists. The first number in a list is a repeat, followed by lists of pairs, each pair defining algorithm and number of iterations to run the algorithm.
