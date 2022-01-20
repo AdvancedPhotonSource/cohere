@@ -155,5 +155,6 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
         elif flow_items_list[i] == 'progress_trigger':
             if config_map.lookup('progress_trigger') is not None:
                 flow_arr[i] = trigger_row(config_map.progress_trigger, iter_no)
+                flow_arr[i][-1] = 1
 
     return pc_start is not None, flow_arr
