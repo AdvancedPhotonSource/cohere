@@ -103,7 +103,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         import cohere.controller.AI_guess as ai
 
         # The results will be stored in the directory <experiment_dir>/AI_guess
-        ai_dir = os.path.join(dir, 'AI_guess')
+        ai_dir = os.path.join(dir, 'results_AI')
         if os.path.exists(ai_dir):
             for f in os.listdir(ai_dir):
                 os.remove(os.path.join(ai_dir, f))
