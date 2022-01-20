@@ -254,7 +254,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         save_dir = pars.save_dir
     except AttributeError:
         filename = conf_file.split('/')[-1]
-        save_dir = os.path.join(dir, filename.replace('config_rec', 'results'))
+        save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
     workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
 
