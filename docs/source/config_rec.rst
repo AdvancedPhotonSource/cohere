@@ -12,28 +12,27 @@ Trigger
 | (3) trigger at iteration 3
 | (20, 5) trigger starts at iteration 20, repeats every 5 iteration for the rest of run
 | (20, 5, 40) trigger starts at iteration 20, repeats every 5 iteration until iteration 40
-| Triggers can also be a combination of any of the above, ex: ((4), (3, 7, 24), (6,20))
   
 Parameters
 ==========
 General
 +++++++
 - data_dir:
-| optional, used for specific cases, defualt is <experiment_dir>/data. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The standard preprocessed file, named data.tif should be in data_dir when starting reconstruction. If the data_dir parameter is configured then the data is read from this directory, otherwise from <experiment_dir>/data. This parameter is only accepted when running script from a command line. When using GUI, the data_dir is always default.
+| optional, used for specific cases, defualt is <experiment_dir>/phasing_data. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The standard preprocessed file, named data.tif should be in data_dir when starting reconstruction. If the data_dir parameter is configured then the data is read from this directory, otherwise from <experiment_dir>/data. This parameter is only accepted when running script from a command line. When using GUI, the data_dir is always default.
 | example:
 ::
 
     data_dir = "/path/to/data_dir/data_dir"
 
 - save_dir:
-| optional, used for specific cases, defualt is <experiment_dir>/results. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The  reconstruction results are saved in <experimenr_dir>/results directory. If the save_dir parameter is configured then the reconstruction result is saved in this directory. This parameter is only accepted when running script from a command line.
+| optional, used for specific cases, defualt is <experiment_dir>/results. Driven by the scripts, the experiment directory contains four directories: conf, preprocessed_data, phasing_data, results_phasing, and results_viz. The  reconstruction results are saved in <experiment_dir>/results_phasing directory. If the save_dir parameter is configured then the reconstruction result is saved in this directory.
 | example:
 ::
 
     save_dir = "/path/to/save_dir/save_dir"
 
 - init_guess:
-| optional, defines how the initial guess is set. Possible options are: 'random', 'continue', and 'AI_guess'. The choice "random" will generate random guess, "continue" will start from previously saved results, and "AI_guess" will run AI reconstruction that will be an initial guess. Each of these algorithms require different parameters, explained below. The default is 'random'.
+| optional, defines how the initial guess is set. Possible options are: 'random', 'continue', and 'AI_guess'. The choice "random" will generate random guess, "continue" will start from previously saved results, and "AI_guess" will run AI reconstruction that will be an initial guess saved at <experiment_dir>/results_AI. Each of these algorithms require different parameters, explained below. The default is 'random'.
 | example:
 ::
 
@@ -44,7 +43,7 @@ General
 | example:
 ::
 
-    continue_dir = "/path/to/previous_results_dir/previous_results_dir"
+    continue_dir = "/path/to/previous_results_dir/some_phasing_results_dir"
 
 - AI_threshold:
 | optional, valid if init_guess is "AI_guess". defines the threshold used in shrink wrap to calculate initial support. Defaults to shrink_wrap_threshold.
@@ -82,7 +81,7 @@ General
     device = (0,1,2,7)
 
 - algorithm_sequence:
-| mandatory, defines algorithm applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
+| mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
 | example:
 ::
 
@@ -125,21 +124,21 @@ Shrink wrap
     shrink_wrap_trigger = (10, 1)
 
 - shrink_wrap_type:
-| optional, defaults to "GAUSS". Currently only "GAUSS" is supported
+| optional, defaults to "GAUSS" which applies gaussian filter. Currently only "GAUSS" is supported.
 | example:
 ::
 
     shrink_wrap_type = "GAUSS"
 
 - shrink_wrap_threshold:
-| optional, defaults to 0.1. A threshold value used in the gauss distribution.
+| optional, defaults to 0.1. A threshold value used in the gaussian filter algorithm.
 | example:
 ::
 
     shrink_wrap_threshold = 0.1
 
 - shrink_wrap_gauss_sigma:
-| optional, defaults to 1.0. A sigma value used in the gauss distribution.
+| optional, defaults to 1.0. A sigma value used in the gaussian filter algorithm.
 | example:
 ::
 
@@ -179,7 +178,7 @@ Phase constrain
 
 Partial coherence
 +++++++++++++++++
-| Partial coherence triggers recalculation of coherence array for the amplitudes in reciprocal space. After first coherence array is determined, it is used for convolution in subsequent iteration. The coherence array is updated as defined by the pc_interval.
+| Partial coherence triggers recalculation of coherence array for the amplitudes in reciprocal space. After coherence array is determined, it is used for convolution in subsequent iteration. The coherence array is updated as defined by the pc_interval. Partial coherence feature is active if the interval is defined and the algorithm sequence contains algorithm with partial coherence.
 
 - pc_interval:
 | defines iteration interval between coherence update.
@@ -269,7 +268,7 @@ GA
     ga_generations = 3
 
 - ga_metrics:
-| optional, a list of metrics that should be used to rank the reconstruction results for subsequent generations. If not defined, or shorter that number of generations, the metric defaults to "chi".
+| optional, a list of metrics that should be used to rank the reconstruction results for subsequent generations. If not defined, or shorter than number of generations, the metric defaults to "chi".
 | supported: "chi", "sharpness", "summed_phase", "area"
 | example:
 ::

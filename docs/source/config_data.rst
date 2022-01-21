@@ -6,7 +6,7 @@ config_data
 Parameters
 ==========
 - data_dir:
-| optional, used for specific cases. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The formatted data is saved in the <experimenr_dir>/data directory. If the data_dir parameter is configured then the data is saved in this directory. Warning: The script running reconstruction expects to read data from <experimenr_dir>/data.
+| optional, used for specific cases. Driven by the scripts, the experiment directory contains four directories: conf, preprocessed_data, phasing_data, results_phasing, and results_viz. The formatted data is saved in the <experimenr_dir>/data directory. If the data_dir parameter is configured then the data is saved in this directory. Warning: The script running reconstruction expects to read data from <experimenr_dir>/data.
 | example:
 ::
 

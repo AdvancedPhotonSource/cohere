@@ -1,7 +1,7 @@
 =====
 cofig
 =====
-| The "config" is a main configuration defining the experiment and is applicable to all processing.
+| The "config" is a main configuration defining the experiment and is applicable to all parts of processing: beamline preprocessing, standard preprocessing, phasing, and beamline visualization.
 
 Parameters
 ==========
@@ -34,7 +34,7 @@ Parameters
     specfile = "/path/to/specfile/Staff20.spec"
                                         
 - beamline:
-| optional (if not configured, the preparation and visualization scripts are not available), beamline where the experiment was conducted.
+| optional, beamline where the experiment was conducted. If not configured, the beamline preprocessing and beamline visualization scripts are not available.
 | example:
 ::
 

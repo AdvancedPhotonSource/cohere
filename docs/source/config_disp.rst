@@ -10,7 +10,7 @@ Parameters
 | example:
 ::
 
-    results_dir = "/path/to/results_dir_tree"
+    results_dir = "/path/to/phasing_results_dir_tree"
 
 - rampups:                
 | optional, upsize when running ramp removal, default is 1. Expect long processing time for greater numbers.
@@ -32,15 +32,6 @@ Parameters
 ::
 
     diffractometer = "34idc"
-
-| The diffractometer typically is set to a defined class, but in case of a new diffractometer a user can enter the following parameters instead. These will override anything set internally. This functionality is supported only by command line scripts, not GUI.
-| example:
-::
-
-    sampleaxes_name = ('theta','chi','phi')
-    detectoraxes_name = ('delta','gamma','detdist')
-    sampleaxes = ('y+', 'z-', 'x-')
-    detectoraxes = ('y+','z-')
 
 Parsed parameters
 =================
@@ -104,16 +95,8 @@ Parsed parameters
     scanmot_del = 0.005
 
 - detector:
-| Warning: Don't forget the : on the end of the detector name (34idcTIM2:)
+| detector name
 | example:
 ::
 
-    detector = "34idcTIM2:"
-
-| The following parameters are set in the detector class, but can be set from config if no class has been written yet.  These will override anything set internally. This functionality is supported only by command line scripts, not GUI.
-| example:
-::
-
-    pixel = (55.0e-6, 55.0e-6)
-    pixelorientation = ('x+', 'y-')
-
+    detector = "34idcTIM2"
