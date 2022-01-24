@@ -73,6 +73,13 @@ General
 
     reconstructions = 5
 
+- processing:
+| optional, the library used when running reconstruction. When the auto option is selected the program will use the best performing library that is available, in the following order: cupy, af, numpy. The cp option will utilize cupy, np will utilize numpy, and af will leave selection to arrayfire. The cuda, opencl, and cpu are arrayfire libraries. The "cuda" and "opencl" options will invoke the processing on GPUs, and the "cpu" option on cpu. Default is auto.
+| example:
+::
+
+    processing = "auto"
+
 - device:
 | optional, IDs of the target devices (GPU) for each reconstruction thread. If not defined, the OS will select the GPU, but the processing will not be concurrent. Ignored when running cpu library.
 | example:

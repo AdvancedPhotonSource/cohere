@@ -95,20 +95,9 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/run_reconstruction.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
+        python cohere-scripts/run_reconstruction.py <experiment_dir> --rec_id <alternate reconstruction id>
 
   The parameters are as follows:
-     * processor: the library used when running reconstruction. Possible options:
-
-       + auto
-       * np
-       * cp
-       * af
-       * cuda
-       + opencl
-       + cpu
-
-       When the auto option is selected the program will use the best performing library that is available, in this order: cupy, af, numpy. The af option leaves the choice to arrayfire, which will select a library in this order: cuda, opencl, cpu. The cp option will utilize cupy, np will utilize numpy, and af will leave selection to arrayfire. The cuda, opencl, and cpu are arrayfire libraries. The "cuda" and "opencl" options will invoke the processing on GPUs, and the "cpu" option on cpu.
      * experiment directory: directory of the experiment space.
      * rec_id: optional parameter, when present, the alternate configuration will be used to run reconstruction. . Refer to 'Experiment' section for details.
 
@@ -131,11 +120,10 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/everything.py <processor> <experiment_dir> --rec_id <alternate reconstruction id>
+        python cohere-scripts/everything.py <experiment_dir> --rec_id <reconstruction id>
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
-     * processor: the library used when running reconstruction.
      * rec_id: optional parameter, when present, the alternate configuration will be used to run reconstruction
 
 - cdi_window.py
