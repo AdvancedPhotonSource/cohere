@@ -7,7 +7,7 @@ Installation for development
 ============================
 Creating environment
 ++++++++++++++++++++
-| The best practice is to create coda environment allocated for the development:
+| The best practice is to create coda environment allocated for the development. The Python version can be chosen by user:
 ::
 
     conda create -n cohere3.8 python=3.8
@@ -27,6 +27,7 @@ Pre-requisites
    - pip install psutil
    - conda install pyqt
    - if running AutoAlien1 algorithm during standard preprocessing: pip install sklearn
+   - if using Initial AI guess: conda install tensorflow -c conda-forge
    - if using cupy library: conda install cupy
    - if using arrayfire: install according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
 

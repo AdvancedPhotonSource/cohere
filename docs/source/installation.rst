@@ -16,3 +16,5 @@ then run the installation command::
 
     conda install cohere -c bfrosik -c conda-forge
 
+The cohere package can be run as installed running on numpy library. Other available libraries are cupy and arrayfire.
+User has to intall the library of his choice.
