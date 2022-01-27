@@ -8,6 +8,10 @@ algs = {'ER': ('er', 'modulus'),
         }
 
 
+def get_algs():
+    return algs
+
+
 def get_alg_rows(s, pc_conf_start):
     seq = []
     def parse_entry(ent):
