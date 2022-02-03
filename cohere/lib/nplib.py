@@ -55,7 +55,7 @@ class nplib(cohlib):
         return np.fft.fftshift(arr)
 
     def ifftshift(arr):
-        return np.fft.fftshift(arr)
+        return np.fft.ifftshift(arr)
 
     def shift(arr, sft):
         sft = [int(s) for s in sft]

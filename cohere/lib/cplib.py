@@ -52,7 +52,7 @@ class cplib(cohlib):
         return cp.fft.fftshift(arr)
 
     def ifftshift(arr):
-        return cp.fft.fftshift(arr)
+        return cp.fft.ifftshift(arr)
 
     def shift(arr, sft):
         sft = [int(s) for s in sft]

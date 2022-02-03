@@ -44,14 +44,14 @@ class Pcdi:
                 self.kernel = None
 
         self.dims = devlib.dims(data)
-        self.roi_data = dvut.crop_center(devlib.ifftshift(data), self.params.pc_LUCY_kernel)
+        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.params.pc_LUCY_kernel)
         if self.params.pc_normalize:
             self.sum_roi_data = devlib.sum(devlib.square(self.roi_data))
         if self.kernel is None:
             self.kernel = devlib.full(self.params.pc_LUCY_kernel, 0.5, dtype=devlib.dtype(data))
 
     def set_previous(self, abs_amplitudes):
-        self.roi_amplitudes_prev = dvut.crop_center(devlib.ifftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
+        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
 
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
@@ -61,7 +61,7 @@ class Pcdi:
         return converged
 
     def update_partial_coherence(self, abs_amplitudes):
-        roi_amplitudes = dvut.crop_center(devlib.ifftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
+        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
         roi_combined_amp = 2 * roi_amplitudes - self.roi_amplitudes_prev
         if self.params.pc_normalize:
             amplitudes_2 = devlib.square(roi_combined_amp)
@@ -377,9 +377,9 @@ class Rec:
             distribution = devlib.gaussian(self.dims, sigmas)
             max_el = devlib.amax(distribution)
             distribution = distribution / max_el
-            data_shifted = devlib.ifftshift(self.data)
+            data_shifted = devlib.fftshift(self.data)
             masked = data_shifted * distribution
-            self.iter_data = devlib.ifftshift(masked)
+            self.iter_data = devlib.fftshift(masked)
 
         if self.params.ll_sigmas is not None:
             self.sigma = self.params.ll_sigmas[self.iter]
