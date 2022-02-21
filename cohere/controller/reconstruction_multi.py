@@ -15,7 +15,6 @@ import cohere.utilities.utils as ut
 import cohere.controller.phasing as calc
 from multiprocessing import Pool, Queue
 from functools import partial
-from cohere.controller.params import Params
 
 
 __author__ = "Barbara Frosik"
@@ -201,10 +200,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     -------
     nothing
     """
-    pars = Params(conf_file)
-    er_msg = pars.set_params()
-    if er_msg is not None:
-        return er_msg
+    pars = ut.read_config(conf_file)
 
     if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
         if datafile.endswith('tif') or datafile.endswith('tiff'):
@@ -229,30 +225,30 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     else:
         set_lib(lib)
 
-    try:
-        reconstructions = pars.reconstructions
+    if 'reconstructions' in pars:
+        reconstructions = pars['reconstructions']
         # temporery fix.limit number of reconstructions to the number of available devices if lib is cupy.
         if lib == 'cp':
             reconstructions = len(devices)
-    except:
+    else:
         reconstructions = 1
 
     prev_dirs = []
-    if pars.init_guess == 'continue':
+    if pars['init_guess'] == 'continue':
         continue_dir = pars.continue_dir
         for sub in os.listdir(continue_dir):
             image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
             if image is not None:
                 prev_dirs.append(sub)
-    elif pars.init_guess == 'AI_guess':
+    elif pars['init_guess'] == 'AI_guess':
         print('multiple reconstruction do not support AI_guess initial guess')
         return
     else:
         for _ in range(reconstructions):
             prev_dirs.append(None)
-    try:
-        save_dir = pars.save_dir
-    except AttributeError:
+    if 'save_dir' in pars:
+        save_dir = pars['save_dir']
+    else:
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 

@@ -44,14 +44,14 @@ class Pcdi:
                 self.kernel = None
 
         self.dims = devlib.dims(data)
-        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.params.pc_LUCY_kernel)
-        if self.params.pc_normalize:
+        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.params['pc_LUCY_kernel'])
+        if self.params['pc_normalize']:
             self.sum_roi_data = devlib.sum(devlib.square(self.roi_data))
         if self.kernel is None:
-            self.kernel = devlib.full(self.params.pc_LUCY_kernel, 0.5, dtype=devlib.dtype(data))
+            self.kernel = devlib.full(self.params['pc_LUCY_kernel'], 0.5, dtype=devlib.dtype(data))
 
     def set_previous(self, abs_amplitudes):
-        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
+        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params['pc_LUCY_kernel'])
 
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
@@ -61,9 +61,9 @@ class Pcdi:
         return converged
 
     def update_partial_coherence(self, abs_amplitudes):
-        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params.pc_LUCY_kernel)
+        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params['pc_LUCY_kernel'])
         roi_combined_amp = 2 * roi_amplitudes - self.roi_amplitudes_prev
-        if self.params.pc_normalize:
+        if self.params['pc_normalize']:
             amplitudes_2 = devlib.square(roi_combined_amp)
             sum_ampl = devlib.sum(amplitudes_2)
             ratio = self.sum_roi_data / sum_ampl
@@ -71,9 +71,9 @@ class Pcdi:
         else:
             amplitudes = roi_combined_amp
 
-        if self.params.pc_type == "LUCY":
+        if self.params['pc_type'] == "LUCY":
             self.lucy_deconvolution(devlib.square(amplitudes), devlib.square(self.roi_data),
-                                    self.params.pc_LUCY_iterations)
+                                    self.params['pc_LUCY_iterations'])
 
     def lucy_deconvolution(self, amplitudes, data, iterations):
         data_mirror = devlib.flip(data)
@@ -93,7 +93,7 @@ class Support:
         self.dims = dims
 
         if dir is None or not os.path.isfile(os.path.join(dir, 'support.npy')):
-            initial_support_area = params.initial_support_area
+            initial_support_area = params['initial_support_area']
             init_support = []
             for i in range(len(initial_support_area)):
                 if type(initial_support_area[0]) == int:
@@ -121,12 +121,83 @@ class Support:
 
     def update_phase(self, ds_image):
         phase = devlib.angle(ds_image)
-        phase_condition = (phase > self.params.phm_phase_min) & (phase < self.params.phm_phase_max)
+        phase_condition = (phase > self.params['phm_phase_min']) & (phase < self.params['phm_phase_max'])
         self.support *= phase_condition
 
 
 class Rec:
     def __init__(self, params, data_file):
+        # set defaults in params
+        if 'init_guess' not in params:
+            params['init_guess'] = 'random'
+        elif params['init_guess'] == 'AI_guess':
+            if 'AI_threshold' not in params:
+                params['AI_threshold'] = params['shrink_wrap_threshold']
+            if 'AI_sigma' not in params:
+                params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
+        if 'reconstructions' not in params:
+            params['reconstructions'] = 1
+        if 'device' not in params:
+            params['device'] = (-1)
+        if 'hio_beta' not in params:
+            params['hio_beta'] = 0.9
+        if 'initial_support_area' not in params:
+            params['initial_support_area'] = (.5, .5, .5)
+        if 'twin_trigger' in params and 'twin_halves' not in params:
+            params['twin_halves'] = (0, 0)
+        if 'shrink_wrap_gauss_sigma' not in params:
+            params['shrink_wrap_gauss_sigma'] = 1.0
+        if 'shrink_wrap_threshold' not in params:
+            params['shrink_wrap_threshold'] = 0.1
+        if 'shrink_wrap_trigger' in params:
+            if 'shrink_wrap_type' not in params:
+                params['shrink_wrap_type'] = "GAUSS"
+        if 'phase_support_trigger' in params:
+            if 'phm_phase_min' not in params:
+                params['phm_phase_min'] = -1.57
+            if 'phm_phase_max' not in params:
+                params['phm_phase_max'] = 1.57
+        if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
+            self.is_pcdi = True
+            if 'pc_type' not in params:
+                params['pc_type'] = "LUCY"
+            if 'pc_LUCY_iterations' not in params:
+                params['pc_LUCY_iterations'] = 20
+            if 'pc_normalize' not in params:
+                params['pc_normalize'] = True
+            if 'pc_LUCY_kernel' not in params:
+                params['pc_LUCY_kernel'] = (16, 16, 16)
+        else:
+            self.is_pcdi = False
+        self.ll_sigmas = None
+        self.ll_dets = None
+        if 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
+            # linespacing the sigmas and dets need a number of iterations
+            # The trigger should have three elements, the last one
+            # meaning the last iteration when the low resolution is
+            # applied. If the trigger does not have the limit,
+            # it is misconfigured, and the trigger will not be
+            # active
+            ll_iter = params['resolution_trigger'][2]
+            if 'shrink_wrap_trigger' not in params and 'lowpass_filter_sw_sigma_range' in params:
+                # The sigmas are used to find support, if the shrink wrap
+                # trigger is not active, it wil not be used
+                sigma_range = params['lowpass_filter_sw_sigma_range']
+                if len(sigma_range) > 0:
+                    first_sigma = sigma_range[0]
+                    if len(sigma_range) == 1:
+                        last_sigma = params['shrink_wrap_gauss_sigma']
+                    else:
+                        last_sigma = sigma_range[1]
+                    params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in range(ll_iter)]
+            if 'lowpass_filter_range' in params:
+                det_range = params['lowpass_filter_range']
+                if type(det_range) ==int:
+                    det_range = [det_range, 1.0]
+                    params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in range(ll_iter)]
+            else:
+                params['ll_dets'] = None
+        # finished setting defaults
         self.params = params
         self.data_file = data_file
         self.ds_image = None
@@ -171,7 +242,7 @@ class Rec:
         return 0
 
     def fast_ga(self, worker_qin, worker_qout):
-        if self.params.low_resolution_generations > 0:
+        if self.params['low_resolution_generations'] > 0:
             self.need_save_data = True
 
         functions_dict = {}
@@ -243,7 +314,7 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
-        self.sigma = self.params.shrink_wrap_gauss_sigma
+        self.sigma = self.params['shrink_wrap_gauss_sigma']
         self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pc:
             self.pc_obj = Pcdi(self.params, self.data, dir)
@@ -251,15 +322,15 @@ class Rec:
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
         if self.saved_data is not None:
-            if self.params.low_resolution_generations > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params.ga_lowpass_filter_sigmas[self.gen])
+            if self.params['low_resolution_generations'] > self.gen:
+                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
             else:
                 self.data = self.saved_data
         else:
-            if self.gen is not None and self.params.low_resolution_generations > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params.ga_lowpass_filter_sigmas[self.gen])
+            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
+                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
 
-        if self.params.ll_sigmas is None or not first_run:
+        if 'll_sigma' not in self.params or not first_run:
             self.iter_data = self.data
         else:
             self.iter_data = self.data.copy()
@@ -272,15 +343,14 @@ class Rec:
             # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
 
             self.ds_image *= self.support_obj.get_support()
-
         return 0
 
     def breed(self):
-        breed_mode = self.params.breed_modes[self.gen]
+        breed_mode = self.params['breed_modes'][self.gen]
         if breed_mode != 'none':
             self.ds_image = dvut.breed(breed_mode, self.prev_dir, self.ds_image)
-            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params.ga_shrink_wrap_thresholds[self.gen],
-                                                       self.params.ga_shrink_wrap_gauss_sigmas[self.gen])
+            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_shrink_wrap_thresholds'][self.gen],
+                                                       self.params['ga_shrink_wrap_gauss_sigmas'][self.gen])
         return 0
 
     def iterate(self):
@@ -372,8 +442,8 @@ class Rec:
 
 
     def resolution_trigger(self):
-        if self.params.ll_dets is not None:
-            sigmas = [dim * self.params.ll_dets[self.iter] for dim in self.dims]
+        if 'll_dets' in self.params:
+            sigmas = [dim * self.params['ll_dets'][self.iter] for dim in self.dims]
             distribution = devlib.gaussian(self.dims, sigmas)
             max_el = devlib.amax(distribution)
             distribution = distribution / max_el
@@ -381,15 +451,15 @@ class Rec:
             masked = data_shifted * distribution
             self.iter_data = devlib.fftshift(masked)
 
-        if self.params.ll_sigmas is not None:
-            self.sigma = self.params.ll_sigmas[self.iter]
+        if 'll_sigmas' in self.params:
+            self.sigma = self.params['ll_sigmas'][self.iter]
 
     def reset_resolution(self):
         self.iter_data = self.data
-        self.sigma = self.params.shrink_wrap_gauss_sigma
+        self.sigma = self.params['shrink_wrap_gauss_sigma']
 
     def shrink_wrap_trigger(self):
-        self.support_obj.update_amp(self.ds_image, self.sigma, self.params.shrink_wrap_threshold)
+        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['shrink_wrap_threshold'])
 
     def phase_support_trigger(self):
         self.support_obj.update_phase(self.ds_image)
@@ -398,7 +468,7 @@ class Rec:
         self.rs_amplitudes = devlib.ifft(self.ds_image) * devlib.size(self.data)
 
     def new_func_trigger(self):
-        print('in new_func_trigger, new_param', self.params.new_param)
+        print('in new_func_trigger, new_param', self.params['new_param'])
 
     def pc_trigger(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
@@ -429,12 +499,11 @@ class Rec:
         self.ds_image = self.ds_image_raw * self.support_obj.get_support()
 
     def hio(self):
-        combined_image = self.ds_image - self.ds_image_raw * self.params.hio_beta
+        combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
         support = self.support_obj.get_support()
         self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
 
     def new_alg(self):
-        print('in new_alg, works like er')
         self.ds_image = self.ds_image_raw * self.support_obj.get_support()
 
     def twin_trigger(self):
@@ -445,11 +514,11 @@ class Rec:
         dims = self.ds_image.shape
         half_x = int((dims[0] + 1) / 2)
         half_y = int((dims[1] + 1) / 2)
-        if self.params.twin_halves[0] == 0:
+        if self.params['twin_halves'][0] == 0:
             self.ds_image[half_x:, :, :] = 0
         else:
             self.ds_image[: half_x, :, :] = 0
-        if self.params.twin_halves[1] == 0:
+        if self.params['twin_halves'][1] == 0:
             self.ds_image[:, half_y:, :] = 0
         else:
             self.ds_image[:, : half_y, :] = 0

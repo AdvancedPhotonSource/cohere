@@ -13,7 +13,6 @@ import os
 import importlib
 import cohere.controller.phasing as calc
 import cohere.utilities.utils as ut
-from cohere.controller.params import Params
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
@@ -69,10 +68,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     -------
     nothing
     """
-    pars = Params(conf_file)
-    er_msg = pars.set_params()
-    if er_msg is not None:
-        return er_msg
+    pars = ut.read_config(conf_file)
 
     if datafile.endswith('tif') or datafile.endswith('tiff'):
         try:
@@ -97,9 +93,11 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     else:
         set_lib(lib)
 
-    if pars.init_guess == 'continue':
-        continue_dir = pars.continue_dir
-    elif pars.init_guess == 'AI_guess':
+    if 'init_guess' not in pars:
+        pars['init_guess'] = 'random'
+    if pars['init_guess'] == 'continue':
+        continue_dir = pars['continue_dir']
+    elif pars['init_guess'] == 'AI_guess':
         import cohere.controller.AI_guess as ai
 
         # The results will be stored in the directory <experiment_dir>/AI_guess
@@ -110,21 +108,24 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         else:
             os.makedirs(ai_dir)
 
-        ai.run_AI(data, pars.AI_threshold, pars.AI_sigma, pars.AI_trained_model, ai_dir)
+        ai.run_AI(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir)
         continue_dir = ai_dir
     else:
         continue_dir = None
 
-    try:
-        save_dir = pars.save_dir
-    except AttributeError:
+    if 'save_dir' in pars:
+        save_dir = pars['save_dir']
+    else:
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
     worker = calc.Rec(pars, datafile)
 
     if dev is None:
-        device = pars.device
+        if 'device' in pars:
+            device = pars['device']
+        else:
+            device = [-1]
     else:
         device = dev[0]
     if worker.init_dev(device) < 0:

@@ -70,12 +70,17 @@ def get_alg_rows(s, pc_conf_start):
 
 def trigger_row(trig, iter_no):
     row = np.zeros(iter_no, dtype=int)
-    if len(trig) == 1:
+    if type(trig) == int:
+        trig_iter = trig
+        if trig_iter < 0:
+            trig_iter += iter_no
+        row[trig_iter] = 1
+    elif len(trig) ==1:
         trig_iter = trig[0]
         if trig_iter < 0:
             trig_iter += iter_no
         row[trig_iter] = 1
-    else:
+    else:   # trig is list
         trig_start = trig[0]
         if trig_start < 0:
             trig_start += iter_no
@@ -92,30 +97,21 @@ def trigger_row(trig, iter_no):
 
 
 def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
-    # the params hold the parsed values for the parameters, not triggers or algorithm sequence
-    # the triggers and algorithm sequence are parsed in this script which determines the functions
-    success, config_map = params.read_config()
-    # config_map = ut.read_config(conf)
-
     # get information about GA/pc from config_map
-    if config_map.lookup('pc_interval') is not None:
+    if 'pc_interval' in params:
         if curr_gen is None:
             pc_conf_start = True
         else:
-            if config_map.lookup('ga_gen_pc_start') is None:
-                ga_gen_pc_start = 0
-            else:
-                ga_gen_pc_start = config_map.ga_gen_pc_start
-            if curr_gen < ga_gen_pc_start:
+            if curr_gen < params['ga_gen_pc_start']:
                 pc_conf_start = None
-            elif curr_gen == ga_gen_pc_start:
+            elif curr_gen == params['ga_gen_pc_start']:
                 pc_conf_start = True
             else:
                 pc_conf_start = False
     else:
         pc_conf_start = None
 
-    alg_rows, iter_no, pc_start = get_alg_rows(config_map.algorithm_sequence, pc_conf_start)
+    alg_rows, iter_no, pc_start = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
 
     is_res = False
@@ -124,24 +120,24 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
             i] == 'to_direct_space':
             flow_arr[i, :] = 1
         elif flow_items_list[i] == 'resolution_trigger':
-            if first_run and config_map.lookup('resolution_trigger') is not None and len(config_map.resolution_trigger) == 3:
-                flow_arr[i] = trigger_row(config_map.resolution_trigger, iter_no)
+            if first_run and 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
+                flow_arr[i] = trigger_row(params['resolution_trigger'], iter_no)
                 is_res = True
         elif flow_items_list[i] == 'reset_resolution':
             if is_res:
-                flow_arr[i] = trigger_row([config_map.resolution_trigger[-1],], iter_no)
+                flow_arr[i] = trigger_row([params['resolution_trigger'][-1],], iter_no)
         elif flow_items_list[i] == 'shrink_wrap_trigger':
-            if config_map.lookup('shrink_wrap_trigger') is not None:
-                flow_arr[i] = trigger_row(config_map.shrink_wrap_trigger, iter_no)
+            if 'shrink_wrap_trigger' in params:
+                flow_arr[i] = trigger_row(params['shrink_wrap_trigger'], iter_no)
         elif flow_items_list[i] == 'phase_support_trigger':
-            if first_run and config_map.lookup('phase_support_trigger') is not None:
-                flow_arr[i] = trigger_row(config_map.phase_support_trigger, iter_no)
+            if first_run and 'phase_support_trigger' in params:
+                flow_arr[i] = trigger_row(params['phase_support_trigger'], iter_no)
         elif flow_items_list[i] == 'new_func_trigger':
-            if config_map.lookup('new_func_trigger') is not None:
-                flow_arr[i] = trigger_row(config_map.new_func_trigger, iter_no)
+            if 'new_func_trigger' in [algs]:
+                flow_arr[i] = trigger_row(params['new_func_trigger'], iter_no)
         elif flow_items_list[i] == 'pc_trigger':
             if pc_start is not None:
-                pc_interval = config_map.pc_interval
+                pc_interval = params['pc_interval']
                 pc_trigger = [pc_start, pc_interval]
                 flow_arr[i] = trigger_row(pc_trigger, iter_no)
                 pc_row = i
@@ -151,14 +147,14 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
         elif flow_items_list[i] in alg_rows.keys():
             flow_arr[i] = alg_rows[flow_items_list[i]]
         elif flow_items_list[i] == 'twin_trigger':
-            if first_run and config_map.lookup('twin_trigger') is not None:
-                flow_arr[i] = trigger_row(config_map.twin_trigger, iter_no)
+            if first_run and 'twin_trigger' in params:
+                flow_arr[i] = trigger_row(params['twin_trigger'], iter_no)
         elif flow_items_list[i] == 'average_trigger':
-            if config_map.lookup('average_trigger') is not None and curr_gen is not None and curr_gen == config_map.ga_generations -1:
-                flow_arr[i] = trigger_row(config_map.average_trigger, iter_no)
+            if 'average_trigger' in params and curr_gen is not None and curr_gen == params['ga_generations'] -1:
+                flow_arr[i] = trigger_row(params['average_trigger'], iter_no)
         elif flow_items_list[i] == 'progress_trigger':
-            if config_map.lookup('progress_trigger') is not None:
-                flow_arr[i] = trigger_row(config_map.progress_trigger, iter_no)
+            if 'progress_trigger' in params:
+                flow_arr[i] = trigger_row(params['progress_trigger'], iter_no)
                 flow_arr[i][-1] = 1
 
     return pc_start is not None, flow_arr

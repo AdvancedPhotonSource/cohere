@@ -9,7 +9,6 @@ This module is a suite of utility functions.
 """
 
 import tifffile as tf
-import pylibconfig2 as cfg
 import numpy as np
 import os
 import logging
@@ -125,19 +124,59 @@ def read_config(config):
     config_map : Config object
         a Config containing parsed configuration, None if the given file does not exist
     """
-    if os.path.isfile(config):
-        with open(config, 'r') as f:
-            config_map = cfg.Config(f.read())
-            return config_map
-    else:
+    import ast
+
+    if not os.path.isfile(config):
+        print(config, 'is not a file')
         return None
 
+    param_dict = {}
+    input = open(config, 'r')
+    line = input.readline()
+    while line:
+        # Ignore comment lines and move along
+        line = line.strip()
+        if line.startswith('//') or line.startswith('#'):
+            line = input.readline()
+            continue
+        elif "=" in line:
+            param, value = line.split('=')
+            param_dict[param.strip()] = ast.literal_eval(value.strip())
+        line = input.readline()
+    input.close()
+    return param_dict
 
-def get_conf(dict):
-    config_map = cfg.Config()
-    for key, value in dict.items():
-        config_map.setup(key, value)
-    return config_map
+
+def write_config(param_dict, config):
+    """
+    This function writes configuration file.
+
+    Parameters
+    ----------
+    config : str
+        configuration file name, including path
+
+    config_map : Config object
+        a Config containing parsed configuration, None if the given file does not exist
+
+    Returns
+    -------
+    Nothing
+    """
+    import ast
+    with open(config, 'a') as f:
+        f.truncate(0)
+        for key, value in param_dict.items():
+            if type(value) == str:
+                value = '"' + value + '"'
+            f.write(key + ' = ' + str(value) + os.linesep)
+
+
+# def get_conf(dict):
+#     config_map = cfg.Config()
+#     for key, value in dict.items():
+#         config_map.setup(key, value)
+#     return config_map
 
 
 def get_good_dim(dim):
