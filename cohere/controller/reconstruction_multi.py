@@ -234,6 +234,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         reconstructions = 1
 
     prev_dirs = []
+    if 'init_guess' not in pars:
+        pars['init_guess'] = 'random'
     if pars['init_guess'] == 'continue':
         continue_dir = pars.continue_dir
         for sub in os.listdir(continue_dir):
