@@ -76,7 +76,7 @@ def set_ga_defaults(pars):
     pars['ga_metrics'] = metrics
 
     ga_reconstructions = []
-    if 'ga_cullings' not in pars:
+    if 'ga_cullings' in pars:
         worst_remove_no = list(pars['ga_cullings'])
         if len(worst_remove_no) < pars['ga_generations']:
             worst_remove_no = worst_remove_no + [0, ] * (pars['ga_generations'] - len(worst_remove_no))
