@@ -346,7 +346,7 @@ class Rec:
         return 0
 
     def breed(self):
-        breed_mode = self.params['breed_modes'][self.gen]
+        breed_mode = self.params['ga_breed_modes'][self.gen]
         if breed_mode != 'none':
             self.ds_image = dvut.breed(breed_mode, self.prev_dir, self.ds_image)
             self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_shrink_wrap_thresholds'][self.gen],
