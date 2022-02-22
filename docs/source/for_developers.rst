@@ -10,25 +10,22 @@ Creating environment
 | The best practice is to create coda environment allocated for the development. The Python version can be chosen by user:
 ::
 
-    conda create -n cohere3.8 python=3.8
-    conda activate cohere3.8
+    conda create -n cohere3.9 python=3.9
+    conda activate cohere3.9
 
 
 Pre-requisites
 ++++++++++++++
 | After activating conda environment install the packages/libraries listed below.
 - Python packages installation:
-   - pip install tifffile
-   - pip install pylibconfig2
-   - pip install GPUtil
-   - pip install pyparsing
+   - conda install tifffile -c conda-forge
+   - conda install gputil -c conda-forge
    - conda install mayavi -c conda-forge
-   - pip install xrayutilities
-   - pip install psutil
-   - conda install pyqt
+   - conda install xrayutilities -c conda-forge
+   - conda install psutil -c conda-forge
    - if running AutoAlien1 algorithm during standard preprocessing: pip install sklearn
    - if using Initial AI guess: conda install tensorflow -c conda-forge
-   - if using cupy library: conda install cupy
+   - if using cupy library: conda install cupy -c conda-forge
    - if using arrayfire: install according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
 
 Initialization
@@ -74,7 +71,7 @@ Conda Build
 - run conda build:
 ::
 
-    conda build -c conda-forge -c bfrosik -c defaults .
+    conda build -c conda-forge -c defaults .
 
 - upload build to anaconda cloud
 
