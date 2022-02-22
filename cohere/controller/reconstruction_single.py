@@ -107,7 +107,10 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
                 os.remove(os.path.join(ai_dir, f))
         else:
             os.makedirs(ai_dir)
-
+        if 'AI_threshold' not in pars:
+            pars['AI_threshold'] = pars['shrink_wrap_threshold']
+        if 'AI_sigma' not in pars:
+            pars['AI_sigma'] = pars['shrink_wrap_gauss_sigma']
         ai.run_AI(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir)
         continue_dir = ai_dir
     else:
