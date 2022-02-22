@@ -70,12 +70,7 @@ def get_alg_rows(s, pc_conf_start):
 
 def trigger_row(trig, iter_no):
     row = np.zeros(iter_no, dtype=int)
-    if type(trig) == int:
-        trig_iter = trig
-        if trig_iter < 0:
-            trig_iter += iter_no
-        row[trig_iter] = 1
-    elif len(trig) ==1:
+    if len(trig) ==1:
         trig_iter = trig[0]
         if trig_iter < 0:
             trig_iter += iter_no

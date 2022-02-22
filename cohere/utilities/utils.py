@@ -141,7 +141,11 @@ def read_config(config):
             continue
         elif "=" in line:
             param, value = line.split('=')
-            param_dict[param.strip()] = ast.literal_eval(value.strip())
+            # do not replace in strings
+            value = value.strip()
+            if value.startswith('('):
+                value = value.strip().replace('(','[').replace(')',']')
+            param_dict[param.strip()] = ast.literal_eval(value)
         line = input.readline()
     input.close()
     return param_dict
