@@ -345,9 +345,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 processes.pop(pid)
             # get metric, i.e the goodness of reconstruction from each run
             proc_metrics = {}
+            metric_type = pars['ga_metrics'][g]
             for pid in processes:
                 worker_qin = processes[pid][0]
-                metric_type = pars['ga_metrics'][g]
                 worker_qin.put(('get_metric', metric_type))
             for pid in processes:
                 worker_qout = processes[pid][1]
