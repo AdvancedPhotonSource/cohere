@@ -68,7 +68,7 @@ def set_ga_defaults(pars):
     if 'ga_metrics' not in pars:
         pars['ga_metrics'] = ['chi'] * pars['ga_generations']
     else:
-        metrics = list(pars['ga_metrics'])
+        metrics = pars['ga_metrics']
         if len(metrics) == 1:
             metrics = metrics * pars['ga_generations']
         elif len(metrics) < pars['ga_generations']:
@@ -77,26 +77,27 @@ def set_ga_defaults(pars):
 
     ga_reconstructions = []
     if 'ga_cullings' in pars:
-        worst_remove_no = list(pars['ga_cullings'])
+        worst_remove_no = pars['ga_cullings']
         if len(worst_remove_no) < pars['ga_generations']:
             worst_remove_no = worst_remove_no + [0] * (pars['ga_generations'] - len(worst_remove_no))
     else:
         worst_remove_no = [0] * pars['ga_generations']
+    pars['worst_remove_no'] = worst_remove_no
     # calculate how many reconstructions should continue
     reconstructions = pars['reconstructions']
-    for cull in worst_remove_no:
-        reconstructions = reconstructions - cull
+    for culling in worst_remove_no:
+        reconstructions = reconstructions - culling
         if reconstructions <= 0:
             return 'culled down to 0 reconstructions, check configuration'
         ga_reconstructions.append(reconstructions)
     pars['ga_reconstructions'] = ga_reconstructions
 
-    if 'shrink_wrap_threshold' not in pars:
+    if 'shrink_wrap_threshold' in pars:
         shrink_wrap_threshold = pars['shrink_wrap_threshold']
     else:
         shrink_wrap_threshold = .1
     if 'ga_shrink_wrap_thresholds' in pars:
-        ga_shrink_wrap_thresholds = list(pars['ga_shrink_wrap_thresholds'])
+        ga_shrink_wrap_thresholds = pars['ga_shrink_wrap_thresholds']
         if len(ga_shrink_wrap_thresholds) == 1:
             ga_shrink_wrap_thresholds = ga_shrink_wrap_thresholds * pars['ga_generations']
         elif len(ga_shrink_wrap_thresholds) < pars['ga_generations']:
@@ -105,24 +106,24 @@ def set_ga_defaults(pars):
         ga_shrink_wrap_thresholds = [shrink_wrap_threshold] * pars['ga_generations']
     pars['ga_shrink_wrap_thresholds'] = ga_shrink_wrap_thresholds
 
-    if 'shrink_wrap_gauss_sigma' not in pars:
+    if 'shrink_wrap_gauss_sigma' in pars:
         shrink_wrap_gauss_sigma = pars['shrink_wrap_gauss_sigma']
     else:
         shrink_wrap_gauss_sigma = .1
-    if 'ga_shrink_wrap_gauss_sigma' in pars:
-        ga_shrink_wrap_gauss_sigma = list(pars['ga_shrink_wrap_gauss_sigma'])
-        if len(ga_shrink_wrap_gauss_sigma) == 1:
-            ga_shrink_wrap_gauss_sigma = ga_shrink_wrap_gauss_sigma * pars['ga_generations']
-        elif len(ga_shrink_wrap_gauss_sigma) < pars['ga_generations']:
-            ga_shrink_wrap_gauss_sigma = ga_shrink_wrap_gauss_sigma + [shrink_wrap_gauss_sigma] * (pars['ga_generations'] - len(ga_shrink_wrap_gauss_sigma))
+    if 'ga_shrink_wrap_gauss_sigmas' in pars:
+        ga_shrink_wrap_gauss_sigmas = pars['ga_shrink_wrap_gauss_sigmas']
+        if len(ga_shrink_wrap_gauss_sigmas) == 1:
+            ga_shrink_wrap_gauss_sigmas = ga_shrink_wrap_gauss_sigmas * pars['ga_generations']
+        elif len(pars['ga_shrink_wrap_gauss_sigmas']) < pars['ga_generations']:
+            ga_shrink_wrap_gauss_sigmas = ga_shrink_wrap_gauss_sigmas + [shrink_wrap_gauss_sigma] * (pars['ga_generations'] - len(ga_shrink_wrap_gauss_sigmas))
     else:
-        ga_shrink_wrap_gauss_sigma = [shrink_wrap_gauss_sigma] * pars['ga_generations']
-    pars['ga_shrink_wrap_gauss_sigma'] = ga_shrink_wrap_gauss_sigma
+        ga_shrink_wrap_gauss_sigmas = [shrink_wrap_gauss_sigma] * pars['ga_generations']
+    pars['ga_shrink_wrap_gauss_sigmas'] = ga_shrink_wrap_gauss_sigmas
 
     if 'ga_breed_modes' not in pars:
         pars['ga_breed_modes'] = ['sqrt_ab'] * pars['ga_generations']
     else:
-        ga_breed_modes = list(pars['ga_breed_modes'])
+        ga_breed_modes = pars['ga_breed_modes']
         if len(ga_breed_modes) == 1:
             ga_breed_modes = ga_breed_modes * pars['ga_generations']
         elif len(ga_breed_modes) < pars['ga_generations']:
