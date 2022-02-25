@@ -18,12 +18,17 @@ def get_alg_rows(s, pc_conf_start):
         r_e = ent.split('*')
         seq.append([int(r_e[0]), r_e[1]])
 
-    if pc_conf_start is None:  # no pc in this reconstruction
-        s = s.replace('ERpc', 'ER')
-        s = s.replace('HIOpc', 'HIO')
+    if pc_conf_start is None:  # no pc in this
+        # this is kind of hackish, but will be replaced by sequence for each generation
+        if s =='ERpc':
+            s = 'ER'
+        if s == 'HIOpc':
+            s = 'HIO'
     elif not pc_conf_start:    # GA case, the coherence will start at first iteration
-        s = s.replace('ER', 'ERpc')
-        s = s.replace('HIO', 'HIOpc')
+        if s == 'ER':
+            s = 'ERpc'
+        if s == 'HIO':
+            s = 'HIOpc'
 
     s = s.replace(' ','')
     entries = s.split('+')
