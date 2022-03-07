@@ -22,7 +22,6 @@ requirements:
     - mayavi
     - psutil
     - tensorflow
-    - sklearn
 
 about:
   home: https://github.com/advancedPhotonSource/cdi
