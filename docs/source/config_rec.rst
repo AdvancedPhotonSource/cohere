@@ -85,7 +85,7 @@ General
 | example:
 ::
 
-    device = (0,1,2,7)
+    device = [0,1,2,7]
 
 - algorithm_sequence:
 | mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
@@ -109,15 +109,15 @@ Twin
 | example:
 ::
 
-    twin_trigger = (2)
+    twin_trigger = [2]
 
-- twin_halves = (0, 0)
+- twin_halves = [0, 0]
 | optional, and only applied when twin_trigger is configured. Defines which quadrant of the array is preserved in x and y dimensions, defaults to (0, 0).
-| Possible choices: (0, 0), (0, 1), (1, 0), (1,1)
+| Possible choices: [0, 0], [0, 1], [1, 0], [1,1]
 | example:
 ::
 
-    twin_halves = (0, 0)
+    twin_halves = [0, 0]
 
 Shrink wrap
 +++++++
@@ -128,7 +128,7 @@ Shrink wrap
 | example:
 ::
 
-    shrink_wrap_trigger = (10, 1)
+    shrink_wrap_trigger = [10, 1]
 
 - shrink_wrap_type:
 | optional, defaults to "GAUSS" which applies gaussian filter. Currently only "GAUSS" is supported.
@@ -152,11 +152,11 @@ Shrink wrap
     shrink_wrap_gauss_sigma = 1.0
 
 - initial_support_area:
-| optional, defaults to (.5,.5,.5). The list define dimensions of initial support area. If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support array is centered.
+| optional, defaults to [.5,.5,.5]. The list define dimensions of initial support area. If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support array is centered.
 | example:
 ::
 
-    initial_support_area = (.5,.5,.5)
+    initial_support_area = [.5,.5,.5]
 
 Phase constrain
 +++++++++++++++
@@ -167,7 +167,7 @@ Phase constrain
 | example:
 ::
 
-    phase_support_trigger = (0, 1, 310)
+    phase_support_trigger = [0, 1, 310]
 
 - phm_phase_min:
 | optional, defaults too -1.57. Defines lower bound phase.
@@ -192,7 +192,7 @@ Partial coherence
 | example:
 ::
 
-    pc_trigger = 50
+    pc_interval = 50
 
 - pc_type:
 | mandatory, partial coherence algorithm. Currently "LUCY" is supported.
@@ -220,7 +220,7 @@ Partial coherence
 | example:
 ::
 
-    pc_LUCY_kernel = (16, 16, 16)
+    pc_LUCY_kernel = [16, 16, 16]
 
 Low resolution
 ++++++++++++++
@@ -230,21 +230,21 @@ Low resolution
 | example:
 ::
 
-    resolution_trigger = (0, 1, 320)
+    resolution_trigger = [0, 1, 320]
 
 - lowpass_filter_sw_sigma_range:
 | used when applying low resolution to replace support sigma at low resolution iterations. The sigmas are linespaced across the defined range for low resolution iterations. If only one number given, the last sigma will default to support_sigma.
 | example:
 ::
 
-    lowpass_filter_sw_sigma_range = (2.0)
+    lowpass_filter_sw_sigma_range = [2.0]
 
 - lowpass_filter_range:
 | used when applying low resolution to calculate data gauss multiplier. The det values are linespaced for low resolution iterations from first value to last.  The multiplier array is a gauss distribution calculated with sigma of linespaced det across the low resolution iterations. If only one number is given, the last det will default to 1.
 | example:
 ::
 
-    lowpass_filter_range = (.7)
+    lowpass_filter_range = [.7]
 
 averaging
 +++++++++
@@ -254,7 +254,7 @@ averaging
 | example:
 ::
 
-    average_trigger = (-65, 1)
+    average_trigger = [-65, 1]
 
 progress
 ++++++++
@@ -263,7 +263,7 @@ progress
 | example:
 ::
 
-    progress_trigger = (0, 20)
+    progress_trigger = [0, 20]
 
 GA
 ++
@@ -280,7 +280,7 @@ GA
 | example:
 ::
 
-    ga_metrics = ("chi", "sharpness", "area")
+    ga_metrics = ["chi", "sharpness", "area"]
 
 - ga_breed_modes:
 | optional, a list of breeding modes applied to breed consecutive generation. If not defined, or shorter that number of generations, the mode defaults to "sqrt_ab".
@@ -288,35 +288,35 @@ GA
 | example:
 ::
 
-    ga_breed_modes = ("sqrt_ab", "dsqrt", "none")
+    ga_breed_modes = ["sqrt_ab", "dsqrt", "none"]
 
 - ga_cullings:
 | optional, defines how many worst samples to remove in a breeding phase for each generation. If not defined for the generation, the culling defaults to 0.
 | example:
 ::
 
-    ga_cullings = (2,1)
+    ga_cullings = [2,1]
 
 - ga_shrink_wrap_thresholds:
 | optional, a list of threshold values for each generation. The support is recalculated with this threshold after breeding phase. Defaults to configured value of support_threshold. 
 | example:
 ::
 
-    ga_shrink_wrap_thresholds = (.15, .1)
+    ga_shrink_wrap_thresholds = [.15, .1]
 
 - ga_shrink_wrap_gauss_sigmas:
 | optional, a list of sigma values for each generation. The support is recalculated with this sigma after breeding phase. Defaults to configured value of support_sigma. 
 | example:
 ::
 
-    ga_shrink_wrap_gauss_sigmas = (1.1, 1.0)
+    ga_shrink_wrap_gauss_sigmas = [1.1, 1.0]
 
 - ga_lowpass_filter_sigmas:
 | optional, a list of sigmas that will be used in subsequent generations to calculate Gauss distribution in the space defined by the size of the data and applied it to the data. In the example given below this feature will be used in first two generations.
 | example:
 ::
 
-    ga_lowpass_filter_sigmas = (2.0, 1.5)
+    ga_lowpass_filter_sigmas = [2.0, 1.5]
 
 - ga_gen_pc_start:
 | optional, a number indicating at which generation the pcdi feature will start to be active. If not defined, and the pcdi feature is active, it will start at the first generation.

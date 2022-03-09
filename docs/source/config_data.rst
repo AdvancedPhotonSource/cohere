@@ -20,11 +20,11 @@ Parameters
     alien_alg = "AutoAlien1"
 
 - aliens:
-| Needed when the 'block_aliens' method is configured. Used when the data contains regions with intensity produced by interference. The regions needs to be zeroed out. The aliens can be defined as regions each defined by coordinates of starting point, and ending point (i.e. ((xb0,yb0,zb0,xe0,ye0,ze0),(xb1,yb1,zb1,xe1,ye1,ze1),...(xbn,ybn,zbn,xen,yen,zen))).
+| Needed when the 'block_aliens' method is configured. Used when the data contains regions with intensity produced by interference. The regions needs to be zeroed out. The aliens can be defined as regions each defined by coordinates of starting point, and ending point (i.e. [[xb0,yb0,zb0,xe0,ye0,ze0],[xb1,yb1,zb1,xe1,ye1,ze1],...[xbn,ybn,zbn,xen,yen,zen]] ).
 | example:
 ::
 
-    aliens = ((170,220,112,195,245,123), (50,96,10,60,110,20))
+    aliens = [[170,220,112,195,245,123], [50,96,10,60,110,20]]
 
 - alien_file:
 | Needed when the 'alien_file' method is configured. User can produce a file in npy format that contains table of zeros and ones, where zero means to set the pixel to zero, and one to leave it. 
@@ -90,23 +90,23 @@ Parameters
     intensity_threshold = 25.0
 
 - adjust_dimensions:
-| optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to (x left, x right, y left, y right, z left, z right) The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 or a*2^n, where a is 3, 5, or 9
+| optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right] The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 or a*2^n, where a is 3, 5, or 9
 | example:
 ::
 
-    adjust_dimensions = (13, 0, -65, -65, -65, -65)
+    adjust_dimensions = [13, 0, -65, -65, -65, -65]
 
 - center_shift:
-| optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, (0,0,0) has no effect
+| optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, [0,0,0] has no effect
 | example:
 ::
 
-    center_shift = (0,0,0)
+    center_shift = [0,0,0]
 
 - binning:
-| optional, a list that defines binning values in respective dimensions, (1,1,1) has no effect
+| optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect
 | example:
 ::
 
-    binning = (1,1,1)
+    binning = [1,1,1]
 

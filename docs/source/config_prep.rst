@@ -32,7 +32,7 @@ Parameters
 | example:
 ::
 
-    roi = (0,256,0,256)
+    roi = [0,256,0,256]
 
 - min_files:
 | optional, defines a minimum number of raw data files in the scan directory. If number of files is less than minimum, the directory is not added to the data. 
@@ -46,7 +46,7 @@ Parameters
 | example:
 ::
 
-    exclude_scans = (78,81)
+    exclude_scans = [78,81]
 
 - separate_scans:
 | in typical scenario the data from all scans in experiment are combined. If specified as separate scans, each scan will be processed separately and will have sub-experiment name containing scan index ex. "scan_9", where 9 is scan index

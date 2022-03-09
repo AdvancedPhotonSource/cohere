@@ -20,11 +20,11 @@ Parameters
     rampups = 2
 
 - crop:
-| optional, defines a fraction of array at the center that will be subject of visualization. Defaults to (1.0, 1.0, 1.0), i.e. the size of the processed array.
+| optional, defines a fraction of array at the center that will be subject of visualization. Defaults to [1.0, 1.0, 1.0], i.e. the size of the processed array.
 | example:
 ::
 
-    crop = (.5, .5, .5)
+    crop = [.5, .5, .5]
 
 - diffractometer:
 | mandatory, name of diffractometer used in experiment.
