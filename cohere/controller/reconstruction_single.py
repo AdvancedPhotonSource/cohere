@@ -41,6 +41,25 @@ def set_lib(pkg, ndim=None):
     calc.set_lib(devlib, pkg=='af')
 
 
+def rec_process(pars, datafile, dev, continue_dir, save_dir):
+    worker = calc.Rec(pars, datafile)
+
+    if dev is None:
+        if 'device' in pars:
+            device = pars['device']
+        else:
+            device = [-1]
+    else:
+        device = dev[0]
+    if worker.init_dev(device) < 0:
+        return
+
+    worker.init(continue_dir)
+    ret_code = worker.iterate()
+    if ret_code == 0:
+        worker.save_res(save_dir)
+
+
 def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     Controls single reconstruction.
@@ -117,7 +136,6 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         p = Process(target=ai.run_AI, args=(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir))
         p.start()
         p.join()
-        #ai.run_AI(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir)
         continue_dir = ai_dir
     else:
         continue_dir = None
@@ -128,21 +146,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    worker = calc.Rec(pars, datafile)
-
-    if dev is None:
-        if 'device' in pars:
-            device = pars['device']
-        else:
-            device = [-1]
-    else:
-        device = dev[0]
-    if worker.init_dev(device) < 0:
-        return
-
-    worker.init(continue_dir)
-    ret_code = worker.iterate()
-    if ret_code == 0:
-        worker.save_res(save_dir)
-
-
+    p = Process(target=rec_process, args=(pars, datafile, dev,
+                                          continue_dir, save_dir))
+    p.start()
+    p.join()
