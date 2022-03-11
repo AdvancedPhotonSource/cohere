@@ -132,10 +132,12 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
             pars['AI_threshold'] = pars['shrink_wrap_threshold']
         if 'AI_sigma' not in pars:
             pars['AI_sigma'] = pars['shrink_wrap_gauss_sigma']
-        # run AI in separate process so the memory it returned after
-        p = Process(target=ai.run_AI, args=(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir))
-        p.start()
-        p.join()
+
+        ai.run_AI(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir)
+        # # run AI in separate process so the memory it returned after
+        # p = Process(target=ai.run_AI, args=(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir))
+        # p.start()
+        # p.join()
         continue_dir = ai_dir
     else:
         continue_dir = None

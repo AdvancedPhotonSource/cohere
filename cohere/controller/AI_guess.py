@@ -5,11 +5,50 @@ import cohere.utilities.utils as ut
 import math
 from typing import Union
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # import tensorflow for trained model
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.activations import sigmoid, tanh
+
+
+class Mymodel:
+    __model = None
+    __amp_layer_model = None
+    __ph_layer_model = None
+
+    @staticmethod
+    def get_model(model_file):
+        """ Static access method. """
+        if Mymodel.__model == None:
+            Mymodel(model_file)
+        return Mymodel.__amp_layer_model, Mymodel.__ph_layer_model
+
+    def __init__(self, model_file):
+        """ Virtually private constructor. """
+        if Mymodel.__model != None:
+            raise Exception("This class is a singleton!")
+        else:
+            # load trained network
+            Mymodel.__model = load_model(
+                model_file,
+                custom_objects={
+                    'tf': tf,
+                    'loss_comb2_scale': loss_comb2_scale,
+                    'sigmoid': sigmoid,
+                    'tanh': tanh,
+                    'math': math,
+                    'combine_complex': combine_complex,
+                    'get_mask': get_mask,
+                    'ff_propagation': ff_propagation
+                })
+            model = Mymodel.__model
+            # get the outputs from amplitude and phase layers
+            Mymodel.__amp_layer_model = Model(inputs=model.input,
+                                              outputs=model.get_layer('amp').output)
+            Mymodel.__ph_layer_model = Model(inputs=model.input,
+                                             outputs=model.get_layer('phi').output)
 
 
 def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
@@ -243,25 +282,27 @@ def run_AI(data, threshold, sigma, model_file, dir):
     new_data = new_data[np.newaxis]
 
     # load trained network
-    model = load_model(
-        model_file,
-        custom_objects={
-            'tf': tf,
-            'loss_comb2_scale': loss_comb2_scale,
-            'sigmoid': sigmoid,
-            'tanh': tanh,
-            'math': math,
-            'combine_complex': combine_complex,
-            'get_mask': get_mask,
-            'ff_propagation': ff_propagation
-        })
-    print('successfully load the model')
+    # model = load_model(
+    #     model_file,
+    #     custom_objects={
+    #         'tf': tf,
+    #         'loss_comb2_scale': loss_comb2_scale,
+    #         'sigmoid': sigmoid,
+    #         'tanh': tanh,
+    #         'math': math,
+    #         'combine_complex': combine_complex,
+    #         'get_mask': get_mask,
+    #         'ff_propagation': ff_propagation
+    #     })
+    # print('successfully load the model')
+    #
+    # # get the outputs from amplitude and phase layers
+    # amp_layer_model = Model(inputs=model.input,
+    #                         outputs=model.get_layer('amp').output)
+    # ph_layer_model = Model(inputs=model.input,
+    #                        outputs=model.get_layer('phi').output)
 
-    # get the outputs from amplitude and phase layers
-    amp_layer_model = Model(inputs=model.input,
-                            outputs=model.get_layer('amp').output)
-    ph_layer_model = Model(inputs=model.input,
-                           outputs=model.get_layer('phi').output)
+    amp_layer_model, ph_layer_model = Mymodel.get_model(model_file)
 
     preds_amp = amp_layer_model.predict(new_data, verbose=1)
 
