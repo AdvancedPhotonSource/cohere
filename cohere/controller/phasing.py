@@ -207,7 +207,6 @@ class Rec:
     def init_dev(self, device_id):
         self.dev = device_id
         if device_id != -1:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(device_id)
             try:
                 devlib.set_device(device_id)
             except Exception as e:

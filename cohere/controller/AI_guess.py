@@ -327,3 +327,6 @@ def run_AI(data, threshold, sigma, model_file, dir):
 
     support = ut.shrink_wrap(guess, threshold, sigma)
     np.save(os.path.join(dir, 'support.npy'), support)
+
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        del os.environ["CUDA_VISIBLE_DEVICES"]
