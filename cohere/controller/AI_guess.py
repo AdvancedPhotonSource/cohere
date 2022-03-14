@@ -5,6 +5,7 @@ import cohere.utilities.utils as ut
 import math
 from typing import Union
 
+# tensorflow will use cpu
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # import tensorflow for trained model
 import tensorflow as tf
@@ -280,27 +281,6 @@ def run_AI(data, threshold, sigma, model_file, dir):
     # match diff os
     new_data, inshape = match_oversample_diff(data, orig_os, wanted_os)
     new_data = new_data[np.newaxis]
-
-    # load trained network
-    # model = load_model(
-    #     model_file,
-    #     custom_objects={
-    #         'tf': tf,
-    #         'loss_comb2_scale': loss_comb2_scale,
-    #         'sigmoid': sigmoid,
-    #         'tanh': tanh,
-    #         'math': math,
-    #         'combine_complex': combine_complex,
-    #         'get_mask': get_mask,
-    #         'ff_propagation': ff_propagation
-    #     })
-    # print('successfully load the model')
-    #
-    # # get the outputs from amplitude and phase layers
-    # amp_layer_model = Model(inputs=model.input,
-    #                         outputs=model.get_layer('amp').output)
-    # ph_layer_model = Model(inputs=model.input,
-    #                        outputs=model.get_layer('phi').output)
 
     amp_layer_model, ph_layer_model = Mymodel.get_model(model_file)
 
