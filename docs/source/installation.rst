@@ -21,10 +21,10 @@ User has to intall the library of his choice.
 
 if using cupy library::
 
-    conda install cohere -c bfrosik -c conda-forge
+    conda install cupy -c conda-forge
 
 if using arrayfire library::
 
     pip install arrayfire
 
-install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
+and install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
