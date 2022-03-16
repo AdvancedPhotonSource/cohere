@@ -41,7 +41,30 @@ def set_lib(pkg, ndim=None):
     calc.set_lib(devlib, pkg=='af')
 
 
-def rec_process(pars, datafile, dev, continue_dir, save_dir):
+def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
+    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
+        if datafile.endswith('tif') or datafile.endswith('tiff'):
+            try:
+                data = ut.read_tif(datafile)
+            except:
+                print('could not load data file', datafile)
+                return
+        elif datafile.endswith('npy'):
+            try:
+                data = np.load(datafile)
+            except:
+                print('could not load data file', datafile)
+                return
+        else:
+            print('no data file found')
+            return
+
+        set_lib('af', len(data.shape))
+        if lib != 'af':
+            devlib.set_backend(lib)
+    else:
+        set_lib(lib)
+
     worker = calc.Rec(pars, datafile)
 
     if dev is None:
@@ -92,29 +115,6 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     pars = ut.read_config(conf_file)
 
-    if datafile.endswith('tif') or datafile.endswith('tiff'):
-        try:
-            data = ut.read_tif(datafile)
-        except:
-            print ('could not load data file', datafile)
-            return
-    elif datafile.endswith('npy'):
-        try:
-            data = np.load(datafile)
-        except:
-            print ('could not load data file', datafile)
-            return
-    else:
-        print ('no data file found')
-        return
-
-    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-        set_lib('af', len(data.shape))
-        if lib != 'af':
-            devlib.set_backend(lib)
-    else:
-        set_lib(lib)
-
     if 'init_guess' not in pars:
         pars['init_guess'] = 'random'
     if pars['init_guess'] == 'continue':
@@ -125,6 +125,22 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
             return
         if not os.path.isfile(pars['AI_trained_model']):
             print('there is no file', pars['AI_trained_model'])
+            return
+
+        if datafile.endswith('tif') or datafile.endswith('tiff'):
+            try:
+                data = ut.read_tif(datafile)
+            except:
+                print('could not load data file', datafile)
+                return
+        elif datafile.endswith('npy'):
+            try:
+                data = np.load(datafile)
+            except:
+                print('could not load data file', datafile)
+                return
+        else:
+            print('no data file found')
             return
 
         import cohere.controller.AI_guess as ai
@@ -138,10 +154,6 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
             os.makedirs(ai_dir)
 
         ai.run_AI(data, pars['AI_trained_model'], ai_dir)
-        # # run AI in separate process so the memory it returned after
-        # p = Process(target=ai.run_AI, args=(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir))
-        # p.start()
-        # p.join()
         continue_dir = ai_dir
     else:
         continue_dir = None
@@ -152,8 +164,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    rec_process(pars, datafile, dev, continue_dir, save_dir)
-    # p = Process(target=rec_process, args=(pars, datafile, dev,
-    #                                       continue_dir, save_dir))
-    # p.start()
-    # p.join()
+    p = Process(target=rec_process, args=(lib, pars, datafile, dev,
+                                          continue_dir, save_dir))
+    p.start()
+    p.join()
