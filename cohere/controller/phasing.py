@@ -86,6 +86,13 @@ class Pcdi:
         coh_sum = devlib.sum(devlib.absolute(self.kernel))
         self.kernel = devlib.absolute(self.kernel) / coh_sum
 
+    def clear(self):
+        self.params = None
+        self.kernel = None
+        self.roi_amplitudes_prev = None
+        self.roi_data = None
+        self.sum_roi_data = None
+
 
 class Support:
     def __init__(self, params, dims, dir=None):
@@ -123,6 +130,11 @@ class Support:
         phase = devlib.angle(ds_image)
         phase_condition = (phase > self.params['phm_phase_min']) & (phase < self.params['phm_phase_max'])
         self.support *= phase_condition
+
+    def clear(self):
+        self.params = None
+        self.support = None
+        self.distribution = None
 
 
 class Rec:
@@ -538,3 +550,18 @@ class Rec:
         divisor = devlib.where((divisor != 0.0), divisor, 1.0)
         ratio = divident / divisor
         return ratio
+
+    def clear(self):
+        self.support_obj.clear()
+        if self.is_pc:
+            self.pc_obj.clear()
+        self.params = None
+        self.data = None
+        self.ds_image = None
+        self.rs_amplitudes = None
+        self.iter_data = None
+        self.ds_image_raw = None
+        self.saved_data = None
+        self.support_obj = None
+        self.flow = None
+        self.aver = None

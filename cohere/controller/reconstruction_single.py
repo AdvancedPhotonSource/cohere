@@ -58,6 +58,7 @@ def rec_process(pars, datafile, dev, continue_dir, save_dir):
     ret_code = worker.iterate()
     if ret_code == 0:
         worker.save_res(save_dir)
+    worker.clear()
 
 
 def reconstruction(lib, conf_file, datafile, dir, dev=None):
@@ -119,6 +120,13 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':
+        if 'AI_trained_model' not in pars:
+            print ('no AI_trained_model in config')
+            return
+        if not os.path.isfile(pars['AI_trained_model']):
+            print('there is no file', pars['AI_trained_model'])
+            return
+
         import cohere.controller.AI_guess as ai
 
         # The results will be stored in the directory <experiment_dir>/AI_guess
