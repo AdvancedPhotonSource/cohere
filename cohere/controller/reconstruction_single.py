@@ -81,7 +81,6 @@ def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
     ret_code = worker.iterate()
     if ret_code == 0:
         worker.save_res(save_dir)
-    worker.clear()
 
 
 def reconstruction(lib, conf_file, datafile, dir, dev=None):
