@@ -9,9 +9,9 @@ Trigger
 =======
 | Trigger can be defined as a single iteration, or multiple iterations.
 | examples:
-| (3) trigger at iteration 3
-| (20, 5) trigger starts at iteration 20, repeats every 5 iteration for the rest of run
-| (20, 5, 40) trigger starts at iteration 20, repeats every 5 iteration until iteration 40
+| [3] trigger at iteration 3
+| [20, 5] trigger starts at iteration 20, repeats every 5 iteration for the rest of run
+| [20, 5, 40] trigger starts at iteration 20, repeats every 5 iteration until iteration 40
   
 Parameters
 ==========
@@ -44,20 +44,6 @@ General
 ::
 
     continue_dir = "/path/to/previous_results_dir/some_phasing_results_dir"
-
-- AI_threshold:
-| optional, valid if init_guess is "AI_guess". defines the threshold used in shrink wrap to calculate initial support. Defaults to shrink_wrap_threshold.
-| example:
-::
-
-    AI_threshold = 0.1
-
-- AI_sigma:
-| optional, valid if init_guess is "AI_guess". defines sigma used in shrink wrap to calculate initial support. Defaults to shrink_wrap_sigma.
-| example:
-::
-
-    AI_sigma = 1.0
 
 - AI_trained_model:
 | must be defined, if init_guess is "AI_guess". defines the file in hdf5 format that holds trained model.

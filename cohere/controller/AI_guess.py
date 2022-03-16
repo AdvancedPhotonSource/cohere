@@ -270,7 +270,7 @@ def _fourier_transform(input):
     return Fr
 
 
-def run_AI(data, threshold, sigma, model_file, dir):
+def run_AI(data, model_file, dir):
     print('AI guess')
 
     # prepare data to make the oversampling ratio ~3
@@ -304,9 +304,6 @@ def run_AI(data, threshold, sigma, model_file, dir):
     guess = ut.adjust_dimensions(pred_obj, pad)
 
     np.save(os.path.join(dir, 'image.npy'), guess)
-
-    support = ut.shrink_wrap(guess, threshold, sigma)
-    np.save(os.path.join(dir, 'support.npy'), support)
 
     if "CUDA_VISIBLE_DEVICES" in os.environ:
         del os.environ["CUDA_VISIBLE_DEVICES"]

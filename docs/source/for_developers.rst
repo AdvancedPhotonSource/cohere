@@ -23,10 +23,10 @@ Pre-requisites
    - conda install mayavi -c conda-forge
    - conda install xrayutilities -c conda-forge
    - conda install psutil -c conda-forge
-   - if running AutoAlien1 algorithm during standard preprocessing: pip install sklearn
+   - if running AutoAlien1 algorithm during standard preprocessing: conda install scikit-learn -c conda-forge
    - if using Initial AI guess: conda install tensorflow -c conda-forge
    - if using cupy library: conda install cupy -c conda-forge
-   - if using arrayfire: install according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
+   - if using arrayfire: pip install arrayfire, install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
 
 Initialization
 ++++++++++++++

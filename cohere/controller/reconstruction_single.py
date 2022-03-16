@@ -128,12 +128,8 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
                 os.remove(os.path.join(ai_dir, f))
         else:
             os.makedirs(ai_dir)
-        if 'AI_threshold' not in pars:
-            pars['AI_threshold'] = pars['shrink_wrap_threshold']
-        if 'AI_sigma' not in pars:
-            pars['AI_sigma'] = pars['shrink_wrap_gauss_sigma']
 
-        ai.run_AI(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir)
+        ai.run_AI(data, pars['AI_trained_model'], ai_dir)
         # # run AI in separate process so the memory it returned after
         # p = Process(target=ai.run_AI, args=(data, pars['AI_threshold'], pars['AI_sigma'], pars['AI_trained_model'], ai_dir))
         # p.start()
@@ -148,7 +144,8 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    p = Process(target=rec_process, args=(pars, datafile, dev,
-                                          continue_dir, save_dir))
-    p.start()
-    p.join()
+    rec_process(pars, datafile, dev, continue_dir, save_dir)
+    # p = Process(target=rec_process, args=(pars, datafile, dev,
+    #                                       continue_dir, save_dir))
+    # p.start()
+    # p.join()
