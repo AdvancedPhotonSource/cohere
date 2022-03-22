@@ -14,6 +14,7 @@ import os
 import cohere.controller.reconstruction_multi as multi
 import cohere.utilities.utils as ut
 import multiprocessing as mp
+from multiprocessing import Process, Queue
 import shutil
 import importlib
 import cohere.controller.phasing as calc
@@ -244,28 +245,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     pars = ut.read_config(conf_file)
     pars = set_ga_defaults(pars)
 
-    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-        if datafile.endswith('tif') or datafile.endswith('tiff'):
-            try:
-                data = ut.read_tif(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        elif datafile.endswith('npy'):
-            try:
-                data = np.load(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        else:
-            print ('no data file found')
-            return
-        set_lib('af', len(data.shape))
-        if lib != 'af':
-            dvclib.set_backend(lib)
-    else:
-        set_lib(lib)
-
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
     else:
@@ -282,6 +261,28 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     # the cupy does not run correctly with multiprocessing, but limiting number of runs to available devices will work as temporary fix
     if pars['ga_fast'] or lib == 'cp':  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
+        if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
+            if datafile.endswith('tif') or datafile.endswith('tiff'):
+                try:
+                    data = ut.read_tif(datafile)
+                except:
+                    print('could not load data file', datafile)
+                    return
+            elif datafile.endswith('npy'):
+                try:
+                    data = np.load(datafile)
+                except:
+                    print('could not load data file', datafile)
+                    return
+            else:
+                print('no data file found')
+                return
+            set_lib('af', len(data.shape))
+            if lib != 'af':
+                dvclib.set_backend(lib)
+        else:
+            set_lib(lib)
+
         reconstructions = min(reconstructions, len(devices))
         workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
         #            for worker in workers:
@@ -289,9 +290,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         processes = {}
 
         for worker in workers:
-            worker_qin = mp.Queue()
-            worker_qout = mp.Queue()
-            process = mp.Process(target=worker.fast_ga, args=(worker_qin, worker_qout))
+            worker_qin = Queue()
+            worker_qout = Queue()
+            process = Process(target=worker.fast_ga, args=(worker_qin, worker_qout))
             process.start()
             processes[process.pid] = [worker_qin, worker_qout]
 
@@ -383,15 +384,20 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     else:   # not fast GA
         rec = multi
         prev_dirs = []
+        q = Queue()
         for _ in range(reconstructions):
             prev_dirs.append(None)
         for g in range(generations):
             print ('starting generation',g)
             gen_save_dir = os.path.join(save_dir, 'g_' + str(g))
             metric_type = pars['ga_metrics'][g]
-            workers = [calc.Rec(pars, datafile) for _ in range(len(prev_dirs))]
-            prev_dirs, evals = rec.multi_rec(gen_save_dir, devices, workers, prev_dirs, metric_type, g)
+            #workers = [calc.Rec(pars, datafile) for _ in range(len(prev_dirs))]
+            #prev_dirs, evals = rec.multi_rec(lib, gen_save_dir, devices, pars, datafile, prev_dirs, metric_type, g, q)
+            p = Process(target=rec.multi_rec, args=(lib, gen_save_dir, devices, pars, datafile, prev_dirs, metric_type, g, q))
+            p.start()
+            p.join()
 
+            prev_dirs, evals = q.get()
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
             order_dirs(prev_dirs, evals, metric_type)

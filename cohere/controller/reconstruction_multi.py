@@ -13,8 +13,10 @@ import numpy as np
 import importlib
 import cohere.utilities.utils as ut
 import cohere.controller.phasing as calc
-from multiprocessing import Pool, Queue
+from multiprocessing.pool import ThreadPool as Pool
+from multiprocessing import Process
 from functools import partial
+import threading
 
 
 __author__ = "Barbara Frosik"
@@ -24,6 +26,17 @@ __all__ = ['single_rec_process',
            'assign_gpu',
            'multi_rec',
            'reconstruction']
+
+
+class Devices:
+    def __init__(self, devices):
+        self.devices = devices
+        self.index = 0
+
+    def assign_gpu(self):
+        thr = threading.current_thread()
+        thr.gpu = self.devices[self.index]
+        self.index = self.index + 1
 
 
 def set_lib(pkg, ndim=None):
@@ -71,7 +84,8 @@ def single_rec_process(metric_type, gen, rec_attrs):
         a calculated characteristic of the image array defined by the metric
     """
     worker, prev_dir, save_dir = rec_attrs
-    if worker.init_dev(gpu) < 0:
+    thr = threading.current_thread()
+    if worker.init_dev(thr.gpu) < 0:
         worker = None
         metric = None
     else:
@@ -86,29 +100,10 @@ def single_rec_process(metric_type, gen, rec_attrs):
             metric = worker.get_metric(metric_type)
         else:    # bad reconstruction
             metric = None
-        worker = None    # TODO check if this clear the GPU
     return metric
 
 
-def assign_gpu(*args):
-    """
-    This function dequeues GPU id from given queue and makes it global, thus associating it with the process.
-
-    Parameters
-    ----------
-    q : Queue
-        a queue holding GPU ids assigned to consequitive processes
-
-    Returns
-    -------
-    nothing
-    """
-    q = args[0]
-    global gpu
-    gpu = q.get()
-
-
-def multi_rec(save_dir, devices, workers, prev_dirs, metric_type='chi', gen=None):
+def multi_rec(lib, save_dir, devices, pars, datafile, prev_dirs, metric_type='chi', gen=None, q=None):
     """
     This function controls the multiple reconstructions.
 
@@ -148,6 +143,35 @@ def multi_rec(save_dir, devices, workers, prev_dirs, metric_type='chi', gen=None
         for r in result:
             evals.append(r)
 
+    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
+        if datafile.endswith('tif') or datafile.endswith('tiff'):
+            try:
+                data = ut.read_tif(datafile)
+            except:
+                print ('could not load data file', datafile)
+                return
+        elif datafile.endswith('npy'):
+            try:
+                data = np.load(datafile)
+            except:
+                print ('could not load data file', datafile)
+                return
+        else:
+            print ('no data file found')
+            return
+        print('data shape', data.shape)
+        set_lib('af', len(data.shape))
+        if lib != 'af':
+            devlib.set_backend(lib)
+    else:
+        set_lib(lib)
+
+    if 'reconstructions' in pars:
+        reconstructions = pars['reconstructions']
+    else:
+        reconstructions = 1
+    workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
+    dev_obj = Devices(devices)
     iterable = []
     save_dirs = []
 
@@ -156,12 +180,8 @@ def multi_rec(save_dir, devices, workers, prev_dirs, metric_type='chi', gen=None
         save_dirs.append(save_sub)
         iterable.append((workers[i], prev_dirs[i], save_sub))
     func = partial(single_rec_process, metric_type, gen)
-    q = Queue()
-    for device in devices:
-        q.put(device)
-    with Pool(processes=len(devices), initializer=assign_gpu, initargs=(q,)) as pool:
+    with Pool(processes=len(devices), initializer=dev_obj.assign_gpu, initargs=()) as pool:
         pool.map_async(func, iterable, callback=collect_result)
-        q.close()
         pool.close()
         pool.join()
         pool.terminate()
@@ -172,7 +192,8 @@ def multi_rec(save_dir, devices, workers, prev_dirs, metric_type='chi', gen=None
             evals.pop(i)
             save_dirs.pop(i)
 
-    return save_dirs, evals
+    if q is not None:
+        q.put(save_dirs, evals)
 
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
@@ -202,37 +223,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     pars = ut.read_config(conf_file)
 
-    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-        if datafile.endswith('tif') or datafile.endswith('tiff'):
-            try:
-                data = ut.read_tif(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        elif datafile.endswith('npy'):
-            try:
-                data = np.load(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        else:
-            print ('no data file found')
-            return
-        print('data shape', data.shape)
-        set_lib('af', len(data.shape))
-        if lib != 'af':
-            devlib.set_backend(lib)
-    else:
-        set_lib(lib)
-
-    if 'reconstructions' in pars:
-        reconstructions = pars['reconstructions']
-        # temporery fix.limit number of reconstructions to the number of available devices if lib is cupy.
-        if lib == 'cp':
-            reconstructions = len(devices)
-    else:
-        reconstructions = 1
-
     prev_dirs = []
     if 'init_guess' not in pars:
         pars['init_guess'] = 'random'
@@ -246,6 +236,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         print('multiple reconstruction do not support AI_guess initial guess')
         return
     else:
+        if 'reconstructions' in pars:
+            reconstructions = pars['reconstructions']
+        else:
+            reconstructions = 1
         for _ in range(reconstructions):
             prev_dirs.append(None)
     if 'save_dir' in pars:
@@ -254,6 +248,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
-
-    save_dirs, evals = multi_rec(save_dir, devices, workers, prev_dirs)
+    p = Process(target=multi_rec, args=(lib, save_dir, devices, pars, datafile, prev_dirs))
+    p.start()
+    p.join()
