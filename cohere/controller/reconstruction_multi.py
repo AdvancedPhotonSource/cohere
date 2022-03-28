@@ -103,7 +103,7 @@ def single_rec_process(metric_type, gen, rec_attrs):
     return metric
 
 
-def multi_rec(lib, save_dir, devices, pars, datafile, prev_dirs, metric_type='chi', gen=None, q=None):
+def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, q=None):
     """
     This function controls the multiple reconstructions.
 
@@ -166,11 +166,7 @@ def multi_rec(lib, save_dir, devices, pars, datafile, prev_dirs, metric_type='ch
     else:
         set_lib(lib)
 
-    if 'reconstructions' in pars:
-        reconstructions = pars['reconstructions']
-    else:
-        reconstructions = 1
-    workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
+    workers = [calc.Rec(pars, datafile) for _ in range(no_recs)]
     dev_obj = Devices(devices)
     iterable = []
     save_dirs = []
@@ -248,6 +244,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         filename = conf_file.split('/')[-1]
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    p = Process(target=multi_rec, args=(lib, save_dir, devices, pars, datafile, prev_dirs))
+    p = Process(target=multi_rec, args=(lib, save_dir, devices, reconstructions, pars, datafile, prev_dirs))
     p.start()
     p.join()

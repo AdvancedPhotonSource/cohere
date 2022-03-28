@@ -199,14 +199,12 @@ def order_processes(proc_metrics, metric_type):
     nothing
     """
     ranked_proc = sorted(proc_metrics.items(), key=lambda x: x[1], reverse=False)
+
     # ranks keeps indexes of reconstructions from best to worst
     # for most of the metric types the minimum of the metric is best, but for
     # 'summed_phase' and 'area' it is oposite, so reversing the order
-    # procs, metrics = zip(*proc_metrics)
-    # ranks = np.argsort(metrics).tolist()
     if metric_type == 'summed_phase' or metric_type == 'area':
         ranked_proc.reverse()
-    # proc_ranks = list(zip(procs, ranks))
     return ranked_proc
 
 
@@ -257,8 +255,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     if reconstructions < 2:
         print ("GA not implemented for a single reconstruction")
 
-    # init pars
-
     # the cupy does not run correctly with multiprocessing, but limiting number of runs to available devices will work as temporary fix
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
         if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
@@ -285,8 +281,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         reconstructions = min(reconstructions, len(devices))
         workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
-        #            for worker in workers:
-        #                worker.init_dev(devices.pop())
         processes = {}
 
         for worker in workers:
@@ -391,9 +385,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             print ('starting generation',g)
             gen_save_dir = os.path.join(save_dir, 'g_' + str(g))
             metric_type = pars['ga_metrics'][g]
-            #workers = [calc.Rec(pars, datafile) for _ in range(len(prev_dirs))]
-            #prev_dirs, evals = rec.multi_rec(lib, gen_save_dir, devices, pars, datafile, prev_dirs, metric_type, g, q)
-            p = Process(target=rec.multi_rec, args=(lib, gen_save_dir, devices, pars, datafile, prev_dirs, metric_type, g, q))
+            p = Process(target=rec.multi_rec, args=(lib, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, q))
             p.start()
             p.join()
 
@@ -401,6 +393,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
             order_dirs(prev_dirs, evals, metric_type)
-            prev_dirs = cull(prev_dirs, pars['ga_reconstructions'][g])
+            reconstructions = pars['ga_reconstructions'][g]
+            prev_dirs = cull(prev_dirs, reconstructions)
 
     print('done gen')
