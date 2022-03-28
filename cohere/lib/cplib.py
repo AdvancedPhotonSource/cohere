@@ -84,7 +84,10 @@ class cplib(cohlib):
         return cp.square(arr)
 
     def sum(arr, axis=None):
-        return cp.sum(arr, axis)
+        sm = cp.sum(arr, axis)
+        if axis is None:
+            return sm.tolist()
+        return sm
 
     def real(arr):
         return cp.real(arr)
