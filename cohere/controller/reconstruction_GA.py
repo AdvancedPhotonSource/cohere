@@ -260,7 +260,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     # init pars
 
     # the cupy does not run correctly with multiprocessing, but limiting number of runs to available devices will work as temporary fix
-    if pars['ga_fast'] or lib == 'cp':  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
+    if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
         if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
             if datafile.endswith('tif') or datafile.endswith('tiff'):
                 try:

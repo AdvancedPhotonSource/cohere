@@ -193,7 +193,7 @@ def multi_rec(lib, save_dir, devices, pars, datafile, prev_dirs, metric_type='ch
             save_dirs.pop(i)
 
     if q is not None:
-        q.put(save_dirs, evals)
+        q.put((save_dirs, evals))
 
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
