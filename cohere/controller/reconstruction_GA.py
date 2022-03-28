@@ -64,7 +64,7 @@ def set_ga_defaults(pars):
             pars['ga_gen_pc_start'] = min(pars['ga_gen_pc_start'], pars['ga_generations']-1)
 
     if 'ga_fast' not in pars:
-        pars['ga_fast'] = True
+        pars['ga_fast'] = False
 
     if 'ga_metrics' not in pars:
         pars['ga_metrics'] = ['chi'] * pars['ga_generations']
