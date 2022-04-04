@@ -86,7 +86,6 @@ def single_rec_process(metric_type, gen, rec_attrs):
     worker, prev_dir, save_dir = rec_attrs
     thr = threading.current_thread()
     if worker.init_dev(thr.gpu) < 0:
-        worker = None
         metric = None
     else:
         worker.init(prev_dir, gen)
@@ -219,23 +218,26 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     pars = ut.read_config(conf_file)
 
+    if 'reconstructions' in pars:
+        reconstructions = pars['reconstructions']
+    else:
+        reconstructions = 1
+
     prev_dirs = []
     if 'init_guess' not in pars:
         pars['init_guess'] = 'random'
     if pars['init_guess'] == 'continue':
-        continue_dir = pars.continue_dir
+        continue_dir = pars['continue_dir']
         for sub in os.listdir(continue_dir):
             image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
             if image is not None:
-                prev_dirs.append(sub)
+                prev_dirs.append(os.path.join(continue_dir, sub))
+        if len(prev_dirs) < reconstructions:
+            prev_dirs = prev_dirs +  (reconstructions - len(prev_dirs)) * [None]
     elif pars['init_guess'] == 'AI_guess':
         print('multiple reconstruction do not support AI_guess initial guess')
         return
     else:
-        if 'reconstructions' in pars:
-            reconstructions = pars['reconstructions']
-        else:
-            reconstructions = 1
         for _ in range(reconstructions):
             prev_dirs.append(None)
     if 'save_dir' in pars:
