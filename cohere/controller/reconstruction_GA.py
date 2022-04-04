@@ -157,7 +157,8 @@ def order_dirs(dirs, evals, metric):
 
     Returns
     -------
-    nothing
+    ranks : list
+        a list of indexes that point to the ranked outcome
     """
     # ranks keeps indexes of reconstructions from best to worst
     # for most of the metric types the minimum of the metric is best, but for
@@ -181,6 +182,7 @@ def order_dirs(dirs, evals, metric):
         last_sub = os.path.basename(dir)
         dest = os.path.join(parent_dir, last_sub.split('_')[-1])
         shutil.move(dir, dest)
+    return ranks
 
 
 def order_processes(proc_metrics, metric_type):
@@ -250,10 +252,14 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
 
     generations = pars['ga_generations']
-    reconstructions = pars['reconstructions']
+    if 'reconstructions' in pars:
+        reconstructions = pars['reconstructions']
+    else:
+        reconstructions = 1
 
     if reconstructions < 2:
         print ("GA not implemented for a single reconstruction")
+        return
 
     # the cupy does not run correctly with multiprocessing, but limiting number of runs to available devices will work as temporary fix
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
@@ -377,10 +383,25 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             worker_qin.put('done')
     else:   # not fast GA
         rec = multi
-        prev_dirs = []
+        guesses_dir = None
+        if 'init_guess' not in pars:
+            pars['init_guess'] = 'random'
+        if pars['init_guess'] == 'continue':
+            continue_dir = pars['continue_dir']
+            guesses_dir = continue_dir
+            for sub in os.listdir(continue_dir):
+                image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
+                if image is not None:
+                    prev_dirs.append(os.path.join(continue_dir, sub))
+            if len(prev_dirs) < reconstructions:
+                prev_dirs = prev_dirs + (reconstructions - len(prev_dirs)) * [None]
+        elif pars['init_guess'] == 'AI_guess':
+            print('multiple reconstruction do not support AI_guess initial guess')
+            return
+        else:
+            for _ in range(reconstructions):
+                prev_dirs.append(None)
         q = Queue()
-        for _ in range(reconstructions):
-            prev_dirs.append(None)
         for g in range(generations):
             print ('starting generation',g)
             gen_save_dir = os.path.join(save_dir, 'g_' + str(g))
@@ -392,8 +413,12 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             prev_dirs, evals = q.get()
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
-            order_dirs(prev_dirs, evals, metric_type)
+            ranks = order_dirs(prev_dirs, evals, metric_type)
+            # save the ranks of the reconstructions in the parent directory of the initial guesses
+            if guesses_dir is not None:
+                np.save(os.path.join(guesses_dir, 'ranks'), ranks)
             reconstructions = pars['ga_reconstructions'][g]
             prev_dirs = cull(prev_dirs, reconstructions)
+            guesses_dir = gen_save_dir
 
     print('done gen')
