@@ -383,6 +383,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             worker_qin.put('done')
     else:   # not fast GA
         rec = multi
+        prev_dirs = []
         guesses_dir = None
         if 'init_guess' not in pars:
             pars['init_guess'] = 'random'
