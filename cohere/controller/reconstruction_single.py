@@ -11,6 +11,7 @@ This module controls a single reconstruction process.
 import numpy as np
 import os
 import importlib
+import cohere.controller.reconstruction_common as common
 import cohere.controller.phasing as calc
 import cohere.utilities.utils as ut
 from multiprocessing import Process
@@ -119,40 +120,9 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':
-        if 'AI_trained_model' not in pars:
-            print ('no AI_trained_model in config')
+        ai_dir = common.start_AI(pars, datafile, dir)
+        if ai_dir is None:
             return
-        if not os.path.isfile(pars['AI_trained_model']):
-            print('there is no file', pars['AI_trained_model'])
-            return
-
-        if datafile.endswith('tif') or datafile.endswith('tiff'):
-            try:
-                data = ut.read_tif(datafile)
-            except:
-                print('could not load data file', datafile)
-                return
-        elif datafile.endswith('npy'):
-            try:
-                data = np.load(datafile)
-            except:
-                print('could not load data file', datafile)
-                return
-        else:
-            print('no data file found')
-            return
-
-        import cohere.controller.AI_guess as ai
-
-        # The results will be stored in the directory <experiment_dir>/AI_guess
-        ai_dir = os.path.join(dir, 'results_AI')
-        if os.path.exists(ai_dir):
-            for f in os.listdir(ai_dir):
-                os.remove(os.path.join(ai_dir, f))
-        else:
-            os.makedirs(ai_dir)
-
-        ai.run_AI(data, pars['AI_trained_model'], ai_dir)
         continue_dir = ai_dir
     else:
         continue_dir = None
