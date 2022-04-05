@@ -13,11 +13,11 @@ import numpy as np
 import os
 import cohere.controller.reconstruction_multi as multi
 import cohere.utilities.utils as ut
-import multiprocessing as mp
 from multiprocessing import Process, Queue
 import shutil
 import importlib
 import cohere.controller.phasing as calc
+import cohere.controller.reconstruction_common as common
 
 
 __author__ = "Barbara Frosik"
@@ -397,8 +397,11 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             if len(prev_dirs) < reconstructions:
                 prev_dirs = prev_dirs + (reconstructions - len(prev_dirs)) * [None]
         elif pars['init_guess'] == 'AI_guess':
-            print('multiple reconstruction do not support AI_guess initial guess')
-            return
+            ai_dir = common.start_AI(pars, datafile, dir)
+            if ai_dir is None:
+                return
+            guesses_dir = ai_dir
+            prev_dirs = [ai_dir] + (reconstructions - 1) * [None]
         else:
             for _ in range(reconstructions):
                 prev_dirs.append(None)
@@ -417,7 +420,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             ranks = order_dirs(prev_dirs, evals, metric_type)
             # save the ranks of the reconstructions in the parent directory of the initial guesses
             if guesses_dir is not None:
-                np.save(os.path.join(guesses_dir, 'ranks'), ranks)
+                with open(os.path.join(guesses_dir, 'ranks'), 'w') as f:
+                    f.write(str(ranks))
             reconstructions = pars['ga_reconstructions'][g]
             prev_dirs = cull(prev_dirs, reconstructions)
             guesses_dir = gen_save_dir
