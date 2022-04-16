@@ -144,7 +144,7 @@ def set_ga_defaults(pars):
 
 
 
-def order_dirs(dirs, evals, metric):
+def order_dirs(dirs, evals, prev_dir_seq, metric):
     """
     Orders results in generation directory in subdirectories numbered from 0 and up, the best result stored in the '0' subdirectory. The ranking is done by numbers in evals list, which are the results of the generation's metric to the image array.
 
@@ -157,8 +157,8 @@ def order_dirs(dirs, evals, metric):
 
     Returns
     -------
-    ranks : list
-        a list of indexes that point to the ranked outcome
+    ordered_prev_dirs : list
+        a list of previous directories ordered from best to worst
     """
     # ranks keeps indexes of reconstructions from best to worst
     # for most of the metric types the minimum of the metric is best, but for
@@ -170,11 +170,14 @@ def order_dirs(dirs, evals, metric):
     # all the generation directories are in the same parent directory
     parent_dir = os.path.abspath(os.path.join(dirs[0], os.pardir))
     rank_dirs = []
+    ordered_prev_dirs = []
+
     # append "_<rank>" to each result directory name
     for i in range(len(ranks)):
         dest = os.path.join(parent_dir, str(i) + '_' + str(ranks[i]))
         shutil.move(dirs[i], dest)
         rank_dirs.append(dest)
+        ordered_prev_dirs.append(prev_dir_seq[ranks[i]])
 
     # remove the number preceding rank from each directory name, so the directories are numbered
     # according to rank
@@ -182,7 +185,7 @@ def order_dirs(dirs, evals, metric):
         last_sub = os.path.basename(dir)
         dest = os.path.join(parent_dir, last_sub.split('_')[-1])
         shutil.move(dir, dest)
-    return ranks
+    return ordered_prev_dirs
 
 
 def order_processes(proc_metrics, metric_type):
@@ -414,14 +417,16 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             p.start()
             p.join()
 
-            prev_dirs, evals = q.get()
+            temp_dirs, evals, prev_dir_seq = q.get()
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
-            ranks = order_dirs(prev_dirs, evals, metric_type)
+            ordered_prev_dirs = order_dirs(temp_dirs, evals, prev_dir_seq, metric_type)
             # save the ranks of the reconstructions in the parent directory of the initial guesses
             if guesses_dir is not None:
-                with open(os.path.join(guesses_dir, 'ranks'), 'w') as f:
-                    f.write(str(ranks))
+                with open(os.path.join(guesses_dir, 'ranked'), 'w') as f:
+                    for prev_dir in ordered_prev_dirs:
+                        f.write(str(prev_dir)+'\n')
+            prev_dirs = temp_dirs
             reconstructions = pars['ga_reconstructions'][g]
             prev_dirs = cull(prev_dirs, reconstructions)
             guesses_dir = gen_save_dir
