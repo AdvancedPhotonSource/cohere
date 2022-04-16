@@ -99,7 +99,7 @@ def single_rec_process(metric_type, gen, rec_attrs):
             metric = worker.get_metric(metric_type)
         else:    # bad reconstruction
             metric = None
-    return metric
+    return metric, prev_dir
 
 
 def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, q=None):
@@ -137,10 +137,12 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         list of evaluation results of image arrays
     """
     evals = []
+    prev_dir_seq =[]
 
     def collect_result(result):
         for r in result:
-            evals.append(r)
+            evals.append(r[0])
+            prev_dir_seq.append(r[1])
 
     if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
         if datafile.endswith('tif') or datafile.endswith('tiff'):
@@ -186,9 +188,10 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         if e is None:
             evals.pop(i)
             save_dirs.pop(i)
+            prev_dir_seq.pop(i)
 
     if q is not None:
-        q.put((save_dirs, evals))
+        q.put((save_dirs, evals, prev_dir_seq))
 
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
