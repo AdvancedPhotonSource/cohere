@@ -387,12 +387,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     else:   # not fast GA
         rec = multi
         prev_dirs = []
-        guesses_dir = None
         if 'init_guess' not in pars:
             pars['init_guess'] = 'random'
         if pars['init_guess'] == 'continue':
             continue_dir = pars['continue_dir']
-            guesses_dir = continue_dir
             for sub in os.listdir(continue_dir):
                 image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
                 if image is not None:
@@ -403,7 +401,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             ai_dir = common.start_AI(pars, datafile, dir)
             if ai_dir is None:
                 return
-            guesses_dir = ai_dir
             prev_dirs = [ai_dir] + (reconstructions - 1) * [None]
         else:
             for _ in range(reconstructions):
@@ -422,13 +419,11 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             # it will be ranked, and moved to temporary ranked directories
             ordered_prev_dirs = order_dirs(temp_dirs, evals, prev_dir_seq, metric_type)
             # save the ranks of the reconstructions in the parent directory of the initial guesses
-            if guesses_dir is not None:
-                with open(os.path.join(guesses_dir, 'ranked'), 'w') as f:
-                    for prev_dir in ordered_prev_dirs:
-                        f.write(str(prev_dir)+'\n')
+            with open(os.path.join(gen_save_dir, 'ranked'), 'w') as f:
+                for prev_dir in ordered_prev_dirs:
+                    f.write(str(prev_dir)+'\n')
             prev_dirs = temp_dirs
             reconstructions = pars['ga_reconstructions'][g]
             prev_dirs = cull(prev_dirs, reconstructions)
-            guesses_dir = gen_save_dir
 
     print('done gen')
