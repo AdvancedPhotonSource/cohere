@@ -176,13 +176,6 @@ def write_config(param_dict, config):
             f.write(key + ' = ' + str(value) + os.linesep)
 
 
-# def get_conf(dict):
-#     config_map = cfg.Config()
-#     for key, value in dict.items():
-#         config_map.setup(key, value)
-#     return config_map
-
-
 def get_good_dim(dim):
     """
     This function calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) and is closest to the given starting dimension.

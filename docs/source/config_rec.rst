@@ -195,11 +195,11 @@ Partial coherence
     pc_LUCY_iterations = 20
 
 - pc_normalize:
-| optional, defaults to true. Internal.
+| optional, defaults to True. Internal.
 | example:
 ::
 
-    pc_normalize = true
+    pc_normalize = True
 
 - pc_LUCY_kernel:
 | mandatory, coherence array area. 

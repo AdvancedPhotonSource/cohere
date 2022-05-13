@@ -128,7 +128,7 @@ Genetic Algorithm
 
 Separate scans
 ++++++++++++++
-| When the experiment is configured as separate reconstruction for each scan, the experiment directory will contain a subdirectory for each scan. This use case is configured in "config_prep" file by setting parameter "separate_scans" to true. Each scan directory is a concatination of "scan_" and the scan number. Each of the scan subdirectories will have preprocessed_data, phasing_data, results_phasing, and results_viz subdirectories. The configuration is common for all scans. If running multiple reconstructions or GA, the directory structure in each scan directory will reflect it, as described in above sections.
+| When the experiment is configured as separate reconstruction for each scan, the experiment directory will contain a subdirectory for each scan. This use case is configured in "config_prep" file by setting parameter "separate_scans" to True. Each scan directory is a concatination of "scan_" and the scan number. Each of the scan subdirectories will have preprocessed_data, phasing_data, results_phasing, and results_viz subdirectories. The configuration is common for all scans. If running multiple reconstructions or GA, the directory structure in each scan directory will reflect it, as described in above sections.
 | Below is an example of directory structure for separate scans.
 | <experiment_dir>
 |                |

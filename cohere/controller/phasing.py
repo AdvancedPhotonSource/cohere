@@ -127,7 +127,6 @@ class Support:
 
 class Rec:
     def __init__(self, params, data_file):
-        # set defaults in params
         if 'init_guess' not in params:
             params['init_guess'] = 'random'
         elif params['init_guess'] == 'AI_guess':

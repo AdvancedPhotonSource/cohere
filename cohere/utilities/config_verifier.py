@@ -93,12 +93,12 @@ def get_config_error_message(config_file_name, map_file, config_parameter, confi
     config_map_dic = config_map_names.get(map_file)
 
     error_string_message = config_map_dic.get(config_parameter)[config_error_no]
-    presented_message = "File=" + config_file_name, "Parameter=" + config_parameter, "Error=" + error_string_message
+    # presented_message = "File=" + config_file_name, "Parameter=" + config_parameter, "Error=" + error_string_message
 
-    return(presented_message)
+    return(error_string_message)
 
 
-def ver_config(fname):
+def ver_config(config_map):
     """
     This function verifies experiment main config file
 
@@ -113,14 +113,7 @@ def ver_config(fname):
         message describing parameter error or empty string if all parameters are verified
     """
     config_map_file = 'config_error_map_file'
-
-    config_parameter = 'File'
-    config_map = ut.read_config(fname)
-    if config_map is None:
-        config_error = 0
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print ("can't read configuration file", fname)
-        return (error_message)
+    fname = 'config'
 
     config_parameter = 'Workingdir'
     if 'working_dir' in config_map:
@@ -159,19 +152,11 @@ def ver_config(fname):
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Specfile'
-    if 'specfile' in config_map:
-        specfile = config_map['specfile']
-        if type(specfile) != str:
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
-
+    import cohere.utilities.config_verifier as ver
     return ("")
 
 
-def ver_config_rec(fname):
+def ver_config_rec(config_map):
     """
     This function verifies experiment config_rec file
 
@@ -188,13 +173,7 @@ def ver_config_rec(fname):
     import string
 
     config_map_file = 'config_rec_error_map_file'
-    config_parameter = 'File'
-    config_map = ut.read_config(fname)
-    if config_map is None:
-        config_error = 0
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print ("can't read configuration file", fname)
-        return (error_message)
+    fname = 'config_rec'
 
     config_parameter = 'Datadir'
     if 'data_dir' in config_map:
@@ -202,13 +181,18 @@ def ver_config_rec(fname):
         if type(data_dir) != str:
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(config_error)
+            print(error_message)
             return (error_message)
-    else:
-        config_error = 1
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print(config_error)
-        return (error_message)
+        if not os.path.isdir(data_dir):
+            config_error = 1
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+        if not os.path.isfile(os.path.join(data_dir, 'data.tif')) and not os.path.isfile(os.path.join(data_dir, 'data.npy')):
+            config_error = 2
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
 
     config_parameter = 'Savedir'
     if 'save_dir' in config_map:
@@ -284,8 +268,8 @@ def ver_config_rec(fname):
             print (config_error)
             return (error_message)
         # check for supported characters
-        alg_seq_chars = list(string.ascii_lowercase) + list(string.ascii_uppercase) + list(string.octdigits) + ['*', '+', '(', ')', ' ']
-        if any(c not in alg_seq_chars for c in algorithm_sequence):
+        alg_seq_chars = list(string.ascii_lowercase) + list(string.ascii_uppercase) + list(string.digits) + ['*', '+', '(', ')', ' ']
+        if 0 in [c in alg_seq_chars for c in algorithm_sequence]:
             config_error = 1
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(config_error)
@@ -621,7 +605,7 @@ def ver_config_rec(fname):
     return ("")
 
 
-def ver_config_data(fname):
+def ver_config_data(config_map):
     """
     This function verifies experiment config_data file
 
@@ -636,13 +620,7 @@ def ver_config_data(fname):
         message describing parameter error or empty string if all parameters are verified
     """
     config_map_file = 'config_data_error_map_file'
-    config_parameter = 'File'
-    config_map = ut.read_config(fname)
-    if config_map is None:
-        config_error = 0
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print ("can't read configuration file", fname)
-        return (error_message)
+    fname = 'config_data'
 
     config_parameter = 'Datadir'
     if 'data_dir' in config_map:
@@ -686,7 +664,8 @@ def ver_config_data(fname):
             print(error_message)
             return (error_message)
     else:
-        error_message = 'missing mandatory parameter "intensity_threshold'''
+        config_error = 1
+        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
         print(error_message)
         return (error_message)
 
@@ -807,7 +786,7 @@ def ver_config_data(fname):
     return ("")
 
 
-def ver_config_prep(fname):
+def ver_config_prep(config_map):
     """
     This function verifies experiment config_prep file
 
@@ -822,13 +801,7 @@ def ver_config_prep(fname):
         message describing parameter error or empty string if all parameters are verified
     """
     config_map_file = 'config_prep_error_map_file'
-    config_parameter = 'File'
-    config_map = ut.read_config(fname)
-    if config_map is None:
-        config_error = 0
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print ("can't read configuration file", fname)
-        return (error_message)
+    fname = 'config_prep'
 
     config_parameter = 'Roi'
     if 'roi' in config_map:
@@ -916,7 +889,7 @@ def ver_config_prep(fname):
     return ("")
 
 
-def ver_config_disp(fname):
+def ver_config_disp(config_map):
     """
     This function verifies experiment config_disp file
 
@@ -931,13 +904,7 @@ def ver_config_disp(fname):
         message describing parameter error or empty string if all parameters are verified
     """
     config_map_file = 'config_disp_error_map_file'
-    config_parameter = 'File'
-    config_map = ut.read_config(fname)
-    if config_map is None:
-        config_error = 0
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print ("can't read configuration file", fname)
-        return (error_message)
+    fname = 'config_disp'
 
     config_parameter = 'Resultsdir'
     if 'results_dir' in config_map:
@@ -1037,3 +1004,17 @@ def ver_config_disp(fname):
 
     return ("")
 
+
+def verify(file_name, conf_map):
+    if file_name == 'config':
+        return ver_config(conf_map)
+    elif file_name == 'config_prep':
+        return ver_config_prep(conf_map)
+    elif file_name == 'config_data':
+        return ver_config_data(conf_map)
+    elif file_name == 'config_rec':
+        return ver_config_rec(conf_map)
+    elif file_name == 'config_disp':
+        return ver_config_disp(conf_map)
+    else:
+        return ('verifier has no fumction to check config file named', file_name)

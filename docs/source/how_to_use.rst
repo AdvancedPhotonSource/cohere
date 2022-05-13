@@ -63,12 +63,12 @@ Scripts
      * scan range: scans that will be included in the data. This can be a single number, a range separated with "-", or combination of numbers and ranges separated by comma.
      * conf_dir: a directory from which the configuration files will be copied
      * specfile: optional, used when specfile configured in <conf_dir>/config file should be replaced by another specfile
-     * copy_prep: this is a switch parameter, set to true if the prep_data.tif file should be copied from experiment with the <conf_dir> into the prep directory of the newly created experiment
+     * copy_prep: this is a switch parameter, set to True if the prep_data.tif file should be copied from experiment with the <conf_dir> into the prep directory of the newly created experiment
 
 - beamline_preprocess.py
 
   To run this script a configuration file "config_prep" must be defined in the <experiment_dir>/conf directory and the main configuration "config" file must have beamline parameter configured. This script reads raw data, applies correction based on physical properties of the instrument used during experiment, and optionally aligns and combines multiple scans. The prepared data file is stored in <experiment_dir>/preprocessed_data/prep_data.tif file.
-  note: when separate_scan is configured to true, a prep_data.tiff file is created for each scan.
+  note: when separate_scan is configured to True, a prep_data.tiff file is created for each scan.
   Running this script:
   ::
 
