@@ -22,9 +22,7 @@ import threading
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['single_rec_process',
-           'assign_gpu',
-           'multi_rec',
+__all__ = ['multi_rec',
            'reconstruction']
 
 

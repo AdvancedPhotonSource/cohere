@@ -13,18 +13,7 @@ import cohere.utilities.viz_util as vut
 __author__ = "Ross Harder"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['CXDViz.__init__',
-           'CXDViz.visualize',
-           'CXDViz.update_dirspace',
-           'CXDViz.update_recipspace',
-           'CXDViz.clear_direct_arrays',
-           'CXDViz.clear_recip_arrays',
-           'CXDViz.add_ds_arrays',
-           'CXDViz.add_rs_arrays',
-           'CXDViz.get_ds_structured_grid',
-           'CXDViz.get_rs_structured_grid',
-           'CXDViz.write_directspace',
-           'CXDViz.write_recipspace']
+__all__ = ['CXDViz']
 
 
 class CXDViz:

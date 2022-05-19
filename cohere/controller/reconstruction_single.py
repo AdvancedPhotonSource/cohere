@@ -20,8 +20,7 @@ from multiprocessing import Process
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['single_rec',
-           'reconstruction']
+__all__ = ['reconstruction']
 
 
 def set_lib(pkg, ndim=None):

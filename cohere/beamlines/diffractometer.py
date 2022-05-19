@@ -10,8 +10,7 @@ This module encapsulates diffractometer.
 
 __author__ = "Ross Harder"
 __docformat__ = 'restructuredtext en'
-__all__ = [
-    'Diffractometer.__init__']
+__all__ = ['Diffractometer']
 
 
 class Diffractometer(object):

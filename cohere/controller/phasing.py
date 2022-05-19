@@ -12,14 +12,18 @@ The processor specifies which library will be used by FM (Fast Module) that perf
 
 import time
 import os
+import importlib
 import cohere.utilities.dvc_utils as dvut
 import cohere.utilities.utils as ut
+import cohere.utilities.config_verifier as ver
 import cohere.controller.op_flow as of
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['fast_module_reconstruction', ]
+__all__ = ['get_norm',
+           'reconstruction',
+           'Rec']
 
 
 def set_lib(dlib, is_af):
@@ -136,8 +140,6 @@ class Rec:
                 params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
         if 'reconstructions' not in params:
             params['reconstructions'] = 1
-        if 'device' not in params:
-            params['device'] = (-1)
         if 'hio_beta' not in params:
             params['hio_beta'] = 0.9
         if 'initial_support_area' not in params:
@@ -537,3 +539,122 @@ class Rec:
         divisor = devlib.where((divisor != 0.0), divisor, 1.0)
         ratio = divident / divisor
         return ratio
+
+def reconstruction(datafile, **kwargs):
+    """
+    Reconstructs the image in datafile according to given parameters. The results: image.npy, support.npy, and
+    errors.npy are saved in 'saved_dir' defined in kwargs, or if not defined, in the directory of datafile.
+
+    Parameters
+    ----------
+    datafile : str
+        filename of phasing data. Should be either .tif format or .npy
+
+    kwargs : keyword arguments, option listed below
+        save_dir  # directory where results of reconstruction are saved as npy files. If not present, the
+                  # reconstruction outcome will be save in the same directory where datafile is.
+        processing  # the library used when running reconstruction. When the 'auto' option is selected the
+                    # program will use the best performing library that is available, in the following order:
+                    # cupy, numpy. The 'cp' option will utilize cupy, and 'np' will utilize numpy. Default is auto.
+        device  # IDs of the target devices. If not defined, it will default to -1 for the OS to select device.
+        algorithm_sequence  # Mandatory, example: "3* (20*ER + 180*HIO) + 20*ER"
+                            # defines algorithm applied in each iteration during modulus projection and
+                            # during modulus. The "*" character means repeat, and the "+" means add to the sequence.
+                            # The sequence may contain single brackets defining a group that will be repeated by the
+                            # preceding multiplier. The alphabetic entries: 'ER', 'ERpc', 'HIO', 'HIOpc' define algorithms
+                            # used in this iteration. The entries will invoke functions as follows:
+                            # 'ER' definition will invoke 'er' and 'modulus' functions
+                            # 'ERpc' will invoke 'er' and 'pc_modulus'
+                            # 'HIO' will invoke 'hio' and 'modulus'
+                            # 'HIOpc' will invoke 'hio' and 'pc_modulus'.
+                            # The pc_modulus is implementation of modulus with partial coherence correction.
+                            # If defining ERpc or HIOpc the pcdi feature must be activated. If not activated,
+                            # the phasing will use modulus function instead.
+        hio_beta  # used in hio algorithm
+        twin_trigger # example: [2]. Defines at which iteration to cut half of the array(i.e. multiply by 0s),
+        twin_halves  # defines which half of the array is zeroed out in x and y dimensions.
+                     # If 0, the first half in that dimension is zeroed out, otherwise, the second half.
+        shrink_wrap_trigger  # example: [1, 1]. Defines when to update support array using the parameters below.
+        shrink_wrap_type  # supporting "GAUSS" only. Defines which algorithm to use for shrink wrap.
+        shrink_wrap_threshold  # only point with relative intensity greater than the threshold are selected
+        shrink_wrap_gauss_sigma  # used to calculate the Gaussian filter
+        initial_support_area  # If the values are fractional, the support area will be calculated by multiplying
+                              # by the data array dimensions. The support will be set to 1s to this dimensions centered.
+        phase_support_trigger  # defines when to update support array using the parameters below by applaying phase
+                               # constrain.
+        phm_phase_min  # point with phase below this value will be removed from support area
+        phm_phase_max  # point with phase over this value will be removed from support area
+        pc_interval  # defines iteration interval to update coherence.
+        pc_type  # partial coherence algorithm. 'LUCY' type is supported.
+        pc_LUCY_iterations  # number of iterations used in Lucy algorithm
+        pc_LUCY_kernel  # coherence kernel area.
+        resolution_trigger  # defines when to apply low resolution filter using the parameters below.
+        lowpass_filter_sw_sigma_range  # used when applying low resolution to replace support sigma.
+                                       # The sigmas are linespaced for low resolution iterations from first value
+                                       # to last. If only one number given, the last sigma will default to
+                                       # shrink_wrap_gauss_sigma.
+        lowpass_filter_range  # used when applying low resolution data filter while iterating.
+                              # The det values are linespaced for low resolution iterations from first value to last.
+                              # The filter is gauss with sigma of linespaced det. If only one number given,
+                              # the last det will default to 1.
+        average_trigger  # defines when to apply averaging. Negative start means it is offset from the last iteration.
+        progress_trigger  # defines when to print info on the console. The info includes current iteration and error.
+
+    example of the simplest kwargs parameters:
+        algorithm_sequence='1*(20*ER+180*HIO)+20*ER',
+        shrink_wrap_trigger = [1, 1],
+        twin_trigger = [2],
+        progress_trigger = [0, 20]
+
+    Returns
+    -------
+    nothing
+    """
+    error_msg = ver.verify('config_rec', kwargs)
+    if len(error_msg) > 0:
+        print(error_msg)
+        return
+    if not os.path.isfile(datafile):
+        print('no file found', datafile)
+        return
+
+    if 'processing' in kwargs:
+        pkg = kwargs['processing']
+    else:
+        pkg = 'auto'
+    if pkg == 'auto':
+        try:
+            import cupy as cp
+            pkg = 'cp'
+        except:
+            pkg = 'np'
+    if pkg == 'cp':
+        devlib = importlib.import_module('cohere.lib.cplib').cplib
+    elif pkg == 'np':
+        print('np')
+        devlib = importlib.import_module('cohere.lib.nplib').nplib
+    else:
+        print('supporting cp and np processing')
+        return
+    set_lib(devlib, False)
+
+    worker = Rec(kwargs, datafile)
+    if 'device' in kwargs:
+        device = kwargs['device'][0]
+    else:
+        device = [-1]
+    if worker.init_dev(device[0]) < 0:
+        return
+
+    if 'continue_dir' in kwargs:
+        continue_dir = kwargs['continue_dir']
+    else:
+        continue_dir = None
+    worker.init(continue_dir)
+    ret_code = worker.iterate()
+    if 'save_dir' in kwargs:
+        save_dir = kwargs['save_dir']
+    else:
+        save_dir, filename = os.path.split(datafile)
+    if ret_code == 0:
+        worker.save_res(save_dir)

@@ -12,11 +12,7 @@ import cohere.utilities.utils as ut
 
 __author__ = "Ross Harder"
 __docformat__ = 'restructuredtext en'
-__all__ = [
-           'Detector.get_frame',
-           'Detector.insert_seam',
-           'Detector.clear_seam',
-           'Detector.get_pixel']
+__all__ = ['Detector']
 
 
 class Detector(object):

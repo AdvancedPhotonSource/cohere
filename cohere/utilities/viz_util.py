@@ -19,8 +19,7 @@ __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['shift',
            'remove_ramp',
-           'center',
-           'get_crop']
+           'center']
 
 
 def shift(arr, s0, s1, s2):

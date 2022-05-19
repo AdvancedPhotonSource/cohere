@@ -472,51 +472,51 @@ def breed(breed_mode, parent_dir, image):
     beta = image
     beta = zero_phase(beta)
     alpha = check_get_conj_reflect(beta, alpha)
-    alpha_s = align_arrays(beta, alpha)
-    alpha_s = zero_phase(alpha_s)
-    ph_alpha = dvclib.angle(alpha_s)
-    beta = zero_phase_cc(beta, alpha_s)
+    alpha = align_arrays(beta, alpha)
+    alpha = zero_phase(alpha)
+    ph_alpha = dvclib.angle(alpha)
+    beta = zero_phase_cc(beta, alpha)
     ph_beta = dvclib.angle(beta)
     if breed_mode == 'sqrt_ab':
-        beta = dvclib.sqrt(abs(alpha_s) * dvclib.absolute(beta)) * dvclib.exp(0.5j * (ph_beta + ph_alpha))
+        beta = dvclib.sqrt(dvclib.absolute(alpha) * dvclib.absolute(beta)) * dvclib.exp(0.5j * (ph_beta + ph_alpha))
 
     elif breed_mode == 'dsqrt':
-        amp = dvclib.sqrt(dvclib.absolutr(beta))
+        amp = dvclib.sqrt(dvclib.absolute(beta))
         beta = amp * dvclib.exp(1j * ph_beta)
 
     elif breed_mode == 'pixel_switch':
         cond = dvclib.random(dvclib.shape(beta))
-        beta = dvclib.where((cond > 0.5), beta, alpha_s)
+        beta = dvclib.where((cond > 0.5), beta, alpha)
 
     elif breed_mode == 'b_pa':
-        beta = dvclib.absolute(beta) * dvclib.exp(1j * (ph_alpha))
+        beta = dvclib.absolute(beta) * dvclib.exp(1j * ph_alpha)
 
     elif breed_mode == '2ab_a_b':
-        beta = 2 * (beta * alpha_s) / (beta + alpha_s)
+        beta = 2 * (beta * alpha) / (beta + alpha)
 
     elif breed_mode == '2a_b_pa':
-        beta = (2 * dvclib.absolute(alpha_s) - dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = (2 * dvclib.absolute(alpha) - dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
 
     elif breed_mode == 'sqrt_ab_pa':
-        beta = dvclib.sqrt(dvclib.absolute(alpha_s) * dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = dvclib.sqrt(dvclib.absolute(alpha) * dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
 
     elif breed_mode == 'sqrt_ab_recip':
         temp1 = dvclib.fftshift(dvclib.fft(dvclib.fftshift(beta)))
-        temp2 = dvclib.fftshift(dvclib.fft(dvclib.fftshift(alpha_s)))
+        temp2 = dvclib.fftshift(dvclib.fft(dvclib.fftshift(alpha)))
         temp = dvclib.sqrt(dvclib.absolute(temp1) * dvclib.absolute(temp2)) * dvclib.exp(.5j * dvclib.angle(temp1)) * dvclib.exp(.5j * dvclib.angle(temp2))
         beta = dvclib.fftshift(dvclib.ifft(dvclib.fftshift(temp)))
 
     elif breed_mode == 'max_ab':
-        beta = dvclib.maximum(dvclib.absolute(alpha_s), dvclib.absolute(beta)) * dvclib.exp(.5j * (ph_beta + ph_alpha))
+        beta = dvclib.maximum(dvclib.absolute(alpha), dvclib.absolute(beta)) * dvclib.exp(.5j * (ph_beta + ph_alpha))
 
     elif breed_mode == 'max_ab_pa':
-        beta = dvclib.maximum(dvclib.absolute(alpha_s), dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = dvclib.maximum(dvclib.absolute(alpha), dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
 
     elif breed_mode == 'avg_ab':
-        beta = 0.5 * (alpha_s + beta)
+        beta = 0.5 * (alpha + beta)
 
     elif breed_mode == 'avg_ab_pa':
-        beta = 0.5 * (dvclib.absolute(alpha_s) + dvclib.absolute(beta)) * dvclib.exp(1j * (ph_alpha))
+        beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * (ph_alpha))
 
     return beta
 

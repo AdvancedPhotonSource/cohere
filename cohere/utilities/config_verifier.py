@@ -8,7 +8,6 @@
 verification of configuration files
 """
 
-import cohere.utilities.utils as ut
 import os
 from cohere.utilities.config_errors_dict import *
 
@@ -22,7 +21,8 @@ __all__ = ['ver_list_int',
            'ver_config_rec',
            'ver_config_data',
            'ver_config_prep',
-           'ver_config_disp']
+           'ver_config_disp',
+           'verify']
            
 
 def ver_list_int(param_name, param_value):
