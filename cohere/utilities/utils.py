@@ -22,6 +22,7 @@ __all__ = ['get_logger',
            'read_tif',
            'save_tif',
            'read_config',
+           'write_config',
            'get_good_dim',
            'binning',
            'get_centered',
@@ -42,8 +43,7 @@ __all__ = ['get_logger',
            'sub_pixel_shift',
            'arr_property',
            'get_gpu_load',
-           'get_gpu_distribution',
-           'measure']
+           'get_gpu_distribution']
 
 
 def get_logger(name, ldir=''):

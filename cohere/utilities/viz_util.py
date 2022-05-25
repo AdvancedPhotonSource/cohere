@@ -18,6 +18,8 @@ __author__ = "Ross Harder"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['shift',
+           'crop_center',
+           'get_zero_padded_centered',
            'remove_ramp',
            'center']
 

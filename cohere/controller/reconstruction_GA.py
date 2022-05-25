@@ -17,7 +17,7 @@ from multiprocessing import Process, Queue
 import shutil
 import importlib
 import cohere.controller.phasing as calc
-import cohere.controller.reconstruction_common as common
+import cohere.controller.AI_guess as ai
 
 
 __author__ = "Barbara Frosik"
@@ -397,7 +397,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             tmp.append(['AI_guess'])
             for i in range(reconstructions - 1):
                 tmp.append(['random' + str(i)])
-            ai_dir = common.start_AI(pars, datafile, dir)
+            ai_dir = ai.start_AI(pars, datafile, dir)
             if ai_dir is None:
                 return
             prev_dirs = [ai_dir] + (reconstructions - 1) * [None]

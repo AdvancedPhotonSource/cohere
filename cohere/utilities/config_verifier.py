@@ -14,15 +14,7 @@ from cohere.utilities.config_errors_dict import *
 __author__ = "Barbara Frosik, Dave Cyl"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['ver_list_int',
-           'ver_list_float',
-           'get_config_error_message',
-           'ver_config',
-           'ver_config_rec',
-           'ver_config_data',
-           'ver_config_prep',
-           'ver_config_disp',
-           'verify']
+__all__ = ['verify']
            
 
 def ver_list_int(param_name, param_value):

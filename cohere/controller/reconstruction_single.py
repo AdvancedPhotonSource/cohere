@@ -11,7 +11,6 @@ This module controls a single reconstruction process.
 import numpy as np
 import os
 import importlib
-import cohere.controller.reconstruction_common as common
 import cohere.controller.phasing as calc
 import cohere.utilities.utils as ut
 from multiprocessing import Process
@@ -119,7 +118,8 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':
-        ai_dir = common.start_AI(pars, datafile, dir)
+        import cohere.controller.AI_guess as ai
+        ai_dir = ai.start_AI(pars, datafile, dir)
         if ai_dir is None:
             return
         continue_dir = ai_dir

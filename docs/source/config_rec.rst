@@ -263,14 +263,14 @@ GA
 - ga_metrics:
 | optional, a list of metrics that should be used to rank the reconstruction results for subsequent generations. If not defined, or shorter than number of generations, the metric defaults to "chi".
 | supported:
-| 'chi' - the last error calculated as norm(rs_amplitudes - data)/norm(data)
+| - 'chi': the last error calculated as norm(rs_amplitudes - data)/norm(data)
 |           The smallest 'chi' value is the best.
-| 'sharpness' - sum(power(abs(image), 4))
+| - 'sharpness': sum(power(abs(image), 4))
 |           The smallest 'sharpness' value is the best.
-| 'summed_phase' -  angle(image) - sum(angle(image) * support) / sum(support)
+| - 'summed_phase':  angle(image) - sum(angle(image) * support) / sum(support)
 |           where support is calculated with shrink wrap using hardcoded threshold=.2 and sigma=.5
 |           The greatest 'summed_phase' value is the best.
-| 'area' - sum(support)
+| - 'area': sum(support)
 |           where support is calculated with shrink wrap using hardcoded threshold=.2 and sigma=.5
 |           The greatest 'area' value is the best.
 | example:
@@ -282,21 +282,21 @@ GA
 | optional, a list of breeding modes applied to breed consecutive generation. If not defined, or shorter that number of generations, the mode defaults to "sqrt_ab".
 | Breeding starts with choosing alpha image. The rest of the images are crossed with alpha. Before the crossing, the image, called beta is aligned with alpha, and phases in both of the arrays are normalized to derive ph_alpha = angle(alpha), and ph_beta = angle(beta)
 | supported:
-| 'sqrt_ab': sqrt(abs(alpha) * abs(beta)) * exp(0.5j * (ph_beta + ph_alpha))
-| 'dsqrt':  sqrt(abs(beta)) * exp(1j * ph_beta)
-| 'pixel_switch': where((cond > 0.5), beta, alpha); cond = random(shape(beta))
-| 'b_pa': abs(beta) * exp(1j * (ph_alpha))
-| '2ab_a_b': 2 * (beta * alpha) / (beta + alpha)
-| '2a_b_pa': (2 * abs(alpha) - abs(beta)) * exp(1j * ph_alpha)
-| 'sqrt_ab_pa': sqrt(abs(alpha) * abs(beta)) * exp(1j * ph_alpha)
-| 'sqrt_ab_recip': fftshift(ifft(fftshift(temp))), where temp is calculated below
+| - 'sqrt_ab': sqrt(abs(alpha) * abs(beta)) * exp(0.5j * (ph_beta + ph_alpha))
+| - 'dsqrt':  sqrt(abs(beta)) * exp(1j * ph_beta)
+| - 'pixel_switch': where((cond > 0.5), beta, alpha); cond = random(shape(beta))
+| - 'b_pa': abs(beta) * exp(1j * (ph_alpha))
+| - '2ab_a_b': 2 * (beta * alpha) / (beta + alpha)
+| - '2a_b_pa': (2 * abs(alpha) - abs(beta)) * exp(1j * ph_alpha)
+| - 'sqrt_ab_pa': sqrt(abs(alpha) * abs(beta)) * exp(1j * ph_alpha)
+| - 'sqrt_ab_recip': fftshift(ifft(fftshift(temp))), where temp is calculated below
 |                      t1 = fftshift(fft(fftshift(beta)))
 |                      t2 = fftshift(fft(fftshift(alpha)))
 |                      temp = sqrt(abs(t1)*abs(t2))*exp(.5j*angle(t1))*exp(.5j*angle(t2))
-| 'max_ab': max(abs(alpha), abs(beta)) * exp(.5j * (ph_beta + ph_alpha))
-| 'max_ab_pa' - max(abs(alpha), abs(beta)) * exp(1j * ph_alpha)
-| 'avg_ab' - 0.5 * (alpha + beta)
-| 'avg_ab_pa - 0.5 * (abs(alpha) + abs(beta)) * exp(1j * (ph_alpha))
+| - 'max_ab': max(abs(alpha), abs(beta)) * exp(.5j * (ph_beta + ph_alpha))
+| - 'max_ab_pa': max(abs(alpha), abs(beta)) * exp(1j * ph_alpha)
+| - 'avg_ab': 0.5 * (alpha + beta)
+| - 'avg_ab_pa: 0.5 * (abs(alpha) + abs(beta)) * exp(1j * (ph_alpha))
 | example:
 ::
 
