@@ -219,7 +219,7 @@ def ver_config_rec(config_map):
                 print(error_message)
                 return error_message
         elif init_guess == 'AI_guess':
-            config_parameter = 'AItrainedmodel'
+            config_parameter = 'Aitrainedmodel'
             if 'AI_trained_model' in config_map:
                 AI_trained_model = config_map['AI_trained_model']
                 if type(AI_trained_model) != str:
@@ -229,6 +229,7 @@ def ver_config_rec(config_map):
                     return error_message
             else:
                 config_error = 1
+                print(fname, config_map_file, config_parameter, config_error)
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return error_message

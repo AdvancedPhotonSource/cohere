@@ -1,6 +1,6 @@
 package:
   name: cohere
-  version: "2.1"
+  version: "2.2"
 
 source:
   path: .
@@ -16,12 +16,13 @@ requirements:
   run:
     - python=3.9
     - numpy
-    - tifffile
     - gputil
     - xrayutilities
     - mayavi
-    - psutil
     - tensorflow
+    - scikit-learn
+    - tifffile
+    - psutil
 
 about:
   home: https://github.com/advancedPhotonSource/cdi
