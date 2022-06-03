@@ -73,7 +73,7 @@ def get_logger(name, ldir=''):
 
 def read_tif(filename):
     """
-    This method reads tif type file and returns the data as array.
+    This method reads tif type file and returns the data as ndarray.
 
     Parameters
     ----------
@@ -82,7 +82,7 @@ def read_tif(filename):
 
     Returns
     -------
-    data : ndarray
+    ar : ndarray
         an array containing the data parsed from the file
     """
     ar = tf.imread(filename).transpose()
@@ -109,17 +109,17 @@ def save_tif(arr, filename):
 
 def read_config(config):
     """
-    This function gets configuration file. It checks if the file exists and parses it into an object.
+    This function gets configuration file. It checks if the file exists and parses it into a dictionary.
 
     Parameters
     ----------
     config : str
-        configuration file name, including path
+        configuration file name
 
     Returns
     -------
-    config_map : Config object
-        a Config containing parsed configuration, None if the given file does not exist
+    config_map : dict
+        dictionary containing parsed configuration, None if the given file does not exist
     """
     import ast
 
@@ -150,15 +150,15 @@ def read_config(config):
 
 def write_config(param_dict, config):
     """
-    This function writes configuration file.
+    Writes configuration to a file.
 
     Parameters
     ----------
-    config : str
-        configuration file name, including path
+    param_dict : dict
+        dictionary containing configuration parameters
 
-    config_map : Config object
-        a Config containing parsed configuration, None if the given file does not exist
+    config : str
+        configuration name theparameters will be written into
 
     Returns
     -------
@@ -247,11 +247,12 @@ def binning(array, binsizes):
 
 def get_centered(arr, center_shift):
     """
-    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros, the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
+    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros,
+     the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
 
     Parameters
     ----------
-    arr : array
+    arr : ndarray
         the original array to be centered
 
     center_shift : list
@@ -274,14 +275,15 @@ def get_centered(arr, center_shift):
 
 def get_centered_both(arr, support):
     """
-    This function finds maximum value in the array, and puts it in a center of a new array. The support array will be shifted the same way. The shifted elements are rolled into the other end of array.
+    This function finds maximum value in the array, and puts it in a center of a new array. The support array
+    will be shifted the same way. The shifted elements are rolled into the other end of array.
 
     Parameters
     ----------
-    arr : array
+    arr : ndarray
         the original array to be centered
 
-    support : array
+    support : ndarray
         the associated array to be shifted the same way centered array is
 
     Returns
@@ -305,13 +307,13 @@ def get_zero_padded_centered(arr, new_shape):
     This function pads the array with zeros to the new shape with the array in the center.
     Parameters
     ----------
-    arr : array
+    arr : ndarray
         the original array to be padded
     new_shape : tuple
         new dimensions
     Returns
     -------
-    centered : array
+    centered : ndarray
         the zero padded centered array
     """
     shape = arr.shape
@@ -402,7 +404,7 @@ def flip(m, axis):
 
 def gaussian(shape, sigmas, alpha=1):
     """
-    Calculates Gaussian distribution grid in ginven dimensions.
+    Calculates Gaussian distribution grid in given dimensions.
 
     Parameters
     ----------
@@ -442,7 +444,8 @@ def gauss_conv_fft(arr, sigmas):
     """
     Calculates convolution of array with the Gaussian.
 
-    A Guassian distribution grid is calculated with the array dimensions. Fourier transform of the array is multiplied by the grid and and inverse transformed. A correction is calculated and applied.
+    A Guassian distribution grid is calculated with the array dimensions. Fourier transform of the array is
+    multiplied by the grid and inverse transformed. A correction is calculated and applied.
 
     Parameters
     ----------
@@ -479,7 +482,7 @@ def shrink_wrap(arr, threshold, sigma, type='gauss'):
         subject array
 
     threshold : float
-        support is formed by points above this valuue
+        support is formed by points above this value
 
     sigmas : list
         sigmas in all dimensions
@@ -538,7 +541,8 @@ def read_results(read_dir):
 
 def zero_phase(arr, val=0):
     """
-    Calculates average phase of the input array bounded by very tight support. Shifts the phases in the array by avarage plus given value.
+    Calculates average phase of the input array bounded by very tight support. Shifts the phases in the
+    array by avarage plus given value.
 
     Parameters
     ----------
@@ -561,15 +565,13 @@ def zero_phase(arr, val=0):
 
 def sum_phase_tight_support(arr):
     """
-    Calculates average phase of the input array bounded by very tight support. Shifts the phases in the array by avarage plus given value.
+    Calculates average phase of the input array bounded by very tight support. Shifts the phases in the
+    array by avarage.
 
     Parameters
     ----------
     arr : ndarray
         array to shift the phase
-
-    val : float
-        a value to add to shift
     Returns
     -------
     ndarray
@@ -583,11 +585,11 @@ def sum_phase_tight_support(arr):
 
 def get_metric(image, errs):
     """
-    Callculates array characteristic based on various formulas.
+    Calculates array characteristic based on various formulas.
 
     Parameters
     ----------
-    arr : ndarray
+    image : ndarray
         array to get characteristic
     errs : list
         list of "chi" error by iteration
@@ -625,9 +627,7 @@ def save_metrics(errs, dir, metrics=None):
     nothing
     """
     metric_file = os.path.join(dir, 'summary')
-    if os.path.isfile(metric_file):
-        os.remove(metric_file)
-    with open(metric_file, 'a') as f:
+    with open(metric_file, 'w+') as f:
         if metrics is not None:
             f.write('metric     result\n')
             for key in metrics:
@@ -641,18 +641,13 @@ def save_metrics(errs, dir, metrics=None):
 
 def write_plot_errors(save_dir):
     """
-    Creates python executable that draw plot of error by iteration. It assumes that the given directory contains "errors.npy" file
+    Creates python executable that draw plot of error by iteration. It assumes that the given directory
+    contains "errors.npy" file
 
     Parameters
     ----------
-    errs : list
-        list of "chi" error by iteration
-
-    dir : str
-        directory to write the file containing array metrics
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
+    save_dir : str
+        directory containing errors.npy file
 
     Returns
     -------
@@ -678,7 +673,8 @@ def write_plot_errors(save_dir):
 
 def save_results(image, support, coh, errs, save_dir, metric=None):
     """
-    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy, optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
+    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy,
+    optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
 
 
     Parameters
@@ -694,12 +690,6 @@ def save_results(image, support, coh, errs, save_dir, metric=None):
 
     errs : ndarray
         errors "chi" by iterations
-
-    flow : ndarray
-        for development, contains functions that can be activated in fast module during iteration
-
-    iter_array : ndarray
-        for development, matrix indicating which function in fast module was active by iteration
 
     save_dir : str
         directory to write the files
@@ -779,8 +769,9 @@ def arr_property(arr):
 
 def get_gpu_load(mem_size, ids):
     """
-    This function is only used when running on Linux OS. The GPUtil module is not supported on mac.
-    This function finds available GPU memory in each GPU that id is included in ids list. It calculates how many reconstruction can fit in each GPU available memory.
+    This function is only used when running on Linux OS. The GPUtil module is not supported on Mac.
+    This function finds available GPU memory in each GPU that id is included in ids list. It calculates
+    how many reconstruction can fit in each GPU available memory.
 
     Parameters
     ----------
@@ -852,7 +843,8 @@ def get_gpu_distribution(runs, available):
 
 def estimate_no_proc(arr_size, factor):
     """
-    Estimates number of processes the prep can be run on. Determined by number of available cpus and size of array
+    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
+    of array.
     Parameters
     ----------
     arr_size : int
@@ -883,7 +875,7 @@ def fast_shift(arr, shifty, fill_val=0):
     Shifts array by given numbers for shift in each dimension.
     Parameters
     ----------
-    arr : array
+    arr : ndarray
         array to shift
     shifty : list
         a list of integer to shift the array in each dimension
@@ -891,7 +883,7 @@ def fast_shift(arr, shifty, fill_val=0):
         values to fill emptied space
     Returns
     -------
-    result : array
+    result : ndarray
         shifted array
     """
     dims = arr.shape
@@ -917,16 +909,17 @@ def fast_shift(arr, shifty, fill_val=0):
 
 def shift_to_ref_array(fft_ref, array):
     """
-    Returns an array shifted to align with ref, only single pixel resolution pass fft of ref array to save doing that a lot.
+    Returns an array shifted to align with ref, only single pixel resolution pass fft of ref array to save
+    doing that a lot.
     Parameters
     ----------
-    fft_ref : array
+    fft_ref : ndarray
         Fourier transform of reference array
-    array : array
+    array : ndarray
         array to align with reference array
     Returns
     -------
-    shifted_array : array
+    shifted_array : ndarray
         array shifted to be aligned with reference array
     """
     # get cross correlation and pixel shift

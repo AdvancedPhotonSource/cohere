@@ -218,14 +218,18 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     Parameters
     ----------
-    proc : str
-        processor to run on (cpu, opencl, or cuda)
+    lib : str
+        library acronym to use for reconstruction. Supported:
+        np - to use numpy
+        cp - to use cupy
+        af - to use arrayfire
+        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file with reconstruction parameters
 
     datafile : str
-        name of the file with initial data
+        name of the file containing data
 
     dir : str
         a parent directory that holds the generations. It can be experiment directory or scan directory.

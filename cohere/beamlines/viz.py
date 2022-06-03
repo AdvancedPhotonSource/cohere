@@ -55,6 +55,8 @@ class CXDViz:
             coherence array or None
         save_dir : str
             a directory to save the results
+        is_twin : boolean
+            True if the image array is result of reconstruction, False if twin
         Returns
         -------
         nothing

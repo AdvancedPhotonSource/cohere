@@ -106,33 +106,43 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
 
     Parameters
     ----------
+    lib : str
+        library acronym to use for reconstruction. Supported:
+        np - to use numpy
+        cp - to use cupy
+        af - to use arrayfire
+        cpu, opencl, or cuda - to use specified library of arrayfire
+
     save_dir : str
         a directory where the subdirectories will be created to save all the results for multiple reconstructions
-
-    proc : str
-        a string indicating the processor type (cpu, cuda or opencl)
-
-    data : numpy array
-        data array
-
-    pars : Object
-        Params object containing parsed configuration
 
     devices : list
         list of GPUs available for this reconstructions
 
-    previous_dirs : list
-        list directories that hols results of previous reconstructions if it is continuation
+    no_recs : int
+        number of reconstructions
 
-    metric : str
-        a metric defining algorithm by which to evaluate the image array
+    pars : dict
+        parameters for reconstruction
+
+    datafie : str
+        name of file containing data for reconstruction
+
+    previous_dirs : list
+        directories that hols results of previous reconstructions if it is continuation or None(s)
+
+    metric_type : str
+        a metric defining algorithm by which to evaluate the quality of reconstructed array
+
+    gen : int
+        which generation is the reconstruction for
+
+    q : queue
+        if provided the results will be queued
 
     Returns
     -------
-    save_dirs : list
-        list of directories where to save results
-    evals : list
-        list of evaluation results of image arrays
+    None
     """
     evals = []
     prev_dir_seq =[]
@@ -198,8 +208,12 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     Parameters
     ----------
-    proc : str
-        processor to run on (cpu, opencl, or cuda)
+    lib : str
+        library acronym to use for reconstruction. Supported:
+        np - to use numpy
+        cp - to use cupy
+        af - to use arrayfire
+        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file with reconstruction parameters

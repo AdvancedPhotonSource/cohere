@@ -91,8 +91,12 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
 
     Parameters
     ----------
-    proc : str
-        a string indicating the processor type (cpu, cuda or opencl)
+    lib : str
+        library acronym to use for reconstruction. Supported:
+        np - to use numpy
+        cp - to use cupy
+        af - to use arrayfire
+        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file name

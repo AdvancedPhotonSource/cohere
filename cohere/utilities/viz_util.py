@@ -6,6 +6,7 @@
 
 """
 This module is a suite of utility functions supporting visualization.
+It supports 3D visualization.
 """
 
 import numpy as np
@@ -78,7 +79,7 @@ def get_zero_padded_centered(arr, new_shape):
 
     Parameters
     ----------
-    arr : array
+    arr : ndarray
         the original array to be padded
 
     new_shape : tuple
@@ -86,7 +87,7 @@ def get_zero_padded_centered(arr, new_shape):
 
     Returns
     -------
-    centered : array
+    centered : ndarray
         the zero padded centered array
     """
     shape = arr.shape
@@ -134,10 +135,9 @@ def remove_ramp(arr, ups=1):
     return ramp_removed
 
 
-# @measure
 def center(image, support):
     """
-    Shifts the image and support arrays so the product center of mass is in the center of array.
+    Shifts the image and support arrays so the center of mass is in the center of array.
     Parameters
     ----------
     image, support : ndarray, ndarray

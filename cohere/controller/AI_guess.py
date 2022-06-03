@@ -270,6 +270,25 @@ def _fourier_transform(input):
 
 
 def run_AI(data, model_file, dir):
+    """
+    Runs AI process.
+
+    Parameters
+    ----------
+    data : ndarray
+        data array
+
+    model_file : str
+        file name containing training model
+
+    dir : str
+        a parent directory that holds the reconstructions. It can be experiment directory or scan directory.
+        Result of AI will be saved in dir/results_AI.
+
+    Returns
+    -------
+    nothing
+    """
     print('AI guess')
 
     # prepare data to make the oversampling ratio ~3
@@ -310,28 +329,24 @@ def run_AI(data, model_file, dir):
 
 def start_AI(pars, datafile, dir):
     """
-    Controls single reconstruction.
-
-    This function checks whether the reconstruction is continuation or initial reconstruction. If continuation, the arrays of image, support, coherence are read from cont_directory, otherwise they are initialized to None.
-    It starts thr reconstruction and saves results.
+    Starts AI process if all conditionas are met.
 
     Parameters
     ----------
-    proc : str
-        a string indicating the processor type (cpu, cuda or opencl)
-
-    conf_file : str
-        configuration file name
+    pars : dict
+        parameters for reconstruction
 
     datafile : str
-        data file name
+        file name containing data for reconstruction
 
     dir : str
         a parent directory that holds the reconstructions. It can be experiment directory or scan directory.
+        Result of AI will be saved in dir/results_AI.
 
     Returns
     -------
-    nothing
+    ai_dir : str
+        directory where results were saved
     """
     if 'AI_trained_model' not in pars:
         print ('no AI_trained_model in config')

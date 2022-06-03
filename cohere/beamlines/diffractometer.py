@@ -16,5 +16,5 @@ __all__ = ['Diffractometer']
 class Diffractometer(object):
     name = None
 
-    def __init__(self, det_name):
-        self.det_name = det_name
+    def __init__(self, diff_name):
+        self.det_name = diff_name

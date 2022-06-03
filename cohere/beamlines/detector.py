@@ -30,9 +30,11 @@ class Detector(object):
             data file name
         roi : list
             detector area used to take image. If None the entire detector area will be used.
+        Imul : int
+            multiplier
         Returns
         -------
-        raw_frame : ndarray
+        frame : ndarray
             frame after instrument correction
         """
         self.raw_frame = ut.read_tif(filename)

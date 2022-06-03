@@ -999,6 +999,22 @@ def ver_config_disp(config_map):
 
 
 def verify(file_name, conf_map):
+    """
+    Verifies parameters.
+
+    Parameters
+    ----------
+    file_name : str
+        name of file the parameters are related to
+
+    conf_map : dict
+        parameters
+
+    Returns
+    -------
+    msg : str
+        a message with description of error or empty string if no error
+    """
     if file_name == 'config':
         return ver_config(conf_map)
     elif file_name == 'config_prep':
