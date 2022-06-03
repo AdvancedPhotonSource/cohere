@@ -1,4 +1,8 @@
 [![Documentation Status](https://readthedocs.org/projects/cohere/badge/?version=latest)](http://cohere.readthedocs.io/en/latest/?badge=latest)
+.. |Docs Badge| image:: https://readthedocs.org/projects/cohere/badge/
+    :alt: Documentation Status
+    :scale: 100%
+    :target: http://cohere.readthedocs.io
 
 Project home page: https://cohere.readthedocs.io/
 
