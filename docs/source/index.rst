@@ -7,7 +7,10 @@ Welcome to cohere's documentation!
 
    about
    installation
-   how_to_use   
+   api_beamlines
+   api_phasing
+   api_utils
+   how_to_use
    configuration
    experiment_space  
    for_developers

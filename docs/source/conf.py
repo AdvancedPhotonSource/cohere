@@ -12,6 +12,7 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../../cohere'))
 
 
@@ -39,7 +40,7 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+#templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -52,12 +53,12 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
-
+#html_theme = 'alabaster'
+html_theme = 'sphinxdoc'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 autodoc_mock_imports = ['tensorflow', 'tvtk', 'xrayutilities', 'tifffile', 'psutil', 'gputil', 'scikit-learn']
 

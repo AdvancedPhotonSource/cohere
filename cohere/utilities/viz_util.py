@@ -5,6 +5,9 @@
 # #########################################################################
 
 """
+cohere.viz_util
+===============
+
 This module is a suite of utility functions supporting visualization.
 It supports 3D visualization.
 """

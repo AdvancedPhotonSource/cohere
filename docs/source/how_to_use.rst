@@ -1,7 +1,7 @@
 .. _use:
 
-Use
-===
+Using cohere with cohere-scripts package
+========================================
 | User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-scripts. The cohere-scripts package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User with other instruments than those defined in 34-ID-C suite can easily add own code that would encapsulate user's beamline specifics.
 In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
 

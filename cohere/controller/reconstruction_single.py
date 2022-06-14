@@ -5,7 +5,11 @@
 # #########################################################################
 
 """
+cohere.reconstruction_single
+============================
+
 This module controls a single reconstruction process.
+Refer to cohere-scripts suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
 """
 
 import numpy as np
@@ -86,16 +90,15 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     Controls single reconstruction.
 
-    This function checks whether the reconstruction is continuation or initial reconstruction. If continuation, the arrays of image, support, coherence are read from cont_directory, otherwise they are initialized to None.
-    It starts thr reconstruction and saves results.
+    This script is typically started with cohere-scripts helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined, or starting from some saved state. It will set the initial guess accordingly and start phasing process. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------
     lib : str
         library acronym to use for reconstruction. Supported:
-        np - to use numpy
-        cp - to use cupy
-        af - to use arrayfire
+        np - to use numpy,
+        cp - to use cupy,
+        af - to use arrayfire,
         cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
@@ -105,15 +108,11 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         data file name
 
     dir : str
-        a parent directory that holds the reconstructions. It can be experiment directory or scan directory.
+        a parent directory that holds the reconstructions. For example experiment directory or scan directory.
 
     dev : int
-        id defining the GPU this reconstruction will be utilizing, or -1 if running cpu or the gpu assignment is left to OS
+        id defining GPU the this reconstruction will be utilizing, or -1 if running cpu
 
-
-    Returns
-    -------
-    nothing
     """
     pars = ut.read_config(conf_file)
 

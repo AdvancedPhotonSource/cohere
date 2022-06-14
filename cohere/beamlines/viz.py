@@ -18,8 +18,20 @@ __all__ = ['CXDViz']
 
 class CXDViz:
     """
-      This class generates files for visualization. It uses tvtk package for that purpose.
+    cohere.CXDViz(self, crop, geometry)
+    ===================================
+
+    Class, generates files for visualization from reconstructed suite.
+
+    crop : list
+        list of fractions; the fractions will be multipled by dimensions to derive region to visualize
+    geometry : tuple of arrays
+        arrays containing geometry in reciprocal and direct space
+
     """
+    __all__ = ['visualize'
+               ]
+
     dir_arrs = {}
     recip_arrs = {}
 
@@ -44,7 +56,8 @@ class CXDViz:
 
     def visualize(self, image, support, coh, save_dir, is_twin=False):
         """
-        Manages visualization process.
+        Manages visualization process. Saves the results in a given directory in files: image.vts, support.vts, and coherence.vts. If is_twin then the saved files have twin prefix.
+
         Parameters
         ----------
         image : ndarray
@@ -56,10 +69,8 @@ class CXDViz:
         save_dir : str
             a directory to save the results
         is_twin : boolean
-            True if the image array is result of reconstruction, False if twin
-        Returns
-        -------
-        nothing
+            True if the image array is result of reconstruction, False if is_twin of reconstructed array.
+
         """
         arrays = {"imAmp": abs(image), "imPh": np.angle(image)}
         self.add_ds_arrays(arrays)

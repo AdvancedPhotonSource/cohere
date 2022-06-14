@@ -6,8 +6,12 @@
 
 
 """
-This module controls the reconstruction process. The user has to provide parameters such as type of processor, data, and configuration.
-The processor specifies which library will be used by FM (Fast Module) that performs the processor intensive calculations. The module can be run on cpu, or gpu. Depending on the gpu hardware and library, one can use opencl or cuda library.
+cohere.phasing
+==============
+
+Provides phasing capabilities for the Bragg CDI data.
+The software can run code utilizing different library, such as numpy, cupy, arrayfire (cpu, cuda, opencl). User configures the choice depending on hardware and installed software.
+
 """
 
 import time
@@ -21,8 +25,7 @@ import cohere.controller.op_flow as of
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['get_norm',
-           'reconstruction',
+__all__ = ['reconstruction',
            'Rec']
 
 
@@ -130,6 +133,18 @@ class Support:
 
 
 class Rec:
+    """
+    cohere.phasing.reconstruction(self, params, data_file)
+
+    Class, performs phasing using iterative algorithm.
+
+    params : dict
+        parameters used in reconstruction. Refer to x for parameters description
+    data_file : str
+        name of file containing data to be reconstructed
+
+    """
+    __all__ = []
     def __init__(self, params, data_file):
         if 'init_guess' not in params:
             params['init_guess'] = 'random'
@@ -390,40 +405,9 @@ class Rec:
         return 0
 
     def get_metric(self, metric_type):
-        """
-        Callculates array characteristic based on various formulas.
-
-        Parameters
-        ----------
-        metric_type : str
-            type of metric to apply
-
-        Returns
-        -------
-        metric : float
-            calculated metric
-        """
         return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
     def save_metrics(errs, dir, metrics=None):
-        """
-        Saves arrays metrics and errors by iterations in text file.
-
-        Parameters
-        ----------
-        errs : list
-            list of "chi" error by iteration
-
-        dir : str
-            directory to write the file containing array metrics
-
-        metrics : dict
-            dictionary with metric type keys, and metric values
-
-        Returns
-        -------
-        nothing
-        """
         metric_file = os.path.join(dir, 'summary')
         if os.path.isfile(metric_file):
             os.remove(metric_file)
@@ -540,75 +524,73 @@ class Rec:
         ratio = divident / divisor
         return ratio
 
+
 def reconstruction(datafile, **kwargs):
     """
-    Reconstructs the image in datafile according to given parameters. The results: image.npy, support.npy, and
-    errors.npy are saved in 'saved_dir' defined in kwargs, or if not defined, in the directory of datafile.
+    Reconstructs the image from experiment data in datafile according to given parameters. The results: image.npy, support.npy, and errors.npy are saved in 'saved_dir' defined in kwargs, or if not defined, in the directory of datafile.
+
+    example of the simplest kwargs parameters:
+        - algorithm_sequence ='3*(20*ER+180*HIO)+20*ER'
+        - shrink_wrap_trigger = [1, 1]
+        - twin_trigger = [2]
+        - progress_trigger = [0, 20]
 
     Parameters
     ----------
     datafile : str
-        filename of phasing data. Should be either .tif format or .npy
+        filename of phasing data. Must be either .tif format or .npy
 
-    kwargs : keyword arguments, option listed below
-        save_dir  # directory where results of reconstruction are saved as npy files. If not present, the
-                  # reconstruction outcome will be save in the same directory where datafile is.
-        processing  # the library used when running reconstruction. When the 'auto' option is selected the
-                    # program will use the best performing library that is available, in the following order:
-                    # cupy, numpy. The 'cp' option will utilize cupy, and 'np' will utilize numpy. Default is auto.
-        device  # IDs of the target devices. If not defined, it will default to -1 for the OS to select device.
-        algorithm_sequence  # Mandatory, example: "3* (20*ER + 180*HIO) + 20*ER"
-                            # defines algorithm applied in each iteration during modulus projection and
-                            # during modulus. The "*" character means repeat, and the "+" means add to the sequence.
-                            # The sequence may contain single brackets defining a group that will be repeated by the
-                            # preceding multiplier. The alphabetic entries: 'ER', 'ERpc', 'HIO', 'HIOpc' define algorithms
-                            # used in this iteration. The entries will invoke functions as follows:
-                            # 'ER' definition will invoke 'er' and 'modulus' functions
-                            # 'ERpc' will invoke 'er' and 'pc_modulus'
-                            # 'HIO' will invoke 'hio' and 'modulus'
-                            # 'HIOpc' will invoke 'hio' and 'pc_modulus'.
-                            # The pc_modulus is implementation of modulus with partial coherence correction.
-                            # If defining ERpc or HIOpc the pcdi feature must be activated. If not activated,
-                            # the phasing will use modulus function instead.
-        hio_beta  # used in hio algorithm
-        twin_trigger # example: [2]. Defines at which iteration to cut half of the array(i.e. multiply by 0s),
-        twin_halves  # defines which half of the array is zeroed out in x and y dimensions.
-                     # If 0, the first half in that dimension is zeroed out, otherwise, the second half.
-        shrink_wrap_trigger  # example: [1, 1]. Defines when to update support array using the parameters below.
-        shrink_wrap_type  # supporting "GAUSS" only. Defines which algorithm to use for shrink wrap.
-        shrink_wrap_threshold  # only point with relative intensity greater than the threshold are selected
-        shrink_wrap_gauss_sigma  # used to calculate the Gaussian filter
-        initial_support_area  # If the values are fractional, the support area will be calculated by multiplying
-                              # by the data array dimensions. The support will be set to 1s to this dimensions centered.
-        phase_support_trigger  # defines when to update support array using the parameters below by applaying phase
-                               # constrain.
-        phm_phase_min  # point with phase below this value will be removed from support area
-        phm_phase_max  # point with phase over this value will be removed from support area
-        pc_interval  # defines iteration interval to update coherence.
-        pc_type  # partial coherence algorithm. 'LUCY' type is supported.
-        pc_LUCY_iterations  # number of iterations used in Lucy algorithm
-        pc_LUCY_kernel  # coherence kernel area.
-        resolution_trigger  # defines when to apply low resolution filter using the parameters below.
-        lowpass_filter_sw_sigma_range  # used when applying low resolution to replace support sigma.
-                                       # The sigmas are linespaced for low resolution iterations from first value
-                                       # to last. If only one number given, the last sigma will default to
-                                       # shrink_wrap_gauss_sigma.
-        lowpass_filter_range  # used when applying low resolution data filter while iterating.
-                              # The det values are linespaced for low resolution iterations from first value to last.
-                              # The filter is gauss with sigma of linespaced det. If only one number given,
-                              # the last det will default to 1.
-        average_trigger  # defines when to apply averaging. Negative start means it is offset from the last iteration.
-        progress_trigger  # defines when to print info on the console. The info includes current iteration and error.
+    kwargs : keyword arguments
+        save_dir : str
+            directory where results of reconstruction are saved as npy files. If not present, the reconstruction outcome will be save in the same directory where datafile is.
+        processing : str
+            the library used when running reconstruction. When the 'auto' option is selected the program will use the best performing library that is available, in the following order: cupy, numpy. The 'cp' option will utilize cupy, and 'np' will utilize numpy. Default is auto.
+        device : list of int
+            IDs of the target devices. If not defined, it will default to -1 for the OS to select device.
+        algorithm_sequence : str
+            Mandatory; example: "3* (20*ER + 180*HIO) + 20*ER". Defines algorithm applied in each iteration during modulus projection (ER or HIO) and during modulus (error correction or partial coherence correction). The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: 'ER', 'ERpc', 'HIO', 'HIOpc' define algorithms used in iterations.
+            If the defined algorithm contains 'pc' then during modulus operation a partial coherence correction is applied,  but only if partial coherence (pc) feature is activated. If not activated, the phasing will use error correction instead.
+        hio_beta : float
+             multiplier used in hio algorithm
+        twin_trigger : list
+             example: [2]. Defines at which iteration to cut half of the array (i.e. multiply by 0s)
+        twin_halves : list
+            defines which half of the array is zeroed out in x and y dimensions. If 0, the first half in that dimension is zeroed out, otherwise, the second half.
+        shrink_wrap_trigger : list
+            example: [1, 1]. Defines when to update support array using the parameters below.
+        shrink_wrap_type : str
+            supporting "GAUSS" only. Defines which algorithm to use for shrink wrap.
+        shrink_wrap_threshold : float
+            only point with relative intensity greater than the threshold are selected
+        shrink_wrap_gauss_sigma : float
+            used to calculate the Gaussian filter
+        initial_support_area : list
+            If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support will be set to 1s to this dimensions centered.
+        phase_support_trigger : list
+            defines when to update support array using the parameters below by applaying phase constrain.
+        phm_phase_min : float
+            point with phase below this value will be removed from support area
+        phm_phase_max : float
+            point with phase over this value will be removed from support area
+        pc_interval : int
+            defines iteration interval to update coherence.
+        pc_type : str
+            partial coherence algorithm. 'LUCY' type is supported.
+        pc_LUCY_iterations : int
+            number of iterations used in Lucy algorithm
+        pc_LUCY_kernel : list
+            coherence kernel area.
+        resolution_trigger : list
+            defines when to apply low resolution filter using the parameters below.
+        lowpass_filter_sw_sigma_range : list
+            used when applying low resolution to replace support sigma. The sigmas are linespaced for low resolution iterations from first value to last. If only one number given, the last sigma will default to shrink_wrap_gauss_sigma.
+        lowpass_filter_range : list
+            used when applying low resolution data filter while iterating. The det values are linespaced for low resolution iterations from first value to last. The filter is gauss with sigma of linespaced det. If only one number given, the last det will default to 1.
+        average_trigger : list
+            defines when to apply averaging. Negative start means it is offset from the last iteration.
+        progress_trigger : list
+            defines when to print info on the console. The info includes current iteration and error.
 
-    example of the simplest kwargs parameters:
-        algorithm_sequence='1*(20*ER+180*HIO)+20*ER',
-        shrink_wrap_trigger = [1, 1],
-        twin_trigger = [2],
-        progress_trigger = [0, 20]
-
-    Returns
-    -------
-    nothing
     """
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
@@ -618,6 +600,8 @@ def reconstruction(datafile, **kwargs):
         print('no file found', datafile)
         return
 
+    if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
+        print('Use cohere-scripts package to run multiple reconstructions and GA. Proceding with single reconstruction.')
     if 'processing' in kwargs:
         pkg = kwargs['processing']
     else:

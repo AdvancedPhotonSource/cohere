@@ -3,11 +3,6 @@
 #                                                                         #
 # See LICENSE file.                                                       #
 # #########################################################################
-
-"""
-This module encapsulates detector.
-"""
-
 import cohere.utilities.utils as ut
 
 __author__ = "Ross Harder"
@@ -16,71 +11,93 @@ __all__ = ['Detector']
 
 
 class Detector(object):
-    name = "default"
+    """
+    class cohere.Detector(self)
+    ===========================
+
+    Abstract class representing detector.
+
+    """
+    __all__ = ['get_frame',
+               'insert_seam',
+               'clear_seam',
+               'get_pixel'
+               ]
 
     def __init__(self):
-        pass
+        self.name = "default"
+
 
     def get_frame(self, filename, roi, Imult):
         """
-        Reads raw frame from a file, and applies correction for concrete detector.
+        Reads raw 2D frame from a file. Concrete function in subclass applies correction for the specific detector. For example it could be darkfield correction or whitefield correction.
+
         Parameters
         ----------
         filename : str
             data file name
         roi : list
             detector area used to take image. If None the entire detector area will be used.
-        Imul : int
+        Imult : int
             multiplier
+
         Returns
         -------
-        frame : ndarray
+        ndarray
             frame after instrument correction
+
         """
         self.raw_frame = ut.read_tif(filename)
         return self.raw_frame
 
+
     def insert_seam(self, arr, roi=None):
         """
-        This function if overriden in concrete detector class. It inserts rows/columns in frame as instrument correction.
+        Corrects the non-continuous areas of detector. Concrete function in subclass inserts rows/columns in frame as instrument correction.
+
         Parameters
         ----------
         arr : ndarray
             frame to insert the correction
         roi : list
             detector area used to take image. If None the entire detector area will be used.
+
         Returns
         -------
-        arr : ndarray
+        ndarray
             frame after instrument correction
+
         """
         return arr
 
+
     def clear_seam(self, arr, roi=None):
         """
-        This function if overriden in concrete detector class. It removes rows/columns from frame as instrument correction.
+        Corrects the non-continuous areas of detector. Concrete function in subclass removes rows/columns in frame as instrument correction.
+
         Parameters
         ----------
         arr : ndarray
-            frame to remove the correction
+            frame to apply the correction
         roi : list
             detector area used to take image. If None the entire detector area will be used.
+
         Returns
         -------
-        arr : ndarray
+        ndarray
             frame after instrument correction
+
         """
         return arr
 
     def get_pixel(self):
         """
-        This function if overriden in concrete detector class. It returns pixel size applicable to concrete detector.
-        Parameters
-        ----------
-        none
+        Returns detector pixel size.  Concrete function in subclass returns value applicable to the detector.
+
         Returns
         -------
         tuple
             size of pixel
+
         """
         pass

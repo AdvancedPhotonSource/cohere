@@ -4,9 +4,12 @@
 # See LICENSE file.                                                       #
 # #########################################################################
 
-
 """
-This module controls the genetic algoritm process.
+cohere.reconstruction_GA
+========================
+
+This module controls a reconstructions using genetic algorithm (GA).
+Refer to cohere-scripts suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
 """
 
 import numpy as np
@@ -214,32 +217,31 @@ def cull(lst, no_left):
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
     """
-    This function controls reconstruction utilizing genetic algorithm.
+    Controls reconstruction that employs genetic algorith (GA).
+
+    This script is typically started with cohere-scripts helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined (one reconstruction, the rest random), or starting from some saved state. It will set the initial guess accordingly and start GA algorithm. It will run multiple reconstructions for each generation in a loop. After each generation the best reconstruction, alpha is identified, and used for breeding. For each generation the results will be saved in g_x subdirectory, where x is the generation number, in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------
     lib : str
         library acronym to use for reconstruction. Supported:
-        np - to use numpy
-        cp - to use cupy
-        af - to use arrayfire
+        np - to use numpy,
+        cp - to use cupy,
+        af - to use arrayfire,
         cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
-        configuration file with reconstruction parameters
+        configuration file name
 
     datafile : str
-        name of the file containing data
+        data file name
 
     dir : str
-        a parent directory that holds the generations. It can be experiment directory or scan directory.
+        a parent directory that holds the reconstructions. For example experiment directory or scan directory.
 
     devices : list
         list of GPUs available for this reconstructions
 
-    Returns
-    -------
-    nothing
     """
     pars = ut.read_config(conf_file)
     pars = set_ga_defaults(pars)

@@ -5,7 +5,10 @@
 # #########################################################################
 
 """
-verification of configuration files
+cohere.config_verifier
+======================
+
+Verification of configuration parameters.
 """
 
 import os
@@ -1005,14 +1008,14 @@ def verify(file_name, conf_map):
     Parameters
     ----------
     file_name : str
-        name of file the parameters are related to
+        name of file the parameters are related to. Supported: config_prep, config_data, config_rec, config_disp
 
     conf_map : dict
         parameters
 
     Returns
     -------
-    msg : str
+    str
         a message with description of error or empty string if no error
     """
     if file_name == 'config':

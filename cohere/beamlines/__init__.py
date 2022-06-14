@@ -1,3 +1,3 @@
-from .detector import *
-from .diffractometer import *
+from .detector import Detector
+from .diffractometer import Diffractometer
 from .viz import *

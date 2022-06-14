@@ -5,7 +5,11 @@
 # #########################################################################
 
 """
-This module controls the multi reconstruction process.
+cohere.reconstruction_multi
+===========================
+
+This module controls a multiple reconstructions.
+Refer to cohere-scripts suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
 """
 
 import os
@@ -204,32 +208,31 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
     """
-    This function controls multiple reconstructions.
+    Controls multiple reconstructions, the reconstructions run concurrently.
+
+    This script is typically started with cohere-scripts helper functions. The 'init_guess' parameter in the configuration file defines whether guesses are random, or start from some saved states. It will set the initial guesses accordingly and start phasing process, running each reconstruction in separate thread. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------
     lib : str
         library acronym to use for reconstruction. Supported:
-        np - to use numpy
-        cp - to use cupy
-        af - to use arrayfire
+        np - to use numpy,
+        cp - to use cupy,
+        af - to use arrayfire,
         cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
-        configuration file with reconstruction parameters
+        configuration file name
 
     datafile : str
-        name of the file with initial data
+        data file name
 
     dir : str
-        a parent directory that holds the reconstructions. It can be experiment directory or scan directory.
+        a parent directory that holds the reconstructions. For example experiment directory or scan directory.
 
     devices : list
         list of GPUs available for this reconstructions
 
-    Returns
-    -------
-    nothing
     """
     pars = ut.read_config(conf_file)
 

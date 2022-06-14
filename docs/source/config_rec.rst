@@ -1,3 +1,5 @@
+.. _config_rec:
+
 ==========
 config_rec
 ==========
@@ -106,7 +108,7 @@ Twin
     twin_halves = [0, 0]
 
 Shrink wrap
-+++++++
++++++++++++
 | Support area is an array that defines region in which the image is meaningful. This area is recalculated at the trigger iteration shrinking along when the image develops. The calculations employ an algorithm defined here as shrink_wrap_type.
 
 - shrink_wrap_trigger:

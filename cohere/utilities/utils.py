@@ -5,6 +5,9 @@
 # #########################################################################
 
 """
+cohere.utils
+============
+
 This module is a suite of utility functions.
 """
 
@@ -55,9 +58,9 @@ def get_logger(name, ldir=''):
         logger name
     ldir : str
         directory where to create log file
-   Returns
+    Returns
     -------
-    logger : logger
+    logger
         logger object from logging module
     """
     logger = logging.getLogger(name)
@@ -82,7 +85,7 @@ def read_tif(filename):
 
     Returns
     -------
-    ar : ndarray
+    ndarray
         an array containing the data parsed from the file
     """
     ar = tf.imread(filename).transpose()
@@ -99,10 +102,6 @@ def save_tif(arr, filename):
         array to save
     filename : str
         tif format file name
-
-    Returns
-    -------
-    nothing
     """
     tf.imsave(filename, arr.transpose().astype(np.float32))
 
@@ -118,7 +117,7 @@ def read_config(config):
 
     Returns
     -------
-    config_map : dict
+    dict
         dictionary containing parsed configuration, None if the given file does not exist
     """
     import ast
@@ -159,10 +158,6 @@ def write_config(param_dict, config):
 
     config : str
         configuration name theparameters will be written into
-
-    Returns
-    -------
-    Nothing
     """
     import ast
     with open(config, 'a') as f:
@@ -184,7 +179,7 @@ def get_good_dim(dim):
         initial dimension
     Returns
     -------
-    new_dim : int
+    int
         a dimension that is supported by the opencl library, and closest to the original dimension
     """
 
@@ -222,7 +217,7 @@ def binning(array, binsizes):
 
     Returns
     -------
-    binned_array : ndarray
+    ndarray
         binned array
     """
 
@@ -288,7 +283,7 @@ def get_centered_both(arr, support):
 
     Returns
     -------
-    centered, centered_supp : ndarray, ndarray
+    ndarray, ndarray
         the centered arrays
     """
     max_coordinates = list(np.unravel_index(np.argmax(arr), arr.shape))
@@ -313,7 +308,7 @@ def get_zero_padded_centered(arr, new_shape):
         new dimensions
     Returns
     -------
-    centered : ndarray
+    ndarray
         the zero padded centered array
     """
     shape = arr.shape
@@ -346,7 +341,7 @@ def adjust_dimensions(arr, pads):
 
     Returns
     -------
-    adjusted : ndarray
+    ndarray
         the padded/cropped array
     """
     # up the dimensions to 3D
@@ -416,7 +411,7 @@ def gaussian(shape, sigmas, alpha=1):
         a multiplier
     Returns
     -------
-    grid : ndarray
+    ndarray
         Gaussian distribution grid
     """
     grid = np.full(shape, 1.0)
@@ -455,7 +450,7 @@ def gauss_conv_fft(arr, sigmas):
         sigmas in all dimensions
     Returns
     -------
-    convag : ndarray
+    ndarray
         convolution array
     """
     arr_sum = np.sum(abs(arr))
@@ -491,7 +486,7 @@ def shrink_wrap(arr, threshold, sigma, type='gauss'):
         a type of algorithm to apply to calculate the support, currently supporting 'gauss'
     Returns
     -------
-    support : ndarray
+    ndarray
         support array
     """
     sigmas = [sigma] * len(arr.shape)
@@ -515,7 +510,7 @@ def read_results(read_dir):
         directory to read the results from
     Returns
     -------
-    image, support, coh : ndarray, ndarray, ndarray (or None)
+    ndarray, ndarray, ndarray (or None)
         image, support, and coherence arrays
     """
     try:
@@ -596,7 +591,7 @@ def get_metric(image, errs):
 
     Returns
     -------
-    metric : dict
+    dict
         dictionary with all metric
     """
     metric = {}
@@ -621,10 +616,6 @@ def save_metrics(errs, dir, metrics=None):
 
     metrics : dict
         dictionary with metric type keys, and metric values
-
-    Returns
-    -------
-    nothing
     """
     metric_file = os.path.join(dir, 'summary')
     with open(metric_file, 'w+') as f:
@@ -648,10 +639,6 @@ def write_plot_errors(save_dir):
     ----------
     save_dir : str
         directory containing errors.npy file
-
-    Returns
-    -------
-    nothing
     """
     plot_file = os.path.join(save_dir, 'plot_errors.py')
     f = open(plot_file, 'w+')
@@ -696,10 +683,6 @@ def save_results(image, support, coh, errs, save_dir, metric=None):
 
     metrics : dict
         dictionary with metric type keys, and metric values
-
-    Returns
-    -------
-    nothing
     """
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -756,10 +739,6 @@ def arr_property(arr):
     ----------
     arr : ndarray
         array to find max
-
-    Returns
-    -------
-    nothing
     """
     arr1 = abs(arr)
     print('norm', np.sum(pow(abs(arr), 2)))
@@ -783,7 +762,7 @@ def get_gpu_load(mem_size, ids):
 
     Returns
     -------
-    available : list
+    list
         list of available runs aligned with the GPU id list
     """
     import GPUtil
@@ -822,7 +801,7 @@ def get_gpu_distribution(runs, available):
 
     Returns
     -------
-    distributed : list
+    list
         list of runs aligned with the GPU id list, the runs are equally distributed across the GPUs
     """
     all_avail = reduce((lambda x, y: x + y), available)
@@ -853,7 +832,8 @@ def estimate_no_proc(arr_size, factor):
         an estimate of how much memory is required to process comparing to array size
     Returns
     -------
-    number of processes
+    int
+        number of processes
     """
     from multiprocessing import cpu_count
     import psutil
@@ -883,7 +863,7 @@ def fast_shift(arr, shifty, fill_val=0):
         values to fill emptied space
     Returns
     -------
-    result : ndarray
+    ndarray
         shifted array
     """
     dims = arr.shape
@@ -919,7 +899,7 @@ def shift_to_ref_array(fft_ref, array):
         array to align with reference array
     Returns
     -------
-    shifted_array : ndarray
+    ndarray
         array shifted to be aligned with reference array
     """
     # get cross correlation and pixel shift
