@@ -1,8 +1,1 @@
-numpy
-xrayutilities
-tiffile
-gputil
-psutil
-scikit-learn
-tensorflow
 cohere

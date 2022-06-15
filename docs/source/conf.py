@@ -34,7 +34,7 @@ author = 'Barbara Frosik, Ross Harder'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
+#    'sphinx.ext.intersphinx',
 ]
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -60,6 +60,6 @@ html_theme = 'sphinxdoc'
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 
-autodoc_mock_imports = ['tensorflow', 'tvtk', 'xrayutilities', 'tifffile', 'psutil', 'gputil', 'scikit-learn']
+autodoc_mock_imports = ['numpy','tensorflow', 'tvtk', 'xrayutilities', 'tifffile', 'psutil', 'gputil']
 
 master_doc = 'index'
