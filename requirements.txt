@@ -1,6 +1,5 @@
 numpy
 xrayutilities
-mayavi
 tiffile
 gputil
 psutil
