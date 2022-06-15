@@ -1,7 +1,4 @@
 numpy
-tensorflow
-mayavi
-xrayutilities
 tifffile
 psutil
 gputil
