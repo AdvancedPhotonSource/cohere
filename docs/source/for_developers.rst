@@ -1,7 +1,7 @@
 =======
 develop
 =======
-| This chapter has info for developers
+| This chapter has info for developers.
 
 Installation for development
 ============================
