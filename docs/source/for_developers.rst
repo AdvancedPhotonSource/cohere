@@ -18,8 +18,8 @@ Pre-requisites
 ++++++++++++++
 | After activating conda environment install the packages/libraries listed below.
 - Python packages installation:
-   - conda install mayavi -c conda-forge
    - conda install xrayutilities -c conda-forge
+   - conda install mayavi -c conda-forge
    - conda install tifffile -c conda-forge
    - conda install gputil -c conda-forge
    - conda install psutil -c conda-forge
