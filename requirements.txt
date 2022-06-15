@@ -5,3 +5,4 @@ gputil
 psutil
 scikit-learn
 tensorflow
+cohere
