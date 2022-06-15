@@ -1,7 +1,7 @@
+xrayutilities
+mayavi
 tiffile
 gputil
-mayavi
-xrayutilities
 psutil
 scikit-learn
 tensorflow
