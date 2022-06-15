@@ -10,11 +10,11 @@ build:
 
 requirements:
   host:
-    - python=3.9
+    - python=3.8
     - numpy
 
   run:
-    - python=3.9
+    - python=3.8
     - numpy
     - gputil
     - xrayutilities
