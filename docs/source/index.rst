@@ -1,5 +1,5 @@
-Welcome to cohere's documentation!
-==================================
+Welcome to cohere documentation!
+================================
 
 .. toctree::
    :maxdepth: 3

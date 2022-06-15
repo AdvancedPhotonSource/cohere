@@ -12,7 +12,7 @@
 #
 import os
 import sys
-import cohere
+# import cohere
 
 sys.path.insert(0, os.path.abspath('../..'))
 
