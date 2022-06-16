@@ -64,6 +64,5 @@ html_theme = 'sphinxdoc'
 #html_static_path = ['_static']
 
 autodoc_mock_imports = ['tifffile','scipy', 'tvtk', 'gputil']
-import cohere
 
 master_doc = 'index'
