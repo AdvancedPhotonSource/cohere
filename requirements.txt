@@ -1,4 +1,5 @@
 numpy
-tifffile
-psutil
+tiffile
 gputil
+psutil
+cohere
