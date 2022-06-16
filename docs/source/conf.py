@@ -46,7 +46,9 @@ napoleon_numpy_docstring = True
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+
+exclude_patterns = globals().get('exclude_patterns', [])
+exclude_patterns.extend(['_build'])
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -61,6 +63,7 @@ html_theme = 'sphinxdoc'
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 
-autodoc_mock_imports = ['tensorflow', 'tvtk', 'tifffile', 'psutil', 'gputil']
+autodoc_mock_imports = ['tifffile','scipy', 'tvtk', 'gputil']
+import cohere
 
 master_doc = 'index'
