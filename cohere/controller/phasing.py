@@ -63,7 +63,7 @@ class Pcdi:
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
         converged_2 = devlib.fftconvolve(abs_amplitudes_2, self.kernel)
-        converged_2 = devlib.where(converged_2 < 0, 0, converged_2)
+        converged_2 = devlib.where(converged_2 < 0.0, 0.0, converged_2)
         converged = devlib.sqrt(converged_2)
         return converged
 
@@ -86,7 +86,7 @@ class Pcdi:
         data_mirror = devlib.flip(data)
         for i in range(iterations):
             conv = devlib.fftconvolve(self.kernel, data)
-            devlib.where(conv == 0, 1.0, conv)
+            devlib.where(conv == 0.0, 1.0, conv)
             relative_blurr = amplitudes / conv
             self.kernel = self.kernel * devlib.fftconvolve(relative_blurr, data_mirror)
         self.kernel = devlib.real(self.kernel)
@@ -463,13 +463,13 @@ class Rec:
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = get_norm(
-            devlib.where((converged > 0), (devlib.absolute(converged) - self.iter_data), 0)) / get_norm(self.iter_data)
+            devlib.where((converged > 0.0), (devlib.absolute(converged) - self.iter_data), 0.0)) / get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
-        error = get_norm(devlib.where((self.rs_amplitudes > 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
                                       0)) / get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
@@ -489,7 +489,7 @@ class Rec:
         self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
 
     def new_alg(self):
-        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
+        self.ds_image = 2.0 * (self.ds_image_raw * self.support_obj.get_support()) - self.ds_image_raw
 
     def twin_trigger(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?

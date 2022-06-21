@@ -4,7 +4,8 @@ import numpy as np
 algs = {'ER': ('er', 'modulus'),
         'HIO': ('hio', 'modulus'),
         'ERpc': ('er', 'pc_modulus'),
-        'HIOpc': ('hio', 'pc_modulus')
+        'HIOpc': ('hio', 'pc_modulus'),
+        'SF' : ('new_alg', 'pc_modulus')
         }
 
 
