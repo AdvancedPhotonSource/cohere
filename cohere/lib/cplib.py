@@ -59,10 +59,10 @@ class cplib(cohlib):
         return cp.roll(arr, sft)
 
     def fft(arr):
-        return cp.fft.fftn(arr)
+        return cp.fft.fftn(arr, norm='forward')
 
     def ifft(arr):
-        return cp.fft.ifftn(arr)
+        return cp.fft.ifftn(arr, norm='forward')
 
     def fftconvolve(arr1, arr2):
         return cupyx.scipy.ndimage.convolve(arr1, arr2)

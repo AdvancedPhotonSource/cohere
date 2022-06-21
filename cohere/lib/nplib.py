@@ -62,10 +62,10 @@ class nplib(cohlib):
         return np.roll(arr, sft)
 
     def fft(arr):
-        return np.fft.fftn(arr)
+        return np.fft.fftn(arr, norm='forward')
 
     def ifft(arr):
-        return np.fft.ifftn(arr)
+        return np.fft.ifftn(arr, norm='forward')
 
     def fftconvolve(arr1, arr2):
         return convolve(arr1, arr2)

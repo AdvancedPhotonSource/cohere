@@ -450,7 +450,7 @@ class Rec:
         self.support_obj.update_phase(self.ds_image)
 
     def to_reciprocal_space(self):
-        self.rs_amplitudes = devlib.ifft(self.ds_image) * devlib.size(self.data)
+        self.rs_amplitudes = devlib.ifft(self.ds_image)
 
     def new_func_trigger(self):
         print('in new_func_trigger, new_param', self.params['new_param'])
@@ -478,7 +478,7 @@ class Rec:
         self.pc_obj.set_previous(devlib.absolute(self.rs_amplitudes))
 
     def to_direct_space(self):
-        self.ds_image_raw = devlib.fft(self.rs_amplitudes) / devlib.size(self.data)
+        self.ds_image_raw = devlib.fft(self.rs_amplitudes)
 
     def er(self):
         self.ds_image = self.ds_image_raw * self.support_obj.get_support()
