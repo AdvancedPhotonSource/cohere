@@ -91,7 +91,7 @@ def prep(datafile, **kwargs):
         return
 
     # zero out the noise
-    prep_data = np.where(data <= intensity_threshold, 0, data)
+    prep_data = np.where(data <= intensity_threshold, 0.0, data)
 
     # square root data
     prep_data = np.sqrt(prep_data)
