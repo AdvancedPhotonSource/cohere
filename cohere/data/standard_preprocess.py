@@ -23,16 +23,14 @@ __all__ = ['prep',
 
 def prep(datafile, **kwargs):
     """
-    This function formats data for reconstruction. The preparation consists of the following steps:
-    1. removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
-    2. clearing the noise: values below an amplitude threshold are set to zero
-    3. amplitudes are set to sqrt
-    4. cropping and padding. If the adjust_dimention is negative in any dimension, the array is cropped in this dimension.
-    The cropping is followed by padding in the dimensions that have positive adjust dimension. After adjusting, the dimensions
-    are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
-    5. centering - finding the greatest amplitude and locating it at a center of array. If shift center is defined, the center will be shifted accordingly.
-    6. binning - adding amplitudes of several consecutive points. Binning can be done in any dimension.
-    The modified data is then saved in data directory as data.tif.
+    This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
+        - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
+        - clearing the noise: values below an amplitude threshold are set to zero
+        - amplitudes are set to sqrt
+        - cropping and padding. If the adjust_dimention is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions that have positive adjust dimension. After adjusting, the dimensions are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
+        - centering - finding the greatest amplitude and locating it at a center of array. If shift center is defined, the center will be shifted accordingly.
+        - binning - adding amplitudes of several consecutive points. Binning can be done in any dimension.
+
     Parameters
     ----------
     datafile : str
