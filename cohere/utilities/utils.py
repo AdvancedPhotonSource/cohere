@@ -46,7 +46,10 @@ __all__ = ['get_logger',
            'sub_pixel_shift',
            'arr_property',
            'get_gpu_load',
-           'get_gpu_distribution']
+           'get_gpu_distribution',
+           'estimate_no_proc',
+           'shift_to_ref_array'
+           ]
 
 
 def get_logger(name, ldir=''):
@@ -824,12 +827,14 @@ def estimate_no_proc(arr_size, factor):
     """
     Estimates number of processes the prep can be run on. Determined by number of available cpus and size
     of array.
+
     Parameters
     ----------
     arr_size : int
         size of array
     factor : int
         an estimate of how much memory is required to process comparing to array size
+
     Returns
     -------
     int
@@ -889,8 +894,8 @@ def fast_shift(arr, shifty, fill_val=0):
 
 def shift_to_ref_array(fft_ref, array):
     """
-    Returns an array shifted to align with ref, only single pixel resolution pass fft of ref array to save
-    doing that a lot.
+    Returns an array shifted to align with ref.
+
     Parameters
     ----------
     fft_ref : ndarray
@@ -901,6 +906,7 @@ def shift_to_ref_array(fft_ref, array):
     -------
     ndarray
         array shifted to be aligned with reference array
+
     """
     # get cross correlation and pixel shift
     fft_array = np.fft.fftn(array)
