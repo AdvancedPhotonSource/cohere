@@ -347,25 +347,16 @@ def adjust_dimensions(arr, pads):
     ndarray
         the padded/cropped array
     """
-    # up the dimensions to 3D
+   # up the dimensions to 3D
     for _ in range(len(arr.shape), 3):
-        np.expand_dims(arr,0)
+        arr = np.expand_dims(arr,axis=0)
+        pads = [(0,0)] + pads
 
     old_dims = arr.shape
-    start = []
-    stop = []
-    for i in range(len(old_dims)):
-        pad = pads[i]
-        first = max(0, -pad[0])
-        last = old_dims[i] - max(0, -pad[1])
-        if first >= last:
-            print('the crop exceeds size, please change the crop and run again')
-            return None
-        else:
-            start.append(first)
-            stop.append(last)
-
+    start = [max(0, -pad[0]) for pad in pads]
+    stop = [arr.shape[i] - max(0, -pads[i][1]) for i in range(3)]
     cropped = arr[start[0]:stop[0], start[1]:stop[1], start[2]:stop[2]]  #for 1D and 2D it was upped to 3D
+
     dims = cropped.shape
     c_vals = []
     new_pad = []
@@ -373,7 +364,10 @@ def adjust_dimensions(arr, pads):
         pad = pads[i]
         # find a good dimension and find padding
         temp_dim = old_dims[i] + pad[0] + pad[1]
-        new_dim = get_good_dim(temp_dim)
+        if temp_dim > 1:
+            new_dim = get_good_dim(temp_dim)
+        else:
+            new_dim = temp_dim
         added = new_dim - temp_dim
         # if the pad is positive
         pad_front = max(0, pad[0]) + int(added / 2)
