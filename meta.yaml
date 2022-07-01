@@ -1,6 +1,6 @@
 package:
   name: cohere
-  version: "2.2"
+  version: "2.3"
 
 source:
   path: .
@@ -23,7 +23,7 @@ requirements:
     - psutil
 
 about:
-  home: https://github.com/advancedPhotonSource/cdi
+  home: https://github.com/advancedPhotonSource/cohere
   license: BSD
   license_file: LICENSE
   summary: AI, parallelized genetic algorithms and phase retrieval methods for Bragg CDI techniques.

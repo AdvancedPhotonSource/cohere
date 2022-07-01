@@ -10,8 +10,8 @@ Creating environment
 The best practice is to create coda environment allocated for the development. The Python version can be chosen by user:
 ::
 
-    conda create -n cohere3.9 python=3.9
-    conda activate cohere3.9
+    conda create -n cohere3.8 python=3.8
+    conda activate cohere3.8
 
 
 Pre-requisites

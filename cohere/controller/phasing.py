@@ -538,7 +538,7 @@ def reconstruction(datafile, **kwargs):
     Parameters
     ----------
     datafile : str
-        filename of phasing data. Must be either .tif format or .npy
+        filename of phasing data. Must be either .tif format or .npy type
 
     kwargs : keyword arguments
         save_dir : str
