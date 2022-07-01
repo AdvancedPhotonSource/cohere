@@ -73,11 +73,12 @@ def prep(datafile, **kwargs):
         # the error message is printed in verifier
         return
 
+    datafile = datafile.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     data = cohere.read_tif(datafile)
 
     if 'data_dir' in kwargs:
-        data_dir = kwargs['data_dir']
+        data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
         data_dir, filename = os.path.split(datafile)
 
@@ -136,6 +137,6 @@ def prep(datafile, **kwargs):
             print('check "binning" configuration')
 
     # save data
-    data_file = os.path.join(data_dir, 'data.tif')
+    data_file = data_dir + '/data.tif'
     cohere.save_tif(prep_data, data_file)
     print('data ready for reconstruction, data dims:', prep_data.shape)

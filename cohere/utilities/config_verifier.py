@@ -183,7 +183,7 @@ def ver_config_rec(config_map):
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
-        if not os.path.isfile(os.path.join(data_dir, 'data.tif')) and not os.path.isfile(os.path.join(data_dir, 'data.npy')):
+        if not os.path.isfile(data_dir + '/data.tif') and not os.path.isfile(data_dir + '/data.npy'):
             config_error = 2
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)

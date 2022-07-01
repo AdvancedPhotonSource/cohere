@@ -72,20 +72,21 @@ class CXDViz:
             True if the image array is result of reconstruction, False if is_twin of reconstructed array.
 
         """
+        save_dir = save_dir.replace(os.sep, '/')
         arrays = {"imAmp": abs(image), "imPh": np.angle(image)}
         self.add_ds_arrays(arrays)
         if is_twin:
-            self.write_directspace(os.path.join(save_dir, 'twin_image'))
+            self.write_directspace(save_dir + '/twin_image')
         else:
-            self.write_directspace(os.path.join(save_dir, 'image'))
+            self.write_directspace(save_dir + '/image')
         self.clear_direct_arrays()
         if support is not None:
             arrays = {"support": support}
             self.add_ds_arrays(arrays)
             if is_twin:
-                self.write_directspace(os.path.join(save_dir, 'twin_support'))
+                self.write_directspace(save_dir + '/twin_support')
             else:
-                self.write_directspace(os.path.join(save_dir, 'support'))
+                self.write_directspace(save_dir + '/support')
             self.clear_direct_arrays()
 
         if coh is not None:
@@ -93,7 +94,7 @@ class CXDViz:
             coh = vut.get_zero_padded_centered(coh, image.shape)
             arrays = {"cohAmp": np.abs(coh), "cohPh": np.angle(coh)}
             self.add_ds_arrays(arrays)
-            self.write_directspace(os.path.join(save_dir, 'coherence'))
+            self.write_directspace(save_dir + '/coherence')
             self.clear_direct_arrays()
 
 
@@ -218,6 +219,7 @@ class CXDViz:
 
 
     def write_directspace(self, filename, **args):
+        filename = filename.replace(os.sep, '/')
         sgwriter = tvtk.XMLStructuredGridWriter()
         # sgwriter.file_type = 'binary'
         if filename.endswith(".vtk"):
@@ -230,6 +232,7 @@ class CXDViz:
 
 
     def write_recipspace(self, filename, **args):
+        filename = filename.replace(os.sep, '/')
         sgwriter = tvtk.XMLStructuredGridWriter()
         if filename.endswith(".vtk"):
             sgwriter.file_name = filename

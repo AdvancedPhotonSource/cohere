@@ -4,6 +4,7 @@
 # See LICENSE file.                                                       #
 # #########################################################################
 import cohere.utilities.utils as ut
+import os
 
 __author__ = "Ross Harder"
 __docformat__ = 'restructuredtext en'
@@ -47,6 +48,7 @@ class Detector(object):
             frame after instrument correction
 
         """
+        filename = filename.replace(os.sep, '/')
         self.raw_frame = ut.read_tif(filename)
         return self.raw_frame
 

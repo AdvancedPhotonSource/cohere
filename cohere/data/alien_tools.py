@@ -184,7 +184,7 @@ def save_arr(arr, dir, fname):
     """
 
     if dir is not None:
-        full_name = os.path.join(dir, fname)
+        full_name = dir + '/' + fname
     else:
         full_name = fname  # save in the current dir
     tif.imsave(full_name, arr.transpose().astype(np.float32))
@@ -250,6 +250,7 @@ def auto_alien1(data, config, data_dir=None):
     cuboid : ndarray
         data array with removed aliens
     """
+    data_dir = data_dir.replace(os.sep, '/')
     if 'AA1_size_threshold' in config:
         size_threshold = config['AA1_size_threshold']
     else:
@@ -273,7 +274,7 @@ def auto_alien1(data, config, data_dir=None):
     if 'AA1_save_arrs' in config:
         save_arrs = config['AA1_save_arrs']
         if save_arrs:
-            save_dir = os.path.join(data_dir, 'alien_analysis')
+            save_dir = data_dir + '/alien_analysis'
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
     else:

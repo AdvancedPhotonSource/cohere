@@ -68,7 +68,7 @@ def get_logger(name, ldir=''):
     """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    log_file = os.path.join(ldir, 'default.log')
+    log_file = ldir + '/default.log'
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -91,7 +91,7 @@ def read_tif(filename):
     ndarray
         an array containing the data parsed from the file
     """
-    ar = tf.imread(filename).transpose()
+    ar = tf.imread(filename.replace(os.sep, '/')).transpose()
     return ar
 
 
@@ -106,7 +106,7 @@ def save_tif(arr, filename):
     filename : str
         tif format file name
     """
-    tf.imsave(filename, arr.transpose().astype(np.float32))
+    tf.imsave(filename.replace(os.sep, '/'), arr.transpose().astype(np.float32))
 
 
 def read_config(config):
@@ -125,6 +125,7 @@ def read_config(config):
     """
     import ast
 
+    config = config.replace(os.sep, '/')
     if not os.path.isfile(config):
         print(config, 'is not a file')
         return None
@@ -162,8 +163,7 @@ def write_config(param_dict, config):
     config : str
         configuration name theparameters will be written into
     """
-    import ast
-    with open(config, 'a') as f:
+    with open(config.replace(os.sep, '/'), 'w+') as f:
         f.truncate(0)
         for key, value in param_dict.items():
             if type(value) == str:
@@ -510,20 +510,21 @@ def read_results(read_dir):
     ndarray, ndarray, ndarray (or None)
         image, support, and coherence arrays
     """
+    read_dir = read_dir.replace(os.sep, '/')
     try:
-        imagefile = os.path.join(read_dir, 'image.npy')
+        imagefile = read_dir + '/image.npy'
         image = np.load(imagefile)
     except:
         image = None
 
     try:
-        supportfile = os.path.join(read_dir, 'support.npy')
+        supportfile = read_dir + '/support.npy'
         support = np.load(supportfile)
     except:
         support = None
 
     try:
-        cohfile = os.path.join(read_dir, 'coherence.npy')
+        cohfile = read_dir + '/coherence.npy'
         coh = np.load(cohfile)
     except:
         coh = None
@@ -614,7 +615,8 @@ def save_metrics(errs, dir, metrics=None):
     metrics : dict
         dictionary with metric type keys, and metric values
     """
-    metric_file = os.path.join(dir, 'summary')
+    dir = dir.replace(os.sep, '/')
+    metric_file = dir + '/summary'
     with open(metric_file, 'w+') as f:
         if metrics is not None:
             f.write('metric     result\n')
@@ -637,7 +639,8 @@ def write_plot_errors(save_dir):
     save_dir : str
         directory containing errors.npy file
     """
-    plot_file = os.path.join(save_dir, 'plot_errors.py')
+    save_dir = save_dir.replace(os.sep, '/')
+    plot_file = save_dir + '/plot_errors.py'
     f = open(plot_file, 'w+')
     f.write("#! /usr/bin/env python\n")
     f.write("import matplotlib.pyplot as plt\n")
@@ -645,7 +648,7 @@ def write_plot_errors(save_dir):
     f.write("import sys\n")
     f.write("import os\n")
     f.write("current_dir = sys.path[0]\n")
-    f.write("errs = np.load(os.path.join(current_dir, 'errors.npy')).tolist()\n")
+    f.write("errs = np.load(current_dir + '/errors.npy').tolist()\n")
     f.write("errs.pop(0)\n")
     f.write("plt.plot(errs)\n")
     f.write("plt.ylabel('errors')\n")
@@ -681,17 +684,18 @@ def save_results(image, support, coh, errs, save_dir, metric=None):
     metrics : dict
         dictionary with metric type keys, and metric values
     """
+    save_dir = save_dir.replace(os.sep, '/')
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    image_file = os.path.join(save_dir, 'image')
+    image_file = save_dir + '/image'
     np.save(image_file, image)
-    support_file = os.path.join(save_dir, 'support')
+    support_file = save_dir + '/support'
     np.save(support_file, support)
 
-    errs_file = os.path.join(save_dir, 'errors')
+    errs_file = save_dir + '/errors'
     np.save(errs_file, errs)
     if not coh is None:
-        coh_file = os.path.join(save_dir, 'coherence')
+        coh_file = save_dir + '/coherence'
         np.save(coh_file, coh)
 
     write_plot_errors(save_dir)

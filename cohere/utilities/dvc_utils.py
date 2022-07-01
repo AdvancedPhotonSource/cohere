@@ -455,17 +455,15 @@ def breed(breed_mode, parent_dir, image):
     dirs : tuple
         a tuple containing two elements: directory where the image to breed from is stored, a 'parent', and a directory where the bred image, a 'child', will be stored.
 
-    Returns
-    -------
-    nothing
     """
+    parent_dir = parent_dir.replace(os.sep, '/')
     if os.path.basename(os.path.normpath(parent_dir)) == '0':
         # it is alpha, no breeding
         return zero_phase(image)
     else:
         # find and load alpha
-        gen_dir = os.path.dirname(parent_dir)
-        alpha = dvclib.load(os.path.join(gen_dir, '0', 'image.npy'))
+        gen_dir = os.path.dirname(parent_dir).replace(os.sep, '/')
+        alpha = dvclib.load(gen_dir + '/0/image.npy')
         alpha = zero_phase(alpha)
 
     # load image file
@@ -556,17 +554,18 @@ def save_results(image, support, coh, errs, save_dir, metric=None):
     -------
     nothing
     """
+    save_dir = save_dir.replace(os.sep, '/')
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    image_file = os.path.join(save_dir, 'image')
+    image_file = save_dir + '/image'
     dvclib.save(image_file, image)
-    support_file = os.path.join(save_dir, 'support')
+    support_file = save_dir + '/support'
     dvclib.save(support_file, support)
 
-    errs_file = os.path.join(save_dir, 'errors')
+    errs_file = save_dir + '/errors'
     dvclib.save(errs_file, errs)
     if not coh is None:
-        coh_file = os.path.join(save_dir, 'coherence')
+        coh_file = save_dir + '/coherence'
         dvclib.save(coh_file, coh)
 
     # write_plot_errors(save_dir)
