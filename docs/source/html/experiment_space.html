@@ -1,0 +1,449 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Experiment Space &#8212; cohere  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinxdoc.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="develop" href="for_developers.html" />
+    <link rel="prev" title="config_disp" href="config_disp.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="for_developers.html" title="develop"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="config_disp.html" title="config_disp"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Experiment Space</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="experiment-space">
+<h1>Experiment Space<a class="headerlink" href="#experiment-space" title="Permalink to this headline">¶</a></h1>
+<div class="line-block">
+<div class="line">In order to group the files associated with an experiment in a structured manner user scripts will create a space dedicated to the experiment. The space, experiment directory, will be a sub-directory in working directory. The name of experiment directory is descriptive as it contains an ID and scan ranges.</div>
+<div class="line">ex: with experiment ID of “ABC”, and scan “56-78”, the experiment directory is ABC_56-78</div>
+<div class="line">Below we show experiment directory structure for various use cases.</div>
+</div>
+<section id="single-reconstruction">
+<h2>Single reconstruction<a class="headerlink" href="#single-reconstruction" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">Below is a directory tree that is created for an experiment when using users scripts. Refer to <a class="reference internal" href="how_to_use.html#use"><span class="std std-ref">Using cohere with cohere-ui package</span></a> page for description and explanation how to use the scripts and to <a class="reference internal" href="configuration.html"><span class="doc">Configuration</span></a> page for configuration files and parameters.</div>
+<div class="line">&lt;experiment_dir&gt;</div>
+<div class="line-block">
+<div class="line">|</div>
+<div class="line">|–conf</div>
+<div class="line-block">
+<div class="line">|–config</div>
+<div class="line">|–config_prep</div>
+<div class="line">|–config_data</div>
+<div class="line">|–config_rec</div>
+<div class="line">|–config_disp</div>
+</div>
+<div class="line">|–preprocessed_data</div>
+<div class="line">|–phasing_data</div>
+<div class="line">|–results_phasing</div>
+<div class="line">|–results_viz</div>
+<div class="line"><br /></div>
+</div>
+<div class="line">The directory tree is created by users scripts.  Below is a sequence of events that produces the experiment directory tree.</div>
+</div>
+<ul class="simple">
+<li><p>The experiment should be set up with “conf” subdirectory containing configuration files. There are scripts that create the initial experiment space.</p></li>
+<li><p>The script “beamline_preprocess.py” creates “prep_data.tif” file in “preprocessed_data” subdirectory. This is a file ready to be formatted.</p></li>
+<li><p>The script “standard_preprocess.py” reads the “preprocessed_data.tif” file, formats it, and saves the result in the “phasing_data” subdirectory as “data.tif” file. This file is ready for reconstruction.</p></li>
+<li><p>“run_reconstruction.py” script reads “data.tif” file and runs phasing. The results are stored in the “results_phasing” subdirectory in “image.npy” file, along with “support.npy, and “coherence.npy” if partial coherence feature is configured.</p></li>
+<li><p>The “beamline_visualization.py” script loads the arrays from “results_phasing” directory, processes the image and saves it in the results_viz directory.</p></li>
+</ul>
+<div class="line-block">
+<div class="line">After running all the scripts the experiment will have the following files:</div>
+<div class="line">&lt;experiment_dir&gt;</div>
+<div class="line-block">
+<div class="line">|</div>
+<div class="line">|–conf</div>
+<div class="line-block">
+<div class="line">|–config</div>
+<div class="line">|–config_prep</div>
+<div class="line">|–config_data</div>
+<div class="line">|–config_rec</div>
+<div class="line">|–config_disp</div>
+</div>
+<div class="line">|–preprocessed_data</div>
+<div class="line-block">
+<div class="line">|–prep_data.tif</div>
+</div>
+<div class="line">|–phasing_data</div>
+<div class="line-block">
+<div class="line">|–data.tif</div>
+</div>
+<div class="line">|–results_phasing</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–results_viz</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.viz</div>
+</div>
+</div>
+</div>
+</section>
+<section id="multiple-reconstruction">
+<h2>Multiple reconstruction<a class="headerlink" href="#multiple-reconstruction" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">If running multiple reconstructions which is driven by configuration (i.e. the “config_rec” file contains “reconstructions” parameter set to a number greater than 1) the “results” directory will have subdirectories reflecting the runs. The subdirectories are named by the number. The results_phasing will contain the numbered subdirectories, each with image.npy and support.npy files, and results_viz subdirectories, each with image.vts and support.vts files.</div>
+<div class="line">Below is an example of “results” directory structure when running three reconstructions:</div>
+<div class="line">&lt;experiment_dir&gt;</div>
+<div class="line-block">
+<div class="line">|</div>
+<div class="line">|–results_phasing</div>
+<div class="line-block">
+<div class="line">|–0</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–1</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–2</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+</div>
+<div class="line">|–results_viz</div>
+<div class="line-block">
+<div class="line">|–0</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+<div class="line">|–1</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+<div class="line">|–2</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="genetic-algorithm">
+<h2>Genetic Algorithm<a class="headerlink" href="#genetic-algorithm" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">Results of reconstruction when using GA are reflected in relevant directory structure. The “results” directory will have subdirectories reflecting the generation, and each generation subdirectory will have subdirectories reflecting the runs. The generation directory is a concatenation of “g”, underscore, and the generation number.</div>
+<div class="line">Below is an example of “results” directory structure when running two generations and three reconstructions:</div>
+<div class="line">&lt;experiment_dir&gt;</div>
+<div class="line-block">
+<div class="line">|</div>
+<div class="line">|–results_phasing</div>
+<div class="line-block">
+<div class="line">|–g_0</div>
+<div class="line-block">
+<div class="line">|–0</div>
+<div class="line-block">
+<div class="line">--image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–1</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–2</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+</div>
+<div class="line">|–g_1</div>
+<div class="line-block">
+<div class="line">|–0</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–1</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–2</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+</div>
+</div>
+<div class="line">|–results_viz</div>
+<div class="line-block">
+<div class="line">|–g_0</div>
+<div class="line-block">
+<div class="line">|–0</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+<div class="line">|–1</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+<div class="line">|–2</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+</div>
+<div class="line">|–g_1</div>
+<div class="line-block">
+<div class="line">|–0</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+<div class="line">|–1</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+<div class="line">|–2</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="separate-scans">
+<h2>Separate scans<a class="headerlink" href="#separate-scans" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">When the experiment is configured as separate reconstruction for each scan, the experiment directory will contain a subdirectory for each scan. This use case is configured in “config_prep” file by setting parameter “separate_scans” to True. Each scan directory is a concatination of “scan”, underscore, and the scan number. Each of the scan subdirectories will have preprocessed_data, phasing_data, results_phasing, and results_viz subdirectories. The configuration is common for all scans. If running multiple reconstructions or GA, the directory structure in each scan directory will reflect it, as described in above sections.</div>
+<div class="line">Below is an example of directory structure for separate scans.</div>
+<div class="line">&lt;experiment_dir&gt;</div>
+<div class="line-block">
+<div class="line">|</div>
+<div class="line">|–conf</div>
+<div class="line-block">
+<div class="line">|–config</div>
+<div class="line">|–config_prep</div>
+<div class="line">|–config_data</div>
+<div class="line">|–config_rec</div>
+<div class="line">|–config_disp</div>
+</div>
+<div class="line">|–scan_54</div>
+<div class="line-block">
+<div class="line">|–preprocessed_data</div>
+<div class="line-block">
+<div class="line">|–prep_data.tif</div>
+</div>
+<div class="line">|–phasing_data</div>
+<div class="line-block">
+<div class="line">|–data.tif</div>
+</div>
+<div class="line">|–results_phasing</div>
+<div class="line-block">
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–results_viz</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+</div>
+</div>
+<div class="line">|–scan_57</div>
+<div class="line-block">
+<div class="line">|–preprocessed_data</div>
+<div class="line-block">
+<div class="line">|–prep_data.tif</div>
+</div>
+<div class="line">|–phasing_data</div>
+<div class="line-block">
+<div class="line">|–data.tif</div>
+</div>
+<div class="line">|–results_phasing</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–results_viz</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.vts</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="alternate-configuration">
+<h2>Alternate configuration<a class="headerlink" href="#alternate-configuration" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">The “run_rec.py” script supports feature of running reconstruction with alternate configuration(s). Each alternate configuration must be named with arbitrary postfix (rec_id), preceded by “confic_rec” and underscore. This file should be created in the conf subdirectory. Refer to ‘Scripts’  section below for instruction how to run a case with alternate reconstruction configuration.</div>
+<div class="line">After running the “run_rec” script with this option, the results will be saved in the results_phasing_&lt;rec_id&gt; directory.</div>
+<div class="line">Below is an example of directory structure with alternate configuration.</div>
+<div class="line">&lt;experiment_dir&gt;</div>
+<div class="line-block">
+<div class="line">|</div>
+<div class="line">|–conf</div>
+<div class="line-block">
+<div class="line">|–config</div>
+<div class="line">|–config_prep</div>
+<div class="line">|–config_data</div>
+<div class="line">|–config_rec</div>
+<div class="line">|–config_rec_aa</div>
+<div class="line">|–config_rec_bb</div>
+<div class="line">|–config_disp</div>
+</div>
+<div class="line">|–prepprocessed_data</div>
+<div class="line-block">
+<div class="line">|–prep_data.tif</div>
+</div>
+<div class="line">|–phasing_data</div>
+<div class="line-block">
+<div class="line">|–data.tif</div>
+</div>
+<div class="line">|–results_phasing</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–results_viz</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.viz</div>
+</div>
+<div class="line">|–results_phasing_aa</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–results_viz_aa</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.viz</div>
+</div>
+<div class="line">|–results_phasing_bb</div>
+<div class="line-block">
+<div class="line">|–image.npy</div>
+<div class="line">|–support.npy</div>
+</div>
+<div class="line">|–results_viz_bb</div>
+<div class="line-block">
+<div class="line">|–image.vts</div>
+<div class="line">|–support.viz</div>
+</div>
+</div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Experiment Space</a><ul>
+<li><a class="reference internal" href="#single-reconstruction">Single reconstruction</a></li>
+<li><a class="reference internal" href="#multiple-reconstruction">Multiple reconstruction</a></li>
+<li><a class="reference internal" href="#genetic-algorithm">Genetic Algorithm</a></li>
+<li><a class="reference internal" href="#separate-scans">Separate scans</a></li>
+<li><a class="reference internal" href="#alternate-configuration">Alternate configuration</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="config_disp.html"
+                          title="previous chapter">config_disp</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="for_developers.html"
+                          title="next chapter">develop</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/experiment_space.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="for_developers.html" title="develop"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="config_disp.html" title="config_disp"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Experiment Space</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Barbara Frosik, Ross Harder.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,267 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>config_disp &#8212; cohere  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinxdoc.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Experiment Space" href="experiment_space.html" />
+    <link rel="prev" title="config_rec" href="config_rec.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="experiment_space.html" title="Experiment Space"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="config_rec.html" title="config_rec"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="configuration.html" accesskey="U">Configuration</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">config_disp</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="config-disp">
+<h1>config_disp<a class="headerlink" href="#config-disp" title="Permalink to this headline">¶</a></h1>
+<div class="line-block">
+<div class="line">The “config_disp” file defines parameters needed to process visualization of the reconstructed image.</div>
+</div>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>results_dir:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, defaults to &lt;experiment_dir&gt;. A directory that has a tree, or leaf with reconstruction results. The results will be used as input to the visualization processing. There could be several results in the given directory tree, and all will be processed concurrently.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">results_dir</span> <span class="o">=</span> <span class="s2">&quot;/path/to/phasing_results_dir_tree&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>rampups:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, upsize when running ramp removal, default is 1. Expect long processing time for greater numbers.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rampups</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>crop:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, defines a fraction of array at the center that will be subject of visualization. Defaults to [1.0, 1.0, 1.0], i.e. the size of the processed array.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">crop</span> <span class="o">=</span> <span class="p">[</span><span class="mf">.5</span><span class="p">,</span> <span class="mf">.5</span><span class="p">,</span> <span class="mf">.5</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>diffractometer:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">mandatory, name of diffractometer used in experiment.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">diffractometer</span> <span class="o">=</span> <span class="s2">&quot;34idc&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="parsed-parameters">
+<h2>Parsed parameters<a class="headerlink" href="#parsed-parameters" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line">In a typical scenario at APS 34-idc beamline a spec file is generated during experiment and the parameters listed below are parsed from this file, so the user do not configure them. User may configure the following parameters if spec file is not configured in the main configuration or user wants to override the parsed parameters.</div>
+</div>
+<ul class="simple">
+<li><p>energy</p></li>
+</ul>
+<div class="line-block">
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">energy</span> <span class="o">=</span> <span class="mf">7.2</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>delta:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">delta (degrees)</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">delta</span> <span class="o">=</span> <span class="mf">30.1</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>gamma:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">gamma (degrees)</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">gamma</span> <span class="o">=</span> <span class="mf">14.0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>detdist:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">camera distance (mm)</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">detdist</span> <span class="o">=</span> <span class="mf">500.0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>theta:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">angular step size</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">theta</span> <span class="o">=</span> <span class="mf">0.1999946</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>chi:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">chi</span> <span class="o">=</span> <span class="mf">90.0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>phi:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">phi</span> <span class="o">=</span> <span class="o">-</span><span class="mf">5.0</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>scanmot:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">scanmot</span> <span class="o">=</span> <span class="s2">&quot;th&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>scanmot_del:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">scanmot_del</span> <span class="o">=</span> <span class="mf">0.005</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>detector:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">detector name</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">detector</span> <span class="o">=</span> <span class="s2">&quot;34idcTIM2&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">config_disp</a><ul>
+<li><a class="reference internal" href="#parameters">Parameters</a></li>
+<li><a class="reference internal" href="#parsed-parameters">Parsed parameters</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="config_rec.html"
+                          title="previous chapter">config_rec</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="experiment_space.html"
+                          title="next chapter">Experiment Space</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/config_disp.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="experiment_space.html" title="Experiment Space"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="config_rec.html" title="config_rec"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="configuration.html" >Configuration</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">config_disp</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Barbara Frosik, Ross Harder.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    </div>
+  </body>
+</html>

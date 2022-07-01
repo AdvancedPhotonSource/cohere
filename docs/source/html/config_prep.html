@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>config_prep &#8212; cohere  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinxdoc.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="config_data" href="config_data.html" />
+    <link rel="prev" title="cofig" href="config_main.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="config_data.html" title="config_data"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="config_main.html" title="cofig"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="configuration.html" accesskey="U">Configuration</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">config_prep</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="config-prep">
+<h1>config_prep<a class="headerlink" href="#config-prep" title="Permalink to this headline">¶</a></h1>
+<div class="line-block">
+<div class="line">The “config_prep” file defines parameters used during data preparation, when reading data. This file contains parameters used by script written for APS 34-IDC beamline.</div>
+</div>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>data_dir:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">mandatory for the 34-IDC prep, the directory containing raw data. This directory will have several subdirectories each containing tif format data files. Each subdirectory represents separate scan and is numbered with the scan index</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;/path/to/data/files/ADStaff19-1a&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>darkfield_filename:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, depending on the detector. Dark field file taken to clean bad pixels or correct background in CCD. Each detector needs to implement this correctly.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">darkfield_filename</span> <span class="o">=</span> <span class="s2">&quot;/path/to/darkfield_file/dark.tif&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>whitefield_filename:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, depending on the detector. White field file taken to correct over saturated pixels. Each detector needs to implement this correctly.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">whitefield_filename</span> <span class="o">=</span> <span class="s2">&quot;/path/to/whitefield_file/whitefield.tif&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>roi:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">typically read from a spec file, but if not present there, must be configured. Defines the region of a detector that the data has been read from. Needed to determine corrections on the detector. The values in the list (refer to example below) are as follows: x coordinate starting point, x length, y coordinate starting point, y length.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">roi</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">256</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>min_files:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, defines a minimum number of raw data files in the scan directory. If number of files is less than minimum, the directory is not added to the data.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">min_files</span> <span class="o">=</span> <span class="mi">80</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>exclude_scans:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">a list containing scan indexes that will be excluded from preparation</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">exclude_scans</span> <span class="o">=</span> <span class="p">[</span><span class="mi">78</span><span class="p">,</span><span class="mi">81</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>separate_scans:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">in typical scenario the data from all scans in experiment are combined. If specified as separate scans, each scan will be processed separately and will have sub-experiment name containing scan index ex. “scan_9”, where 9 is scan index</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">separate_scans</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>separate_scan_ranges:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">in typical scenario the data from all scans in experiment are combined. If specified as separate scan ranges, each scan or scan range in the experiment will be processed separately and will have sub-experiment name containing scan index ex. “scan_9”, where 9 is scan index, or “scan_10-15”, where 10-15 is the scan range. The scans and scan ranges are defined in main configuration “config” file as scan parameter, and are part of experiment name.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">separate_scan_ranges</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Imult:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">Optional, defaults to the average of the whitefield. A multiplication factor used to renormalize the whitefield correction.</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Imult</span> <span class="o">=</span> <span class="mi">1000000</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>detector:</p></li>
+</ul>
+<div class="line-block">
+<div class="line">optional, can be omitted if roi param is specified</div>
+<div class="line">example:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">detector</span> <span class="o">=</span> <span class="s2">&quot;34idcTIM2&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">config_prep</a><ul>
+<li><a class="reference internal" href="#parameters">Parameters</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="config_main.html"
+                          title="previous chapter">cofig</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="config_data.html"
+                          title="next chapter">config_data</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/config_prep.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="config_data.html" title="config_data"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="config_main.html" title="cofig"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="configuration.html" >Configuration</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">config_prep</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Barbara Frosik, Ross Harder.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    </div>
+  </body>
+</html>

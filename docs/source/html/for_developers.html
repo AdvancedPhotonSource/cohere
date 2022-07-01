@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>develop &#8212; cohere  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinxdoc.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Experiment Space" href="experiment_space.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="experiment_space.html" title="Experiment Space"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">develop</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="develop">
+<h1>develop<a class="headerlink" href="#develop" title="Permalink to this headline">¶</a></h1>
+<div class="line-block">
+<div class="line">This chapter has info for developers.</div>
+</div>
+<section id="installation-for-development">
+<h2>Installation for development<a class="headerlink" href="#installation-for-development" title="Permalink to this headline">¶</a></h2>
+<section id="creating-environment">
+<h3>Creating environment<a class="headerlink" href="#creating-environment" title="Permalink to this headline">¶</a></h3>
+<p>The best practice is to create coda environment allocated for the development. The Python version can be chosen by user:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">create</span> <span class="o">-</span><span class="n">n</span> <span class="n">cohere3</span><span class="mf">.8</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.8</span>
+<span class="n">conda</span> <span class="n">activate</span> <span class="n">cohere3</span><span class="mf">.8</span>
+</pre></div>
+</div>
+</section>
+<section id="pre-requisites">
+<h3>Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permalink to this headline">¶</a></h3>
+<dl class="simple">
+<dt>After activating conda environment install the packages/libraries listed below.</dt><dd><ul class="simple">
+<li><p>conda install tifffile -c conda-forge</p></li>
+<li><p>conda install gputil -c conda-forge</p></li>
+<li><p>conda install psutil -c conda-forge</p></li>
+<li><p>if running AutoAlien1 algorithm during standard preprocessing: conda install scikit-learn -c conda-forge</p></li>
+<li><p>if using Initial AI guess: conda install tensorflow -c conda-forge</p></li>
+<li><p>if using cupy library: conda install cupy -c conda-forge</p></li>
+<li><p>if using arrayfire: pip install arrayfire, install arrayfire library according to <a class="reference external" href="https://github.com/arrayfire/arrayfire-python/blob/master/README.md">https://github.com/arrayfire/arrayfire-python/blob/master/README.md</a></p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="initialization">
+<h3>Initialization<a class="headerlink" href="#initialization" title="Permalink to this headline">¶</a></h3>
+<p>Clone the latest cohere repository from GitHub:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">advancedPhotonSource</span><span class="o">/</span><span class="n">cohere</span>
+<span class="n">cd</span> <span class="n">cohere</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line">install:</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+</section>
+<section id="compile-and-install">
+<h3>compile and install<a class="headerlink" href="#compile-and-install" title="Permalink to this headline">¶</a></h3>
+<p>After changing code run the following command from ‘cohere’ directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line">Sometimes if the version number in setup.py script did not change, the install may not update. In this case remove build and distribute directories before running the setup.py script.</div>
+</div>
+</section>
+</section>
+<section id="adding-new-trigger">
+<h2>Adding new trigger<a class="headerlink" href="#adding-new-trigger" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications need to be done to add a new feature:</dt><dd><ul class="simple">
+<li><p>In cohere/controller/phasing.py, Rec.init, insert a new function to the to the iter_functions list in the correct order.</p></li>
+<li><p>Implement the new function in cohere/controller/phasing.py, Rec class.</p></li>
+<li><p>In cohere/controller/op_flow.py add code to add the new trigger row into flow array.</p></li>
+<li><p>In cohere/controller/params.py add code to parse trigger and parameters applicable to the new feature.</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="adding-new-algorithm">
+<h2>Adding new algorithm<a class="headerlink" href="#adding-new-algorithm" title="Permalink to this headline">¶</a></h2>
+<p>todo</p>
+</section>
+<section id="conda-build">
+<h2>Conda Build<a class="headerlink" href="#conda-build" title="Permalink to this headline">¶</a></h2>
+<p>For a new build change version in meta.yaml and setup.py files to the new version and run conda build:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">build</span> <span class="o">-</span><span class="n">c</span> <span class="n">conda</span><span class="o">-</span><span class="n">forge</span> <span class="o">-</span><span class="n">c</span> <span class="n">defaults</span> <span class="o">.</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>upload build to anaconda cloud</p></li>
+</ul>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">develop</a><ul>
+<li><a class="reference internal" href="#installation-for-development">Installation for development</a><ul>
+<li><a class="reference internal" href="#creating-environment">Creating environment</a></li>
+<li><a class="reference internal" href="#pre-requisites">Pre-requisites</a></li>
+<li><a class="reference internal" href="#initialization">Initialization</a></li>
+<li><a class="reference internal" href="#compile-and-install">compile and install</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#adding-new-trigger">Adding new trigger</a></li>
+<li><a class="reference internal" href="#adding-new-algorithm">Adding new algorithm</a></li>
+<li><a class="reference internal" href="#conda-build">Conda Build</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="experiment_space.html"
+                          title="previous chapter">Experiment Space</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/for_developers.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="experiment_space.html" title="Experiment Space"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cohere  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">develop</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Barbara Frosik, Ross Harder.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    </div>
+  </body>
+</html>
