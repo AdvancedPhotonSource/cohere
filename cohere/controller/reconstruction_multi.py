@@ -9,7 +9,7 @@ cohere.reconstruction_multi
 ===========================
 
 This module controls a multiple reconstructions.
-Refer to cohere-scripts suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
+Refer to cohere-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
 """
 
 import os
@@ -210,7 +210,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     Controls multiple reconstructions, the reconstructions run concurrently.
 
-    This script is typically started with cohere-scripts helper functions. The 'init_guess' parameter in the configuration file defines whether guesses are random, or start from some saved states. It will set the initial guesses accordingly and start phasing process, running each reconstruction in separate thread. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere-ui helper functions. The 'init_guess' parameter in the configuration file defines whether guesses are random, or start from some saved states. It will set the initial guesses accordingly and start phasing process, running each reconstruction in separate thread. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------

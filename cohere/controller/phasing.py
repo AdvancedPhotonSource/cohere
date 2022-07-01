@@ -601,7 +601,7 @@ def reconstruction(datafile, **kwargs):
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere-scripts package to run multiple reconstructions and GA. Proceding with single reconstruction.')
+        print('Use cohere-ui package to run multiple reconstructions and GA. Proceding with single reconstruction.')
     if 'processing' in kwargs:
         pkg = kwargs['processing']
     else:

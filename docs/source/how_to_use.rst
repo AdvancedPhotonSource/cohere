@@ -1,33 +1,33 @@
 .. _use:
 
-Using cohere with cohere-scripts package
+Using cohere with cohere-ui package
 ========================================
-| User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-scripts. The cohere-scripts package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User with other instruments than those defined in 34-ID-C suite can easily add own code that would encapsulate user's beamline specifics. In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
+| User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-ui. The cohere-ui package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User with other instruments than those defined in 34-ID-C suite can easily add own code that would encapsulate user's beamline specifics. In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
 
 Installing Scripts
 ##################
-| There are three ways to get the cohere-scripts package onto your local computer, or remote computer.
+| There are three ways to get the cohere-ui package onto your local computer, or remote computer.
 
-1. The cohere-scripts package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-scripts and clicking the green “Code” button and selecting “Download ZIP”.
+1. The cohere-ui package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-ui and clicking the green “Code” button and selecting “Download ZIP”.
 
-2. Alternatively one can clone the repository using git. This will create the cohere-scripts directory containing all of the cohere-scripts content. In this code below we clone it to cohere-scripts-main directory.
+2. Alternatively one can clone the repository using git. This will create the cohere-ui directory containing all of the cohere-ui content. In this code below we clone it to cohere-ui-main directory.
    
   ::
 
-        git clone https://github.com/advancedPhotonSource/cohere-scripts cohere-scripts-main
+        git clone https://github.com/advancedPhotonSource/cohere-ui cohere-ui-main
 
-3. Another way to get the cohere-scripts package on your machine is with the wget command:
+3. Another way to get the cohere-ui package on your machine is with the wget command:
    
   ::
 
-        wget https://github.com/AdvancedPhotonSource/cohere-scripts/archive/main.zip
+        wget https://github.com/AdvancedPhotonSource/cohere-ui/archive/main.zip
         unzip main.zip
 
-| After the package is installed change directory to cohere-scripts-main and run setup.py script. The setup.py script modifies paths from relative to absolute in the provided example configuration.:
+| After the package is installed change directory to cohere-ui-main and run setup.py script. The setup.py script modifies paths from relative to absolute in the provided example configuration.:
    
   ::
 
-        cd cohere-scripts-main
+        cd cohere-ui-main
         python setup.py
 
 Scripts
