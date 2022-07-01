@@ -1,6 +1,6 @@
-=============
+===========
 Phasing API
-=============
+===========
 .. automodule:: cohere.phasing
    :members:
 .. automodule:: cohere.reconstruction_single

@@ -588,7 +588,7 @@ def reconstruction(datafile, **kwargs):
             used when applying low resolution data filter while iterating. The det values are linespaced for low resolution iterations from first value to last. The filter is gauss with sigma of linespaced det. If only one number given, the last det will default to 1.
         average_trigger : list
             defines when to apply averaging. Negative start means it is offset from the last iteration.
-        progress_trigger : list
+        progress_trigger : list of int
             defines when to print info on the console. The info includes current iteration and error.
 
     """
@@ -596,6 +596,7 @@ def reconstruction(datafile, **kwargs):
     if len(error_msg) > 0:
         print(error_msg)
         return
+    
     if not os.path.isfile(datafile):
         print('no file found', datafile)
         return
