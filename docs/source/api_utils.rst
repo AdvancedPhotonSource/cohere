@@ -5,5 +5,3 @@ Utils API
    :members:
 .. automodule:: cohere.utils
    :members:
-.. automodule:: cohere.viz_util
-   :members:

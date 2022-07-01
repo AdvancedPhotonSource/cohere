@@ -9,7 +9,6 @@ Welcome to cohere documentation!
    installation
    api_standard_preprocess
    api_phasing
-   api_beamlines
    api_utils
    how_to_use
    configuration

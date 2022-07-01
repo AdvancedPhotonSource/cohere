@@ -17,8 +17,6 @@ The best practice is to create coda environment allocated for the development. T
 Pre-requisites
 ++++++++++++++
 After activating conda environment install the packages/libraries listed below.
-    - conda install xrayutilities -c conda-forge
-    - conda install mayavi -c conda-forge
     - conda install tifffile -c conda-forge
     - conda install gputil -c conda-forge
     - conda install psutil -c conda-forge
@@ -26,6 +24,10 @@ After activating conda environment install the packages/libraries listed below.
     - if using Initial AI guess: conda install tensorflow -c conda-forge
     - if using cupy library: conda install cupy -c conda-forge
     - if using arrayfire: pip install arrayfire, install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
+    - conda install xrayutilities -c conda-forge
+    - conda install mayavi -c conda-forge or pip install mayavi
+    - conda install pyqt
+Note: xrayutilities and mayavi are needed to use cohere-ut package that contains users scripts
 
 Initialization
 ++++++++++++++

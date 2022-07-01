@@ -17,8 +17,6 @@ requirements:
     - python=3.8
     - numpy
     - gputil
-    - xrayutilities
-    - mayavi
     - tensorflow
     - scikit-learn
     - tifffile
