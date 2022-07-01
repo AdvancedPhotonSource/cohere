@@ -23,12 +23,14 @@ Installing Scripts
         wget https://github.com/AdvancedPhotonSource/cohere-ui/archive/main.zip
         unzip main.zip
 
-| After the package is installed change directory to cohere-ui-main and run setup.py script. The setup.py script modifies paths from relative to absolute in the provided example configuration.:
+| After the package is installed change directory to cohere-ui-main and run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
    
   ::
 
         cd cohere-ui-main
         python setup.py
+        sh install_pkgs.sh    # for Linux and OS_X
+        install_pkgs.bat      # for Windows
 
 Scripts
 ####### 
