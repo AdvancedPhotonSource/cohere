@@ -596,7 +596,7 @@ def reconstruction(datafile, **kwargs):
     if len(error_msg) > 0:
         print(error_msg)
         return
-    
+
     if not os.path.isfile(datafile):
         print('no file found', datafile)
         return

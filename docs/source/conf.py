@@ -62,6 +62,6 @@ html_theme = 'sphinxdoc'
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 
-autodoc_mock_imports = ['tifffile','scipy', 'gputil']
+autodoc_mock_imports = ['tifffile','scipy', 'gputil', 'functools', 'stat', 'logging']
 
 master_doc = 'index'
