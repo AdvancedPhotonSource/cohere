@@ -16,7 +16,7 @@ import numpy as np
 import os
 import logging
 import stat
-from functools import reduce
+
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c), UChicago Argonne, LLC."
@@ -25,30 +25,18 @@ __all__ = ['get_logger',
            'read_tif',
            'save_tif',
            'read_config',
-           'write_config',
            'get_good_dim',
            'binning',
            'get_centered',
-           'get_centered_both',
            'get_zero_padded_centered',
            'adjust_dimensions',
-           'flip',
            'gaussian',
            'gauss_conv_fft',
-           'shrink_wrap',
            'read_results',
-           'zero_phase',
-           'sum_phase_tight_support',
-           'get_metric',
            'save_metrics',
            'write_plot_errors',
            'save_results',
-           'sub_pixel_shift',
            'arr_property',
-           'get_gpu_load',
-           'get_gpu_distribution',
-           'estimate_no_proc',
-           'shift_to_ref_array'
            ]
 
 
@@ -151,26 +139,6 @@ def read_config(config):
     return param_dict
 
 
-def write_config(param_dict, config):
-    """
-    Writes configuration to a file.
-
-    Parameters
-    ----------
-    param_dict : dict
-        dictionary containing configuration parameters
-
-    config : str
-        configuration name theparameters will be written into
-    """
-    with open(config.replace(os.sep, '/'), 'w+') as f:
-        f.truncate(0)
-        for key, value in param_dict.items():
-            if type(value) == str:
-                value = '"' + value + '"'
-            f.write(key + ' = ' + str(value) + os.linesep)
-
-
 def get_good_dim(dim):
     """
     This function calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) and is closest to the given starting dimension.
@@ -271,35 +239,6 @@ def get_centered(arr, center_shift):
     return centered
 
 
-def get_centered_both(arr, support):
-    """
-    This function finds maximum value in the array, and puts it in a center of a new array. The support array
-    will be shifted the same way. The shifted elements are rolled into the other end of array.
-
-    Parameters
-    ----------
-    arr : ndarray
-        the original array to be centered
-
-    support : ndarray
-        the associated array to be shifted the same way centered array is
-
-    Returns
-    -------
-    ndarray, ndarray
-        the centered arrays
-    """
-    max_coordinates = list(np.unravel_index(np.argmax(arr), arr.shape))
-    shape = arr.shape
-    centered = arr
-    centered_supp = support
-    for i in range(len(max_coordinates)):
-        centered = np.roll(centered, int(shape[i] / 2) - max_coordinates[i], i)
-        centered_supp = np.roll(centered_supp, int(shape[i] / 2) - max_coordinates[i], i)
-
-    return centered, centered_supp
-
-
 def get_zero_padded_centered(arr, new_shape):
     """
     This function pads the array with zeros to the new shape with the array in the center.
@@ -379,21 +318,6 @@ def adjust_dimensions(arr, pads):
     return np.squeeze(adjusted)
 
 
-def flip(m, axis):
-    """
-    Copied from numpy 1.12.0.
-    """
-    if not hasattr(m, 'ndim'):
-        m = np.asarray(m)
-    indexer = [slice(None)] * m.ndim
-    try:
-        indexer[axis] = slice(None, None, -1)
-    except IndexError:
-        raise ValueError("axis=%i is invalid for the %i-dimensional input array"
-                         % (axis, m.ndim))
-    return m[tuple(indexer)]
-
-
 def gaussian(shape, sigmas, alpha=1):
     """
     Calculates Gaussian distribution grid in given dimensions.
@@ -464,39 +388,6 @@ def gauss_conv_fft(arr, sigmas):
     return convag
 
 
-def shrink_wrap(arr, threshold, sigma, type='gauss'):
-    """
-    Calculates support array.
-
-    Parameters
-    ----------
-    arr : ndarray
-        subject array
-
-    threshold : float
-        support is formed by points above this value
-
-    sigmas : list
-        sigmas in all dimensions
-
-    type : str
-        a type of algorithm to apply to calculate the support, currently supporting 'gauss'
-    Returns
-    -------
-    ndarray
-        support array
-    """
-    sigmas = [sigma] * len(arr.shape)
-    if type == 'gauss':
-        convag = gauss_conv_fft(abs(arr), sigmas)
-        max_convag = np.amax(convag)
-        convag = convag / max_convag
-        support = np.where(convag >= threshold, 1, 0)
-        return support
-    else:
-        return None
-
-
 def read_results(read_dir):
     """
     Reads results and returns array representation.
@@ -530,74 +421,6 @@ def read_results(read_dir):
         coh = None
 
     return image, support, coh
-
-
-def zero_phase(arr, val=0):
-    """
-    Calculates average phase of the input array bounded by very tight support. Shifts the phases in the
-    array by avarage plus given value.
-
-    Parameters
-    ----------
-    arr : ndarray
-        array to shift the phase
-
-    val : float
-        a value to add to shift
-    Returns
-    -------
-    ndarray
-        array with modified phase
-    """
-    ph = np.angle(arr)
-    support = shrink_wrap(abs(arr), .2, .5)  # get just the crystal, i.e very tight support
-    avg_ph = np.sum(ph * support) / np.sum(support)
-    ph = ph - avg_ph + val
-    return abs(arr) * np.exp(1j * ph)
-
-
-def sum_phase_tight_support(arr):
-    """
-    Calculates average phase of the input array bounded by very tight support. Shifts the phases in the
-    array by avarage.
-
-    Parameters
-    ----------
-    arr : ndarray
-        array to shift the phase
-    Returns
-    -------
-    ndarray
-        array with modified phase
-    """
-    arr = zero_phase(arr)
-    ph = np.arctan2(arr.imag, arr.real)
-    support = shrink_wrap(abs(arr), .2, .5)
-    return sum(abs(ph * support))
-
-
-def get_metric(image, errs):
-    """
-    Calculates array characteristic based on various formulas.
-
-    Parameters
-    ----------
-    image : ndarray
-        array to get characteristic
-    errs : list
-        list of "chi" error by iteration
-
-    Returns
-    -------
-    dict
-        dictionary with all metric
-    """
-    metric = {}
-    metric['chi'] = errs[-1]
-    metric['sharpness'] = np.sum(pow(abs(image), 4)).item()
-    metric['summed_phase'] = np.sum(sum_phase_tight_support(image)).item()
-    metric['area'] = np.sum(shrink_wrap(image, .2, .5)).item()
-    return metric
 
 
 def save_metrics(errs, dir, metrics=None):
@@ -703,35 +526,6 @@ def save_results(image, support, coh, errs, save_dir, metric=None):
     save_metrics(errs, save_dir, metric)
 
 
-def sub_pixel_shift(arr, row_shift, col_shift, z_shift):
-    """
-    Shifts pixels in a regularly sampled LR image with a subpixel precision according to local gradient.
-
-
-    Parameters
-    ----------
-    arr : ndarray
-        array to shift
-
-    row_shift, col_shift, z_shift : float, float, float
-        shift in each dimension
-
-    Returns
-    -------
-    ndarray
-        shifted array
-    """
-    buf2ft = np.fft.fftn(arr)
-    shape = arr.shape
-    Nr = np.fft.ifftshift(np.array(list(range(-int(np.floor(shape[0] / 2)), shape[0] - int(np.floor(shape[0] / 2))))))
-    Nc = np.fft.ifftshift(np.array(list(range(-int(np.floor(shape[1] / 2)), shape[1] - int(np.floor(shape[1] / 2))))))
-    Nz = np.fft.ifftshift(np.array(list(range(-int(np.floor(shape[2] / 2)), shape[2] - int(np.floor(shape[2] / 2))))))
-    [Nc, Nr, Nz] = np.meshgrid(Nc, Nr, Nz)
-    Greg = buf2ft * np.exp(
-        1j * 2 * np.pi * (-row_shift * Nr / shape[0] - col_shift * Nc / shape[1] - z_shift * Nz / shape[2]))
-    return np.fft.ifftn(Greg)
-
-
 def arr_property(arr):
     """
     Used only in development. Prints max value of the array and max coordinates.
@@ -745,179 +539,6 @@ def arr_property(arr):
     print('norm', np.sum(pow(abs(arr), 2)))
     max_coordinates = list(np.unravel_index(np.argmax(arr1), arr.shape))
     print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
-
-
-def get_gpu_load(mem_size, ids):
-    """
-    This function is only used when running on Linux OS. The GPUtil module is not supported on Mac.
-    This function finds available GPU memory in each GPU that id is included in ids list. It calculates
-    how many reconstruction can fit in each GPU available memory.
-
-    Parameters
-    ----------
-    mem_size : int
-        array size
-
-    ids : list
-        list of GPU ids user configured for use
-
-    Returns
-    -------
-    list
-        list of available runs aligned with the GPU id list
-    """
-    import GPUtil
-
-    gpus = GPUtil.getGPUs()
-    total_avail = 0
-    available_dir = {}
-    for gpu in gpus:
-        if gpu.id in ids:
-            free_mem = gpu.memoryFree
-            avail_runs = int(free_mem / mem_size)
-            if avail_runs > 0:
-                total_avail += avail_runs
-                available_dir[gpu.id] = avail_runs
-    available = []
-    for id in ids:
-        try:
-            avail_runs = available_dir[id]
-        except:
-            avail_runs = 0
-        available.append(avail_runs)
-    return available
-
-
-def get_gpu_distribution(runs, available):
-    """
-    Finds how to distribute the available runs to perform the given number of runs.
-
-    Parameters
-    ----------
-    runs : int
-        number of reconstruction requested
-
-    available : list
-        list of available runs aligned with the GPU id list
-
-    Returns
-    -------
-    list
-        list of runs aligned with the GPU id list, the runs are equally distributed across the GPUs
-    """
-    all_avail = reduce((lambda x, y: x + y), available)
-    distributed = [0] * len(available)
-    sum_distr = 0
-    while runs > sum_distr and all_avail > 0:
-        # balance distribution
-        for i in range(len(available)):
-            if available[i] > 0:
-                available[i] -= 1
-                all_avail -= 1
-                distributed[i] += 1
-                sum_distr += 1
-                if sum_distr == runs:
-                    break
-    return distributed
-
-
-def estimate_no_proc(arr_size, factor):
-    """
-    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
-    of array.
-
-    Parameters
-    ----------
-    arr_size : int
-        size of array
-    factor : int
-        an estimate of how much memory is required to process comparing to array size
-
-    Returns
-    -------
-    int
-        number of processes
-    """
-    from multiprocessing import cpu_count
-    import psutil
-
-    ncpu = cpu_count()
-    freemem = psutil.virtual_memory().available
-    nmem = freemem / (factor * arr_size)
-    # decide what limits, ncpu or nmem
-    if nmem > ncpu:
-        return ncpu
-    else:
-        return int(nmem)
-
-
-# supposedly this is faster than np.roll or scipy interpolation shift.
-# https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
-def fast_shift(arr, shifty, fill_val=0):
-    """
-    Shifts array by given numbers for shift in each dimension.
-    Parameters
-    ----------
-    arr : ndarray
-        array to shift
-    shifty : list
-        a list of integer to shift the array in each dimension
-    fill_val : float
-        values to fill emptied space
-    Returns
-    -------
-    ndarray
-        shifted array
-    """
-    dims = arr.shape
-    result = np.ones_like(arr)
-    result *= fill_val
-    result_slices = []
-    arr_slices = []
-    for n in range(len(dims)):
-        if shifty[n] > 0:
-            result_slices.append(slice(shifty[n], dims[n]))
-            arr_slices.append(slice(0, -shifty[n]))
-        elif shifty[n] < 0:
-            result_slices.append(slice(0, shifty[n]))
-            arr_slices.append(slice(-shifty[n], dims[n]))
-        else:
-            result_slices.append(slice(0, dims[n]))
-            arr_slices.append(slice(0, dims[n]))
-    result_slices = tuple(result_slices)
-    arr_slices = tuple(arr_slices)
-    result[result_slices] = arr[arr_slices]
-    return result
-
-
-def shift_to_ref_array(fft_ref, array):
-    """
-    Returns an array shifted to align with ref.
-
-    Parameters
-    ----------
-    fft_ref : ndarray
-        Fourier transform of reference array
-    array : ndarray
-        array to align with reference array
-    Returns
-    -------
-    ndarray
-        array shifted to be aligned with reference array
-
-    """
-    # get cross correlation and pixel shift
-    fft_array = np.fft.fftn(array)
-    cross_correlation = np.fft.ifftn(fft_ref * np.conj(fft_array))
-    corelated = np.array(cross_correlation.shape)
-    amp = np.abs(cross_correlation)
-    intshift = np.unravel_index(amp.argmax(), corelated)
-    shifted = np.array(intshift)
-    pixelshift = np.where(shifted >= corelated / 2, shifted - corelated, shifted)
-    shifted_arr = fast_shift(array, pixelshift)
-    del cross_correlation
-    del fft_array
-    return shifted_arr
 
 
 # https://stackoverflow.com/questions/51503672/decorator-for-timeit-timeit-method/51503837#51503837
