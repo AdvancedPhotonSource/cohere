@@ -5,11 +5,11 @@
 # #########################################################################
 
 """
-cohere-core.reconstruction_GA
+cohere_core.reconstruction_GA
 ========================
 
 This module controls a reconstructions using genetic algorithm (GA).
-Refer to cohere-core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
+Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
 """
 
 import numpy as np
@@ -32,17 +32,17 @@ def set_lib(pkg, ndim=None):
     global dvclib
     if pkg == 'af':
         if ndim == 1:
-            dvclib = importlib.import_module('cohere-core.lib.aflib').aflib1
+            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib1
         elif ndim == 2:
-            dvclib = importlib.import_module('cohere-core.lib.aflib').aflib2
+            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib2
         elif ndim == 3:
-            dvclib = importlib.import_module('cohere-core.lib.aflib').aflib3
+            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib3
         else:
             raise NotImplementedError
     elif pkg == 'cp':
-        dvclib = importlib.import_module('cohere-core.lib.cplib').cplib
+        dvclib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
-        dvclib = importlib.import_module('cohere-core.lib.nplib').nplib
+        dvclib = importlib.import_module('cohere_core.lib.nplib').nplib
     calc.set_lib(dvclib, pkg=='af')
 
 
@@ -219,7 +219,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     Controls reconstruction that employs genetic algorith (GA).
 
-    This script is typically started with cohere-core-ui helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined (one reconstruction, the rest random), or starting from some saved state. It will set the initial guess accordingly and start GA algorithm. It will run multiple reconstructions for each generation in a loop. After each generation the best reconstruction, alpha is identified, and used for breeding. For each generation the results will be saved in g_x subdirectory, where x is the generation number, in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere_core-ui helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined (one reconstruction, the rest random), or starting from some saved state. It will set the initial guess accordingly and start GA algorithm. It will run multiple reconstructions for each generation in a loop. After each generation the best reconstruction, alpha is identified, and used for breeding. For each generation the results will be saved in g_x subdirectory, where x is the generation number, in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------

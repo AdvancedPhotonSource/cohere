@@ -1,7 +1,7 @@
 =========
 Utils API
 =========
-.. automodule:: cohere.config_verifier
+.. automodule:: cohere_core.config_verifier
    :members:
-.. automodule:: cohere.utils
+.. automodule:: cohere_core.utils
    :members:

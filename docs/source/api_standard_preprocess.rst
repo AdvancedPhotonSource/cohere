@@ -1,5 +1,5 @@
 =======================
 Standard Preprocess API
 =======================
-.. automodule:: cohere.standard_preprocess
+.. automodule:: cohere_core.standard_preprocess
    :members:

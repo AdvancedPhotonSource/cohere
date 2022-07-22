@@ -1,5 +1,5 @@
 package:
-  name: cohere
+  name: cohere_core
   version: "2.3"
 
 source:
@@ -16,11 +16,9 @@ requirements:
   run:
     - python=3.8
     - numpy
-    - gputil
     - tensorflow
     - scikit-learn
     - tifffile
-    - psutil
 
 about:
   home: https://github.com/advancedPhotonSource/cohere

@@ -8,7 +8,7 @@ def set_lib(dlib, is_af):
     global dvclib2
     dvclib = dlib
     if is_af:
-        dvclib2 = importlib.import_module('cohere-core.lib.aflib').aflib2
+        dvclib2 = importlib.import_module('cohere_core.lib.aflib').aflib2
     else:
         dvclib2 = dvclib
 

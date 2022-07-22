@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'cohere'
+project = 'cohere_core'
 copyright = '2020, Barbara Frosik, Ross Harder'
 author = 'Barbara Frosik, Ross Harder'
 
@@ -62,6 +62,6 @@ html_theme = 'sphinxdoc'
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 
-autodoc_mock_imports = ['tifffile','scipy', 'gputil', 'functools', 'stat', 'logging']
+autodoc_mock_imports = ['tifffile', 'scipy']
 
 master_doc = 'index'

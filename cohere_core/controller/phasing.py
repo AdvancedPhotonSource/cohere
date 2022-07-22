@@ -6,7 +6,7 @@
 
 
 """
-cohere-core.phasing
+cohere_core.phasing
 ==============
 
 Provides phasing capabilities for the Bragg CDI data.
@@ -134,7 +134,7 @@ class Support:
 
 class Rec:
     """
-    cohere-core.phasing.reconstruction(self, params, data_file)
+    cohere_core.phasing.reconstruction(self, params, data_file)
 
     Class, performs phasing using iterative algorithm.
 
@@ -602,7 +602,7 @@ def reconstruction(datafile, **kwargs):
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere-core-ui package to run multiple reconstructions and GA. Proceding with single reconstruction.')
+        print('Use cohere_core-ui package to run multiple reconstructions and GA. Proceding with single reconstruction.')
     if 'processing' in kwargs:
         pkg = kwargs['processing']
     else:
@@ -614,10 +614,10 @@ def reconstruction(datafile, **kwargs):
         except:
             pkg = 'np'
     if pkg == 'cp':
-        devlib = importlib.import_module('cohere-core.lib.cplib').cplib
+        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         print('np')
-        devlib = importlib.import_module('cohere-core.lib.nplib').nplib
+        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
     else:
         print('supporting cp and np processing')
         return

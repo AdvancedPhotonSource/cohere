@@ -5,11 +5,11 @@
 # #########################################################################
 
 """
-cohere-core.reconstruction_multi
+cohere_core.reconstruction_multi
 ===========================
 
 This module controls a multiple reconstructions.
-Refer to cohere-core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
+Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
 """
 
 import os
@@ -45,17 +45,17 @@ def set_lib(pkg, ndim=None):
     global devlib
     if pkg == 'af':
         if ndim == 1:
-            devlib = importlib.import_module('cohere-core.lib.aflib').aflib1
+            devlib = importlib.import_module('cohere_core.lib.aflib').aflib1
         elif ndim == 2:
-            devlib = importlib.import_module('cohere-core.lib.aflib').aflib2
+            devlib = importlib.import_module('cohere_core.lib.aflib').aflib2
         elif ndim == 3:
-            devlib = importlib.import_module('cohere-core.lib.aflib').aflib3
+            devlib = importlib.import_module('cohere_core.lib.aflib').aflib3
         else:
             raise NotImplementedError
     elif pkg == 'cp':
-        devlib = importlib.import_module('cohere-core.lib.cplib').cplib
+        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
-        devlib = importlib.import_module('cohere-core.lib.nplib').nplib
+        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
     calc.set_lib(devlib, pkg=='af')
 
 
@@ -148,6 +148,7 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
     -------
     None
     """
+    print('lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type', lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type)
     evals = []
     prev_dir_seq =[]
 
@@ -210,7 +211,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     Controls multiple reconstructions, the reconstructions run concurrently.
 
-    This script is typically started with cohere-core-ui helper functions. The 'init_guess' parameter in the configuration file defines whether guesses are random, or start from some saved states. It will set the initial guesses accordingly and start phasing process, running each reconstruction in separate thread. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere_core-ui helper functions. The 'init_guess' parameter in the configuration file defines whether guesses are random, or start from some saved states. It will set the initial guesses accordingly and start phasing process, running each reconstruction in separate thread. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------
