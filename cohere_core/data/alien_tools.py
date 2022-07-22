@@ -13,7 +13,7 @@ This tools auto eliminate aliens from CDI experiment data. It is configuration d
 import numpy as np
 import os
 import tifffile as tif
-import cohere.utilities.utils as ut
+import cohere_core.utilities.utils as ut
 
 __author__ = "Kenly Pelzer, Ross Harder"
 __copyright__ = "Copyright (c) 2021, UChicago Argonne, LLC."

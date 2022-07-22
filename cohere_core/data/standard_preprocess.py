@@ -11,8 +11,10 @@ This script formats data for reconstruction according to configuration.
 
 import os
 import numpy as np
-import cohere.data.alien_tools as at
-import cohere
+import cohere_core.data.alien_tools as at
+import cohere_core.utilities.utils as ut
+import cohere_core.utilities.config_verifier as ver
+
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
@@ -68,14 +70,14 @@ def prep(datafile, **kwargs):
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
 
     """
-    er_msg = cohere.verify('config_data', kwargs)
+    er_msg = ver.verify('config_data', kwargs)
     if len(er_msg) > 0:
         # the error message is printed in verifier
         return
 
     datafile = datafile.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
-    data = cohere.read_tif(datafile)
+    data = ut.read_tif(datafile)
 
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
@@ -112,16 +114,16 @@ def prep(datafile, **kwargs):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
 
-    prep_data = cohere.adjust_dimensions(prep_data, pairs)
+    prep_data = ut.adjust_dimensions(prep_data, pairs)
     if prep_data is None:
         print('check "adjust_dimensions" configuration')
         return
 
     if 'center_shift' in kwargs:
         center_shift = kwargs['center_shift']
-        prep_data = cohere.get_centered(prep_data, center_shift)
+        prep_data = ut.get_centered(prep_data, center_shift)
     else:
-        prep_data = cohere.get_centered(prep_data, [0, 0, 0])
+        prep_data = ut.get_centered(prep_data, [0, 0, 0])
 
     if 'binning' in kwargs:
         binsizes = kwargs['binning']
@@ -132,11 +134,11 @@ def prep(datafile, **kwargs):
             filler = len(prep_data.shape) - len(bins)
             for _ in range(filler):
                 bins.append(1)
-            prep_data = cohere.binning(prep_data, bins)
+            prep_data = ut.binning(prep_data, bins)
         except:
             print('check "binning" configuration')
 
     # save data
     data_file = data_dir + '/data.tif'
-    cohere.save_tif(prep_data, data_file)
+    ut.save_tif(prep_data, data_file)
     print('data ready for reconstruction, data dims:', prep_data.shape)
