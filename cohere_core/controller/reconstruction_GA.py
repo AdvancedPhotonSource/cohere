@@ -19,7 +19,7 @@ import cohere_core.utilities.utils as ut
 from multiprocessing import Process, Queue
 import shutil
 import importlib
-import cohere.controller.phasing as calc
+import cohere_core.controller.phasing as calc
 
 
 __author__ = "Barbara Frosik"
