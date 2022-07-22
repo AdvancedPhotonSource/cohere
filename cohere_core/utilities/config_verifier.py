@@ -147,7 +147,6 @@ def ver_config(config_map):
             print(error_message)
             return (error_message)
 
-    import cohere.utilities.config_verifier as ver
     return ("")
 
 
