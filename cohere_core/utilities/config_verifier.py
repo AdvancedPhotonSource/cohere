@@ -6,13 +6,13 @@
 
 """
 cohere_core.config_verifier
-======================
+===========================
 
 Verification of configuration parameters.
 """
 
 import os
-from cohere.utilities.config_errors_dict import *
+from cohere_core.utilities.config_errors_dict import *
 
 __author__ = "Barbara Frosik, Dave Cyl"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."

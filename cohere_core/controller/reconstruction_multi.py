@@ -6,7 +6,7 @@
 
 """
 cohere_core.reconstruction_multi
-===========================
+================================
 
 This module controls a multiple reconstructions.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
@@ -15,8 +15,8 @@ Refer to cohere_core-ui suite for use cases. The reconstruction can be started f
 import os
 import numpy as np
 import importlib
-import cohere.utilities.utils as ut
-import cohere.controller.phasing as calc
+import cohere_core.utilities.utils as ut
+import cohere_core.controller.phasing as calc
 from multiprocessing.pool import ThreadPool as Pool
 from multiprocessing import Process
 from functools import partial

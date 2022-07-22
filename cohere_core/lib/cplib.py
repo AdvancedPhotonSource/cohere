@@ -1,4 +1,4 @@
-from cohere.lib.cohlib import cohlib
+from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
 import cupyx.scipy.ndimage

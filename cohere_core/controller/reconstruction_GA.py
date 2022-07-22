@@ -6,7 +6,7 @@
 
 """
 cohere_core.reconstruction_GA
-========================
+=============================
 
 This module controls a reconstructions using genetic algorithm (GA).
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
@@ -14,8 +14,8 @@ Refer to cohere_core-ui suite for use cases. The reconstruction can be started f
 
 import numpy as np
 import os
-import cohere.controller.reconstruction_multi as multi
-import cohere.utilities.utils as ut
+import cohere_core.controller.reconstruction_multi as multi
+import cohere_core.utilities.utils as ut
 from multiprocessing import Process, Queue
 import shutil
 import importlib

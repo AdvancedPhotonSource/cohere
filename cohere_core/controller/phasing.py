@@ -7,7 +7,7 @@
 
 """
 cohere_core.phasing
-==============
+===================
 
 Provides phasing capabilities for the Bragg CDI data.
 The software can run code utilizing different library, such as numpy, cupy, arrayfire (cpu, cuda, opencl). User configures the choice depending on hardware and installed software.
@@ -17,10 +17,10 @@ The software can run code utilizing different library, such as numpy, cupy, arra
 import time
 import os
 import importlib
-import cohere.utilities.dvc_utils as dvut
-import cohere.utilities.utils as ut
-import cohere.utilities.config_verifier as ver
-import cohere.controller.op_flow as of
+import cohere_core.utilities.dvc_utils as dvut
+import cohere_core.utilities.utils as ut
+import cohere_core.utilities.config_verifier as ver
+import cohere_core.controller.op_flow as of
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."

@@ -6,7 +6,7 @@
 
 """
 cohere_core.reconstruction_single
-============================
+=================================
 
 This module controls a single reconstruction process.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
@@ -15,8 +15,8 @@ Refer to cohere_core-ui suite for use cases. The reconstruction can be started f
 import numpy as np
 import os
 import importlib
-import cohere.controller.phasing as calc
-import cohere.utilities.utils as ut
+import cohere_core.controller.phasing as calc
+import cohere_core.utilities.utils as ut
 from multiprocessing import Process
 
 

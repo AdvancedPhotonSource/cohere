@@ -1,4 +1,4 @@
-from cohere.lib.cohlib import cohlib
+from cohere_core.lib.cohlib import cohlib
 import arrayfire as af
 import math
 import numpy as np

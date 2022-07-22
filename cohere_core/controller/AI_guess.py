@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import cohere.utilities.utils as ut
+import cohere_core.utilities.utils as ut
 import math
 from typing import Union
 

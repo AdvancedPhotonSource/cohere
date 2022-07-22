@@ -1,4 +1,4 @@
-from cohere.lib.cohlib import cohlib
+from cohere_core.lib.cohlib import cohlib
 import numpy as np
 from scipy.ndimage import convolve, gaussian_filter, center_of_mass
 
