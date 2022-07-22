@@ -5,7 +5,7 @@
 # #########################################################################
 
 """
-cohere.config_verifier
+cohere-core.config_verifier
 ======================
 
 Verification of configuration parameters.

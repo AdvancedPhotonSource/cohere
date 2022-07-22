@@ -5,7 +5,7 @@
 # #########################################################################
 
 """
-cohere.utils
+cohere-core.utils
 ============
 
 This module is a suite of utility functions.
