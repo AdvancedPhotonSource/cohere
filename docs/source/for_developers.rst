@@ -36,14 +36,14 @@ Clone the latest cohere repository from GitHub:
 
 ::
 
-    python setup.py install
+    python setup.py develop
 
 compile and install
 +++++++++++++++++++
 After changing code run the following command from 'cohere' directory:
 ::
 
-    python setup.py install
+    python setup.py develop
 
 | Sometimes if the version number in setup.py script did not change, the install may not update. In this case remove build and distribute directories before running the setup.py script.
 
