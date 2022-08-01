@@ -1,6 +1,6 @@
 package:
   name: cohere_core
-  version: "2.3"
+  version: "3.1"
 
 source:
   path: .
