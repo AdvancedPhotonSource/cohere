@@ -1,13 +1,13 @@
 ============
 Installation
 ============
-Currently we offer conda installation for Linux and Mac
+Currently we offer pip installation for Linux, Windows and Mac
 
 Conda Installation
 ==================
 
 First you must have `Conda <http://continuum.io/downloads>` installed.
-It is highly recommended to install the cohere package in conda environment.
+It is highly recommended to install the cohere_core package in conda environment. Supported python versions are 3.6 - 3.10.
 To create and activate the environment run the commands below::
 
     conda create --name <env_name> python=3.8
@@ -15,10 +15,10 @@ To create and activate the environment run the commands below::
 
 then run the installation command::
 
-    conda install cohere_core -c bfrosik -c conda-forge
+    pip install cohere_core
 
-The cohere package can be run as installed running on numpy library. Other available libraries are cupy and arrayfire.
-User has to intall the library of his choice.
+The cohere_core package can be run as installed running on numpy library. Other available libraries are cupy and arrayfire.
+Users has to install the library of theirs choice.
 
 if using cupy library::
 
