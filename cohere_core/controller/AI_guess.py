@@ -321,7 +321,7 @@ def run_AI(data, model_file, dir):
            [pad_value[2], pad_value[2]]]
     guess = ut.adjust_dimensions(pred_obj, pad)
 
-    np.save(os.path.join(dir, 'image.npy'), guess)
+    np.save(dir + '/image.npy', guess)
 
     if "CUDA_VISIBLE_DEVICES" in os.environ:
         del os.environ["CUDA_VISIBLE_DEVICES"]
@@ -372,7 +372,7 @@ def start_AI(pars, datafile, dir):
         return None
 
     # The results will be stored in the directory <experiment_dir>/AI_guess
-    ai_dir = os.path.join(dir, 'results_AI')
+    ai_dir = dir + '/results_AI'
     if os.path.exists(ai_dir):
         pass
     else:

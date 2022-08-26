@@ -139,7 +139,7 @@ def set_ga_defaults(pars):
     return pars
 
 
-def order_dirs(tmp, dirs, evals, prev_dir_seq, metric):
+def order_dirs(tmp, dirs, evals, metric, first_gen):
     """
     Orders results in generation directory in subdirectories numbered from 0 and up, the best result stored in the '0' subdirectory. The ranking is done by numbers in evals list, which are the results of the generation's metric to the image array.
 
@@ -161,26 +161,40 @@ def order_dirs(tmp, dirs, evals, prev_dir_seq, metric):
     ranks = np.argsort(evals).tolist()
     if metric == 'summed_phase' or metric == 'area':
         ranks.reverse()
-    for i in ranks:
-        tmp[ranks[i]].append((i, evals[ranks[i]]))
+    tracing = {}
+    if first_gen:
+        for i in range(len(ranks)):
+            prev_seq = int(os.path.basename(dirs[ranks[i]]))
+            tmp[prev_seq].append((i, evals[ranks[i]]))
+            tracing[i] = prev_seq
+    else:
+        prev_tracing = tmp.pop()
+        for i in range(len(ranks)):
+            prev_seq = int(os.path.basename(dirs[ranks[i]]))
+            inx = prev_tracing[prev_seq]
+            tmp[inx].append((i, evals[ranks[i]]))
+            tracing[i] = inx
+        prev_tracing.clear()
+    tmp.append(tracing)
 
-    # all the generation directories are in the same parent directory
-    parent_dir = os.path.abspath(os.path.join(dirs[0], os.pardir))
     rank_dirs = []
-
     # append "_<rank>" to each result directory name
     for i in range(len(ranks)):
-        dest = os.path.join(parent_dir, str(i) + '_' + str(ranks[i]))
-        shutil.move(dirs[i], dest)
+        dest = dirs[ranks[i]] + '_' + str(i)
+        src = dirs[ranks[i]]
+        shutil.move(src, dest)
         rank_dirs.append(dest)
 
     # remove the number preceding rank from each directory name, so the directories are numbered
     # according to rank
+    current_dirs = []
     for dir in rank_dirs:
         last_sub = os.path.basename(dir)
-        dest = os.path.join(parent_dir, last_sub.split('_')[-1])
+        parent_dir = os.path.dirname(dir).replace(os.sep, '/')
+        dest = parent_dir + '/' + last_sub.split('_')[-1]
         shutil.move(dir, dest)
-    return tmp
+        current_dirs.append(dest)
+    return current_dirs, tmp
 
 
 def order_processes(proc_metrics, metric_type):
@@ -250,7 +264,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         save_dir = pars['save_dir']
     else:
         filename = conf_file.split('/')[-1]
-        save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
+        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
     generations = pars['ga_generations']
     if 'reconstructions' in pars:
         reconstructions = pars['reconstructions']
@@ -366,13 +380,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 worker_qin.put('done')
                 processes.pop(pid)
             # save results, we may modify it later to save only some
-            gen_save_dir = os.path.join(save_dir, 'g_' + str(g))
+            gen_save_dir = save_dir + '/g_' + str(g)
             prev_dirs = {}
             for i in range(len(culled_proc_ranks)):
                 pid = culled_proc_ranks[i][0]
                 worker_qin = processes[pid][0]
-                worker_qin.put(('save_res', os.path.join(gen_save_dir, str(i))))
-                prev_dirs[pid] = os.path.join(gen_save_dir, str(i))
+                worker_qin.put(('save_res', gen_save_dir + '/' + str(i)))
+                prev_dirs[pid] = gen_save_dir + '/' + str(i)
             for pid in processes:
                 worker_qout = processes[pid][1]
                 ret = worker_qout.get()
@@ -382,7 +396,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             worker_qin = processes[pid][0]
             worker_qin.put('done')
     else:   # not fast GA
-        tmp = []
+        report_tracing = []
         rec = multi
         prev_dirs = []
         if 'init_guess' not in pars:
@@ -390,20 +404,20 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         if pars['init_guess'] == 'continue':
             continue_dir = pars['continue_dir']
             for sub in os.listdir(continue_dir):
-                image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
+                image, support, coh = ut.read_results(continue_dir + '/' + sub + '/')
                 if image is not None:
-                    prev_dirs.append(os.path.join(continue_dir, sub))
-                    tmp.append([os.path.join(continue_dir, sub)])
+                    prev_dirs.append(continue_dir + '/' + sub)
+                    report_tracing.append([continue_dir + '/' + sub])
             if len(prev_dirs) < reconstructions:
                 for i in range(reconstructions - len(prev_dirs)):
-                    tmp.append(['random' + str(i)])
+                    report_tracing.append(['random' + str(i)])
                 prev_dirs = prev_dirs + (reconstructions - len(prev_dirs)) * [None]
         elif pars['init_guess'] == 'AI_guess':
-            import cohere.controller.AI_guess as ai
+            import cohere_core.controller.AI_guess as ai
             
-            tmp.append(['AI_guess'])
+            report_tracing.append(['AI_guess'])
             for i in range(reconstructions - 1):
-                tmp.append(['random' + str(i)])
+                report_tracing.append(['random' + str(i)])
             ai_dir = ai.start_AI(pars, datafile, dir)
             if ai_dir is None:
                 return
@@ -411,27 +425,37 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         else:
             for i in range(reconstructions):
                 prev_dirs.append(None)
-                tmp.append(['random' + str(i)])
+                report_tracing.append(['random' + str(i)])
+
         q = Queue()
         for g in range(generations):
-            print ('starting generation',g)
-            gen_save_dir = os.path.join(save_dir, 'g_' + str(g))
+            print ('starting generation', g)
+            gen_save_dir = save_dir + '/g_' + str(g)
             metric_type = pars['ga_metrics'][g]
+            reconstructions = len(prev_dirs)
             p = Process(target=rec.multi_rec, args=(lib, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, q))
             p.start()
             p.join()
 
-            temp_dirs, evals, prev_dir_seq = q.get()
-            #ranks_file.write(str(evals)+'\n'+str(prev_dir_seq))
+            results = q.get()
+            evals = []
+            temp_dirs = []
+            for r in results:
+                eval = r[0]
+                if eval is not None:
+                    evals.append(eval)
+                    temp_dirs.append(r[1])
+
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
-            tmp = order_dirs(tmp, temp_dirs, evals, prev_dir_seq, metric_type)
-            prev_dirs = temp_dirs
+            current_dirs, report_tracing = order_dirs(report_tracing, temp_dirs, evals, metric_type, first_gen=(g==0))
             reconstructions = pars['ga_reconstructions'][g]
-            prev_dirs = cull(prev_dirs, reconstructions)
-        # the tmp hold the raning info. print it to a file
-        rank_file = open(os.path.join(save_dir, 'ranks.txt'), 'w+')
-        for l in tmp:
+            current_dirs = cull(current_dirs, reconstructions)
+            prev_dirs = current_dirs
+        # the report_tracing hold the ranking info. print it to a file
+        report_tracing.pop()
+        rank_file = open(save_dir + '/ranks.txt', 'w+')
+        for l in report_tracing:
             rank_file.write(str(l) + '\n')
         rank_file.flush()
     print('done gen')

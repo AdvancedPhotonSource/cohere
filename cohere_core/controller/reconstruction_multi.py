@@ -98,10 +98,11 @@ def single_rec_process(metric_type, gen, rec_attrs):
         ret_code = worker.iterate()
         if ret_code == 0:
             worker.save_res(save_dir)
+
             metric = worker.get_metric(metric_type)
         else:    # bad reconstruction
             metric = None
-    return metric, prev_dir
+    return [metric, save_dir]
 
 
 def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, q=None):
@@ -148,14 +149,12 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
     -------
     None
     """
-    print('lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type', lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type)
-    evals = []
-    prev_dir_seq =[]
+    # evals = []
+    # prev_dir_seq =[]
+    results = []
 
     def collect_result(result):
-        for r in result:
-            evals.append(r[0])
-            prev_dir_seq.append(r[1])
+        results.append(result)
 
     if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
         if datafile.endswith('tif') or datafile.endswith('tiff'):
@@ -186,7 +185,7 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
     save_dirs = []
 
     for i in range(len(workers)):
-        save_sub = os.path.join(save_dir, str(i))
+        save_sub = save_dir + '/' + str(i)
         save_dirs.append(save_sub)
         iterable.append((workers[i], prev_dirs[i], save_sub))
     func = partial(single_rec_process, metric_type, gen)
@@ -196,15 +195,8 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         pool.join()
         pool.terminate()
 
-    # remove the unsuccessful reconstructions
-    for i, e in reversed(list(enumerate(evals))):
-        if e is None:
-            evals.pop(i)
-            save_dirs.pop(i)
-            prev_dir_seq.pop(i)
-
     if q is not None:
-        q.put((save_dirs, evals, prev_dir_seq))
+        q.put(results[0])
 
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
@@ -248,11 +240,11 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
         for sub in os.listdir(continue_dir):
-            image, support, coh = ut.read_results(os.path.join(continue_dir, sub) + '/')
+            image, support, coh = ut.read_results(continue_dir + '/' + sub + '/')
             if image is not None:
-                prev_dirs.append(os.path.join(continue_dir, sub))
+                prev_dirs.append(continue_dir + '/' + sub)
         if len(prev_dirs) < reconstructions:
-            prev_dirs = prev_dirs +  (reconstructions - len(prev_dirs)) * [None]
+            prev_dirs = prev_dirs + (reconstructions - len(prev_dirs)) * [None]
     elif pars['init_guess'] == 'AI_guess':
         print('multiple reconstruction do not support AI_guess initial guess')
         return
@@ -263,7 +255,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         save_dir = pars['save_dir']
     else:
         filename = conf_file.split('/')[-1]
-        save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
+        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
 
     p = Process(target=multi_rec, args=(lib, save_dir, devices, reconstructions, pars, datafile, prev_dirs))
     p.start()

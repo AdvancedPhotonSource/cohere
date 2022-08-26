@@ -219,9 +219,31 @@ def get_metric(image, errs, metric_type):
         return dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
     elif metric_type == 'summed_phase':
         ph = shift_phase(image, 0)
-        return sum(abs(ph))
+        return dvclib.sum(abs(ph))
     elif metric_type == 'area':
         return dvclib.sum(shrink_wrap(image, .2, .5))
+
+
+def all_metrics(image, errs):
+    """
+    Callculates array characteristic based on various formulas.
+
+    Parameters
+    ----------
+    arr : ndarray
+        array to get characteristic
+
+    Returns
+    -------
+    metrics : dict
+        calculated metrics for all types
+    """
+    metrics = {}
+    metrics['chi'] = errs[-1]
+    metrics['sharpness'] = dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
+    metrics['summed_phase'] = dvclib.sum(abs(shift_phase(image, 0)))
+    metrics['area'] = dvclib.sum(shrink_wrap(image, .2, .5))
+    return metrics
 
 
 def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
@@ -519,57 +541,60 @@ def breed(breed_mode, parent_dir, image):
     return beta
 
 
-def save_results(image, support, coh, errs, save_dir, metric=None):
-    """
-    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy, optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
-
-
-    Parameters
-    ----------
-    image : ndarray
-        reconstructed image array
-
-    support : ndarray
-        support array related to the image
-
-    coh : ndarray
-        coherence array when pcdi feature is active, None otherwise
-
-    errs : ndarray
-        errors "chi" by iterations
-
-    flow : ndarray
-        for development, contains functions that can be activated in fast module during iteration
-
-    iter_array : ndarray
-        for development, matrix indicating which function in fast module was active by iteration
-
-    save_dir : str
-        directory to write the files
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
-
-    Returns
-    -------
-    nothing
-    """
-    save_dir = save_dir.replace(os.sep, '/')
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    image_file = save_dir + '/image'
-    dvclib.save(image_file, image)
-    support_file = save_dir + '/support'
-    dvclib.save(support_file, support)
-
-    errs_file = save_dir + '/errors'
-    dvclib.save(errs_file, errs)
-    if not coh is None:
-        coh_file = save_dir + '/coherence'
-        dvclib.save(coh_file, coh)
-
-    # write_plot_errors(save_dir)
-    #
-    # save_metrics(errs, save_dir, metric)
-
+# def save_results(image, support, coh, errs, save_dir):
+#     """
+#     Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy, optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
+#
+#
+#     Parameters
+#     ----------
+#     image : ndarray
+#         reconstructed image array
+#
+#     support : ndarray
+#         support array related to the image
+#
+#     coh : ndarray
+#         coherence array when pcdi feature is active, None otherwise
+#
+#     errs : ndarray
+#         errors "chi" by iterations
+#
+#     flow : ndarray
+#         for development, contains functions that can be activated in fast module during iteration
+#
+#     iter_array : ndarray
+#         for development, matrix indicating which function in fast module was active by iteration
+#
+#     save_dir : str
+#         directory to write the files
+#
+#     metrics : dict
+#         dictionary with metric type keys, and metric values
+#
+#     Returns
+#     -------
+#     nothing
+#     """
+#     print('in save results')
+#     save_dir = save_dir.replace(os.sep, '/')
+#     if not os.path.exists(save_dir):
+#         os.makedirs(save_dir)
+#     image_file = save_dir + '/image'
+#     dvclib.save(image_file, image)
+#     support_file = save_dir + '/support'
+#     dvclib.save(support_file, support)
+#
+#     errs_file = save_dir + '/errors'
+#     dvclib.save(errs_file, errs)
+#     if not coh is None:
+#         coh_file = save_dir + '/coherence'
+#         dvclib.save(coh_file, coh)
+#
+#     print ('will save metrics.txt')
+#     with open(save_dir + "/metrics.txt", "w+") as f:
+#         metric = all_metrics(image, errs)
+#         f.write(metric)
+#         print('saved metris.txt')
+#
 

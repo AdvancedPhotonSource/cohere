@@ -133,7 +133,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         save_dir = pars['save_dir']
     else:
         filename = conf_file.split('/')[-1]
-        save_dir = os.path.join(dir, filename.replace('config_rec', 'results_phasing'))
+        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
 
     p = Process(target=rec_process, args=(lib, pars, datafile, dev,
                                           continue_dir, save_dir))

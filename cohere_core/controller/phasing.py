@@ -46,7 +46,7 @@ class Pcdi:
             self.kernel = None
         else:
             try:
-                self.kernel = devlib.load(os.path.join(dir, 'coherence.npy'))
+                self.kernel = devlib.load(dir + '/coherence.npy')
             except:
                 self.kernel = None
 
@@ -99,7 +99,7 @@ class Support:
         self.params = params
         self.dims = dims
 
-        if dir is None or not os.path.isfile(os.path.join(dir, 'support.npy')):
+        if dir is None or not os.path.isfile(dir + '/support.npy'):
             initial_support_area = params['initial_support_area']
             init_support = []
             for i in range(len(initial_support_area)):
@@ -110,7 +110,7 @@ class Support:
             center = devlib.full(init_support, 1)
             self.support = dvut.pad_around(center, self.dims, 0)
         else:
-            self.support = devlib.load(os.path.join(dir, 'support.npy'))
+            self.support = devlib.load(dir + '/support.npy')
 
         # The sigma can change if resolution trigger is active. When it
         # changes the distribution has to be recalculated using the given sigma
@@ -287,11 +287,11 @@ class Rec:
     def init(self, dir=None, gen=None):
         if self.ds_image is not None:
             first_run = False
-        elif dir is None or not os.path.isfile(os.path.join(dir, 'image.npy')):
+        elif dir is None or not os.path.isfile(dir + '/image.npy'):
             self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
             first_run = True
         else:
-            self.ds_image = devlib.load(os.path.join(dir, 'image.npy'))
+            self.ds_image = devlib.load(dir + '/image.npy')
             first_run = False
         iter_functions = [self.next,
                           self.resolution_trigger,
@@ -369,6 +369,7 @@ class Rec:
                                                        self.params['ga_shrink_wrap_gauss_sigmas'][self.gen])
         return 0
 
+
     def iterate(self):
         start_t = time.time()
         for f in self.flow:
@@ -387,40 +388,33 @@ class Rec:
         mx = devlib.amax(devlib.absolute(self.ds_image))
         self.ds_image = self.ds_image / mx
 
-        # it needs to return metric for the current generation, and can default to 'chi'.
-        # for now returning 'chi'
         return 0
+
 
     def save_res(self, save_dir):
         from array import array
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        devlib.save(os.path.join(save_dir, 'image'), self.ds_image)
-        devlib.save(os.path.join(save_dir, 'support'), self.support_obj.get_support())
+        devlib.save(save_dir + '/image', self.ds_image)
+        devlib.save(save_dir + '/support', self.support_obj.get_support())
         if self.is_pc:
-            devlib.save(os.path.join(save_dir, 'coherence'), self.pc_obj.kernel)
+            devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
         errs = array('f', self.errs)
-        devlib.save(os.path.join(save_dir, 'errors'), errs)
+        devlib.save(save_dir + '/errors', errs)
+
+        metric = dvut.all_metrics(self.ds_image, self.errs)
+        with open(save_dir + "/metrics.txt", "w+") as f:
+            f.write(str(metric))
+            # for key, value in metric.items():
+            #     f.write(key + ' : ' + str(value) + '\n')
+
         return 0
+
 
     def get_metric(self, metric_type):
         return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
-    def save_metrics(errs, dir, metrics=None):
-        metric_file = os.path.join(dir, 'summary')
-        if os.path.isfile(metric_file):
-            os.remove(metric_file)
-        with open(metric_file, 'a') as f:
-            if metrics is not None:
-                f.write('metric     result\n')
-                for key in metrics:
-                    value = metrics[key]
-                    f.write(key + ' = ' + str(value) + '\n')
-            f.write('\nerrors by iteration\n')
-            for er in errs:
-                f.write(str(er) + ' ')
-        f.close()
 
     def next(self):
         self.iter = self.iter + 1
