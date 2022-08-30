@@ -16,10 +16,7 @@ The best practice is to create coda environment allocated for the development. T
 
 Pre-requisites
 ++++++++++++++
-After activating conda environment install the packages/libraries listed below.
-    - conda install tifffile -c conda-forge
-    - if running AutoAlien1 algorithm during standard preprocessing: conda install scikit-learn -c conda-forge
-    - if using Initial AI guess: conda install tensorflow -c conda-forge
+After activating conda environment install the packages/libraries that you wish to use.
     - if using cupy library: conda install cupy -c conda-forge
     - if using arrayfire: pip install arrayfire, install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
 Other packages have to be installed if running with cohere-ui package. Refer to :ref:`use` page, section "Installing Scripts".
@@ -45,8 +42,6 @@ After changing code run the following command from 'cohere' directory:
 
     python setup.py develop
 
-| Sometimes if the version number in setup.py script did not change, the install may not update. In this case remove build and distribute directories before running the setup.py script.
-
 Adding new trigger
 ==================
 The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications need to be done to add a new feature:
@@ -59,12 +54,27 @@ Adding new algorithm
 ====================
 todo
 
-Conda Build
-===========
-For a new build change version in meta.yaml and setup.py files to the new version and run conda build:
+Pypi Build
+==========
+For a new build change version in and setup.py files to the new version and run pypi build:
 ::
 
-    conda build -c conda-forge -c defaults .
+    pip install .
+    python setup.py check
+    python setup.py sdist
+    python setup.py bdist_wheel --universal
 
-- upload build to anaconda cloud
+Upload to the test server and test
 
+    pip install twine  # if not installed
+    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
+Test in a new environment
+
+    pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ cohere_core --user
+
+Test Linux, Windows, and Mac
+
+- upload build to pypi cloud
+
+    twine upload dist/*
