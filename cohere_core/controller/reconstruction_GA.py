@@ -458,8 +458,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         rank_file = open(save_dir + '/ranks.txt', 'w+')
         for l in report_tracing:
             # format the ranks.txt file
-            title = 'init_guess'
-            rank_file.write()
+            # title = 'init_guess'
+            # rank_file.write()
             rank_file.write(str(l) + '\n')
         rank_file.flush()
     print('done gen')
