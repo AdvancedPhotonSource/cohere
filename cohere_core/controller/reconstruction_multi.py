@@ -98,7 +98,6 @@ def single_rec_process(metric_type, gen, rec_attrs):
         ret_code = worker.iterate()
         if ret_code == 0:
             worker.save_res(save_dir)
-
             metric = worker.get_metric(metric_type)
         else:    # bad reconstruction
             metric = None

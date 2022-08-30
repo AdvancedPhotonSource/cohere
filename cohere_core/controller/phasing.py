@@ -413,7 +413,8 @@ class Rec:
 
 
     def get_metric(self, metric_type):
-        return dvut.get_metric(self.ds_image, self.errs, metric_type)
+        return dvut.all_metrics(self.ds_image, self.errs)
+        # return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
 
     def next(self):

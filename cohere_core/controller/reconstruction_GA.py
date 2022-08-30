@@ -158,7 +158,8 @@ def order_dirs(tmp, dirs, evals, metric, first_gen):
     # ranks keeps indexes of reconstructions from best to worst
     # for most of the metric types the minimum of the metric is best, but for
     # 'summed_phase' and 'area' it is oposite, so reversing the order
-    ranks = np.argsort(evals).tolist()
+    metric_evals = [e[metric] for e in evals]
+    ranks = np.argsort(metric_evals).tolist()
     if metric == 'summed_phase' or metric == 'area':
         ranks.reverse()
     tracing = {}
@@ -456,6 +457,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         report_tracing.pop()
         rank_file = open(save_dir + '/ranks.txt', 'w+')
         for l in report_tracing:
+            # format the ranks.txt file
+            title = 'init_guess'
+            rank_file.write()
             rank_file.write(str(l) + '\n')
         rank_file.flush()
     print('done gen')
