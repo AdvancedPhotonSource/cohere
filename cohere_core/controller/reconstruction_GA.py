@@ -256,7 +256,7 @@ def pretty_format_results(report_traces):
     report_table.append(['start'] + [f'generation {i}' for i in range(num_gens)])
     report_table.append([''] * len(report_table[0]))
 
-    data_col_width = len(report_table[0][0])
+    data_col_width = 15
     start_col_width = 15
     for pop_data in report_traces:
         report_table.append([str(pop_data[0])] + [str(ind_data[0]) for ind_data in pop_data[1:]])
@@ -503,7 +503,15 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             prev_dirs = current_dirs
         # the report_tracing hold the ranking info. print it to a file
         report_tracing.pop()
-        rank_file = open(save_dir + '/ranks.txt', 'w+')
-        rank_file.write(pretty_format_results(report_tracing))
-        rank_file.flush()
+        
+        try:
+            report_str = pretty_format_results(report_tracing)
+        except Exception as e:
+            print(f'WARNING: Report formatting failed due to {type(e)}: {e}! Falling back to raw formatting.')
+            report_str = '\n'.join([str(l) for l in report_tracing])
+
+        with open(save_dir + '/ranks.txt', 'w+') as rank_file:
+            rank_file.write(report_str)
+            rank_file.flush()
+
     print('done gen')
