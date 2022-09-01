@@ -401,6 +401,10 @@ class Rec:
         if self.is_pc:
             devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
         errs = array('f', self.errs)
+
+        with open(save_dir + "/errors.txt", "w+") as err_f:
+            err_f.write('\n'.join(map(str, errs)))
+
         devlib.save(save_dir + '/errors', errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
