@@ -478,6 +478,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         q = Queue()
         for g in range(generations):
+            # delete previous-previous generation
+            if g > 1:
+                shutil.rmtree(save_dir + '/g_' + str(g-2))
             print ('starting generation', g)
             gen_save_dir = save_dir + '/g_' + str(g)
             metric_type = pars['ga_metrics'][g]
@@ -501,6 +504,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             reconstructions = pars['ga_reconstructions'][g]
             current_dirs = cull(current_dirs, reconstructions)
             prev_dirs = current_dirs
+
+        # remove the previous gen
+        shutil.rmtree(save_dir + '/g_' + str(generations - 2))
         # the report_tracing hold the ranking info. print it to a file
         report_tracing.pop()
         
