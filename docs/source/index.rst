@@ -7,10 +7,10 @@ Welcome to cohere documentation!
 
    about
    installation
+   how_to_use
    api_standard_preprocess
    api_phasing
    api_utils
-   how_to_use
    configuration
    experiment_space  
    for_developers

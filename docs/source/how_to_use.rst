@@ -7,6 +7,11 @@ Using cohere with cohere-ui package
 Installing Scripts
 ##################
 | There are three ways to get the cohere-ui package onto your local computer, or remote computer.
+| Is is assumed the user activated the environment where cohere was installed.
+
+  ::
+
+    conda activate <env_name>
 
 1. The cohere-ui package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-ui and clicking the green “Code” button and selecting “Download ZIP”.
 
@@ -34,7 +39,7 @@ Installing Scripts
 
 Scripts
 ####### 
-| In this documentation it is assumed the scripts are invoked from cohere-scripts directory, and activated conda environment has cohere package installed. Below is a list of scripts with description and explanation how to run them:
+| In this documentation it is assumed the scripts are invoked from cohere-ui directory. Below is a list of scripts with description and explanation how to run them:
 
 - create_experiment.py
 
