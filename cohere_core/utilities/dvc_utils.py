@@ -479,14 +479,15 @@ def breed(breed_mode, parent_dir, image):
 
     """
     parent_dir = parent_dir.replace(os.sep, '/')
-    if os.path.basename(os.path.normpath(parent_dir)) == '0':
-        # it is alpha, no breeding
-        return zero_phase(image)
-    else:
-        # find and load alpha
-        gen_dir = os.path.dirname(parent_dir).replace(os.sep, '/')
-        alpha = dvclib.load(gen_dir + '/0/image.npy')
-        alpha = zero_phase(alpha)
+
+    # load alpha from alpha dir
+    alpha = dvclib.load(os.path.dirname(os.path.dirname(parent_dir)) + '/alpha/image.npy')
+    if parent_dir.endswith('0'):  # it is the best, can be the same as alpha
+        if dvclib.sum(image) == dvclib.sum(alpha):
+            # it is alpha, no breeding
+            return zero_phase(image)
+
+    alpha = zero_phase(alpha)
 
     # load image file
     beta = image

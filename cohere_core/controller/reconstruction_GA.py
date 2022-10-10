@@ -162,6 +162,7 @@ def order_dirs(tmp, dirs, evals, metric, first_gen):
     ranks = np.argsort(metric_evals).tolist()
     if metric == 'summed_phase' or metric == 'area':
         ranks.reverse()
+    best_metrics = evals[ranks[0]]
     tracing = {}
     if first_gen:
         for i in range(len(ranks)):
@@ -195,7 +196,7 @@ def order_dirs(tmp, dirs, evals, metric, first_gen):
         dest = parent_dir + '/' + last_sub.split('_')[-1]
         shutil.move(dir, dest)
         current_dirs.append(dest)
-    return current_dirs, tmp
+    return current_dirs, tmp, best_metrics
 
 
 def order_processes(proc_metrics, metric_type):
@@ -477,6 +478,12 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 report_tracing.append(['random' + str(i)])
 
         q = Queue()
+        # create alpha dir and placeholder for the alpha's metrics
+        alpha_dir = save_dir + '/alpha'
+        if not os.path.isdir(alpha_dir):
+            os.mkdir(alpha_dir)
+        alpha_metrics = None
+
         for g in range(generations):
             # delete previous-previous generation
             if g > 1:
@@ -500,10 +507,22 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
-            current_dirs, report_tracing = order_dirs(report_tracing, temp_dirs, evals, metric_type, first_gen=(g==0))
+            current_dirs, report_tracing, best_metrics = order_dirs(report_tracing, temp_dirs, evals, metric_type, first_gen=(g==0))
             reconstructions = pars['ga_reconstructions'][g]
             current_dirs = cull(current_dirs, reconstructions)
             prev_dirs = current_dirs
+
+            # compare current alpha and previous. If previous is better, set it as alpha.
+            # no need toset alpha  for last generation
+            if (g == 0
+                    or
+                    best_metrics[metric_type] >= alpha_metrics[metric_type] and
+                    (metric_type == 'summed_phase' or metric_type == 'area')
+                    or
+                    best_metrics[metric_type] < alpha_metrics[metric_type] and
+                    (metric_type == 'chi' or metric_type == 'sharpness')):
+                shutil.copyfile(current_dirs[0] + '/image.npy', alpha_dir + '/image.npy')
+                alpha_metrics = best_metrics
 
         # remove the previous gen
         shutil.rmtree(save_dir + '/g_' + str(generations - 2))
