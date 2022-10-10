@@ -480,6 +480,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         q = Queue()
         # create alpha dir and placeholder for the alpha's metrics
         alpha_dir = save_dir + '/alpha'
+        if not os.path.isdir(save_dir):
+            os.mkdir(save_dir)
         if not os.path.isdir(alpha_dir):
             os.mkdir(alpha_dir)
         alpha_metrics = None
