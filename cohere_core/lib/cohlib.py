@@ -142,3 +142,5 @@ class cohlib:
     def conj(arr):
         pass
 
+    def array_equal(arr1, arr2):
+        pass

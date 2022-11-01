@@ -148,8 +148,6 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
     -------
     None
     """
-    # evals = []
-    # prev_dir_seq =[]
     results = []
 
     def collect_result(result):

@@ -162,3 +162,6 @@ class cplib(cohlib):
 
     def conj(arr):
         return cp.conj(arr)
+
+    def array_equal(arr1, arr2):
+        return cp.array_equal(arr1, arr2)

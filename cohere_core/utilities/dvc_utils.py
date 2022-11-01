@@ -1,6 +1,5 @@
 import math
 import importlib
-import os
 
 
 def set_lib(dlib, is_af):
@@ -464,7 +463,7 @@ def zero_phase_cc(arr1, arr2):
     return arr
 
 
-def breed(breed_mode, parent_dir, image):
+def breed(breed_mode, alpha_dir, image):
     """
     Aligns the image to breed from with the alpha image, and applies breed formula, to obtain a 'child' image.
 
@@ -478,15 +477,11 @@ def breed(breed_mode, parent_dir, image):
         a tuple containing two elements: directory where the image to breed from is stored, a 'parent', and a directory where the bred image, a 'child', will be stored.
 
     """
-    parent_dir = parent_dir.replace(os.sep, '/')
-
     # load alpha from alpha dir
-    alpha = dvclib.load(os.path.dirname(os.path.dirname(parent_dir)) + '/alpha/image.npy')
-    if parent_dir.endswith('0'):  # it is the best, can be the same as alpha
-        if dvclib.sum(image) == dvclib.sum(alpha):
-            # it is alpha, no breeding
-            return zero_phase(image)
-
+    alpha = dvclib.load(alpha_dir + '/image.npy')
+    if dvclib.array_equal(image, alpha):
+        # it is alpha, no breeding
+        return zero_phase(image)
     alpha = zero_phase(alpha)
 
     # load image file
@@ -540,62 +535,3 @@ def breed(breed_mode, parent_dir, image):
         beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * (ph_alpha))
 
     return beta
-
-
-# def save_results(image, support, coh, errs, save_dir):
-#     """
-#     Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy, optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
-#
-#
-#     Parameters
-#     ----------
-#     image : ndarray
-#         reconstructed image array
-#
-#     support : ndarray
-#         support array related to the image
-#
-#     coh : ndarray
-#         coherence array when pcdi feature is active, None otherwise
-#
-#     errs : ndarray
-#         errors "chi" by iterations
-#
-#     flow : ndarray
-#         for development, contains functions that can be activated in fast module during iteration
-#
-#     iter_array : ndarray
-#         for development, matrix indicating which function in fast module was active by iteration
-#
-#     save_dir : str
-#         directory to write the files
-#
-#     metrics : dict
-#         dictionary with metric type keys, and metric values
-#
-#     Returns
-#     -------
-#     nothing
-#     """
-#     print('in save results')
-#     save_dir = save_dir.replace(os.sep, '/')
-#     if not os.path.exists(save_dir):
-#         os.makedirs(save_dir)
-#     image_file = save_dir + '/image'
-#     dvclib.save(image_file, image)
-#     support_file = save_dir + '/support'
-#     dvclib.save(support_file, support)
-#
-#     errs_file = save_dir + '/errors'
-#     dvclib.save(errs_file, errs)
-#     if not coh is None:
-#         coh_file = save_dir + '/coherence'
-#         dvclib.save(coh_file, coh)
-#
-#     print ('will save metrics.txt')
-#     with open(save_dir + "/metrics.txt", "w+") as f:
-#         metric = all_metrics(image, errs)
-#         f.write(metric)
-#         print('saved metris.txt')
-#
-

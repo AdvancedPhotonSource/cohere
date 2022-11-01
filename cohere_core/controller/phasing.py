@@ -363,8 +363,13 @@ class Rec:
 
     def breed(self):
         breed_mode = self.params['ga_breed_modes'][self.gen]
+        if self.prev_dir.endswith('alpha'):
+            alpha_dir = self.prev_dir
+        else:
+            alpha_dir = os.path.dirname(os.path.dirname(self.prev_dir)).replace(os.sep, '/') + '/alpha'
+
         if breed_mode != 'none':
-            self.ds_image = dvut.breed(breed_mode, self.prev_dir, self.ds_image)
+            self.ds_image = dvut.breed(breed_mode, alpha_dir, self.ds_image)
             self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_shrink_wrap_thresholds'][self.gen],
                                                        self.params['ga_shrink_wrap_gauss_sigmas'][self.gen])
         return 0
@@ -391,12 +396,16 @@ class Rec:
         return 0
 
 
-    def save_res(self, save_dir):
+    def save_res(self, save_dir, only_image=False):
         from array import array
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         devlib.save(save_dir + '/image', self.ds_image)
+
+        if only_image:
+            return 0
+
         devlib.save(save_dir + '/support', self.support_obj.get_support())
         if self.is_pc:
             devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
