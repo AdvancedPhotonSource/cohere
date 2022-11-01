@@ -130,22 +130,13 @@ class Tracing:
             rank_file.flush()
 
 
-def set_lib(pkg, ndim=None):
+def set_lib(pkg):
     global dvclib
-    if pkg == 'af':
-        if ndim == 1:
-            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib1
-        elif ndim == 2:
-            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib2
-        elif ndim == 3:
-            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib3
-        else:
-            raise NotImplementedError
-    elif pkg == 'cp':
+    if pkg == 'cp':
         dvclib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         dvclib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(dvclib, pkg=='af')
+    calc.set_lib(dvclib)
 
 
 def set_ga_defaults(pars):
@@ -369,8 +360,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
-        af - to use arrayfire,
-        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file name
@@ -423,27 +412,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     tracing = Tracing(reconstructions, pars, dir)
 
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
-        if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-            if datafile.endswith('tif') or datafile.endswith('tiff'):
-                try:
-                    data = ut.read_tif(datafile)
-                except:
-                    print('could not load data file', datafile)
-                    return
-            elif datafile.endswith('npy'):
-                try:
-                    data = np.load(datafile)
-                except:
-                    print('could not load data file', datafile)
-                    return
-            else:
-                print('no data file found')
-                return
-            set_lib('af', len(data.shape))
-            if lib != 'af':
-                dvclib.set_backend(lib)
-        else:
-            set_lib(lib)
+        set_lib(lib)
 
         workers = []
         processes = {}

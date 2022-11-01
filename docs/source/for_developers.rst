@@ -66,8 +66,8 @@ For a new build change version in and setup.py files to the new version and run 
 
 Upload to the test server and test
 
-    pip install twine  # if not installed
-    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+    pip install twine
+    twine upload --repository testpypi dist/*
 
 Test in a new environment
 

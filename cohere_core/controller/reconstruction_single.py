@@ -26,47 +26,17 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def set_lib(pkg, ndim=None):
+def set_lib(pkg):
     global devlib
-    if pkg == 'af':
-        if ndim == 1:
-            devlib = importlib.import_module('cohere_core.lib.aflib').aflib1
-        elif ndim == 2:
-            devlib = importlib.import_module('cohere_core.lib.aflib').aflib2
-        elif ndim == 3:
-            devlib = importlib.import_module('cohere_core.lib.aflib').aflib3
-        else:
-            raise NotImplementedError
-    elif pkg == 'cp':
+    if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(devlib, pkg=='af')
+    calc.set_lib(devlib)
 
 
 def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
-    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-        if datafile.endswith('tif') or datafile.endswith('tiff'):
-            try:
-                data = ut.read_tif(datafile)
-            except:
-                print('could not load data file', datafile)
-                return
-        elif datafile.endswith('npy'):
-            try:
-                data = np.load(datafile)
-            except:
-                print('could not load data file', datafile)
-                return
-        else:
-            print('no data file found')
-            return
-
-        set_lib('af', len(data.shape))
-        if lib != 'af':
-            devlib.set_backend(lib)
-    else:
-        set_lib(lib)
+    set_lib(lib)
 
     worker = calc.Rec(pars, datafile)
 
@@ -98,8 +68,6 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
-        af - to use arrayfire,
-        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file name

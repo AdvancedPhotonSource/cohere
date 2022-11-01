@@ -10,7 +10,7 @@ cohere_core.phasing
 ===================
 
 Provides phasing capabilities for the Bragg CDI data.
-The software can run code utilizing different library, such as numpy, cupy, arrayfire (cpu, cuda, opencl). User configures the choice depending on hardware and installed software.
+The software can run code utilizing different library, such as numpy and cupy. User configures the choice depending on hardware and installed software.
 
 """
 
@@ -29,10 +29,10 @@ __all__ = ['reconstruction',
            'Rec']
 
 
-def set_lib(dlib, is_af):
+def set_lib(dlib):
     global devlib
     devlib = dlib
-    dvut.set_lib(devlib, is_af)
+    dvut.set_lib(devlib)
 
 
 def get_norm(arr):
