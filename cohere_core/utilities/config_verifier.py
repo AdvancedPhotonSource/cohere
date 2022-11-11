@@ -347,7 +347,7 @@ def ver_config_rec(config_map):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print (error_message)
-                    return (error_message)
+                    return ('') 
 
         config_parameter = 'Gabreedmodes'
         if 'ga_breed_modes' in config_map:
@@ -364,7 +364,7 @@ def ver_config_rec(config_map):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print (error_message)
-                    return (error_message)
+                    return ('')
 
         config_parameter = 'Gacullings'
         if 'ga_cullings' in config_map:
