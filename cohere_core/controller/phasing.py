@@ -16,6 +16,8 @@ The software can run code utilizing different library, such as numpy, cupy, arra
 
 import time
 import os
+from math import pi
+import random
 import importlib
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
@@ -331,7 +333,7 @@ class Rec:
         self.gen = gen
         self.prev_dir = dir
         self.sigma = self.params['shrink_wrap_gauss_sigma']
-        self.support_obj = Support(self.params, self.dims, dir)
+        self.support_obj = Support(self.params, self.dims[:-1], dir)
         if self.is_pc:
             self.pc_obj = Pcdi(self.params, self.data, dir)
 
@@ -517,6 +519,362 @@ class Rec:
 
     def progress_trigger(self):
         print('------iter', self.iter, '   error ', self.errs[-1])
+
+    def get_ratio(self, divident, divisor):
+        divisor = devlib.where((divisor != 0.0), divisor, 1.0)
+        ratio = divident / divisor
+        return ratio
+
+
+class CoupledRec:
+    """
+    cohere_core.phasing.reconstruction(self, params, data_file)
+
+    Class, performs phasing using iterative algorithm.
+
+    params : dict
+        parameters used in reconstruction. Refer to x for parameters description
+    data_dir : str
+        name of directory containing data for each peak to be reconstructed
+
+    """
+    __all__ = []
+
+    def __init__(self, params, data_file):
+        if 'init_guess' not in params:
+            params['init_guess'] = 'random'
+        elif params['init_guess'] == 'AI_guess':
+            if 'AI_threshold' not in params:
+                params['AI_threshold'] = params['shrink_wrap_threshold']
+            if 'AI_sigma' not in params:
+                params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
+        if 'reconstructions' not in params:
+            params['reconstructions'] = 1
+        if 'hio_beta' not in params:
+            params['hio_beta'] = 0.9
+        if 'initial_support_area' not in params:
+            params['initial_support_area'] = (.5, .5, .5)
+        if 'twin_trigger' in params and 'twin_halves' not in params:
+            params['twin_halves'] = (0, 0)
+        if 'shrink_wrap_gauss_sigma' not in params:
+            params['shrink_wrap_gauss_sigma'] = 1.0
+        if 'shrink_wrap_threshold' not in params:
+            params['shrink_wrap_threshold'] = 0.1
+        if 'shrink_wrap_trigger' in params:
+            if 'shrink_wrap_type' not in params:
+                params['shrink_wrap_type'] = "GAUSS"
+        if 'phase_support_trigger' in params:
+            if 'phm_phase_min' not in params:
+                params['phm_phase_min'] = -1.57
+            if 'phm_phase_max' not in params:
+                params['phm_phase_max'] = 1.57
+        if "switch_peak_trigger" not in params:
+            params["switch_peak_trigger"] = [0, 10]
+        if "mp_max_weight" not in params:
+            params["mp_max_weight"] = 0.9
+        if "mp_taper" not in params:
+            params["mp_taper"] = 0.75
+        self.ll_sigmas = None
+        self.ll_dets = None
+        if 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
+            # linespacing the sigmas and dets need a number of iterations
+            # The trigger should have three elements, the last one
+            # meaning the last iteration when the low resolution is
+            # applied. If the trigger does not have the limit,
+            # it is misconfigured, and the trigger will not be
+            # active
+            ll_iter = params['resolution_trigger'][2]
+            if 'shrink_wrap_trigger' not in params and 'lowpass_filter_sw_sigma_range' in params:
+                # The sigmas are used to find support, if the shrink wrap
+                # trigger is not active, it wil not be used
+                sigma_range = params['lowpass_filter_sw_sigma_range']
+                if len(sigma_range) > 0:
+                    first_sigma = sigma_range[0]
+                    if len(sigma_range) == 1:
+                        last_sigma = params['shrink_wrap_gauss_sigma']
+                    else:
+                        last_sigma = sigma_range[1]
+                    params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in
+                                           range(ll_iter)]
+            if 'lowpass_filter_range' in params:
+                det_range = params['lowpass_filter_range']
+                if type(det_range) == int:
+                    det_range = [det_range, 1.0]
+                    params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in
+                                         range(ll_iter)]
+            else:
+                params['ll_dets'] = None
+        # finished setting defaults
+        self.params = params
+        self.data_file = data_file
+        self.ds_image = None
+        self.need_save_data = False
+        self.saved_data = None
+
+    def init_dev(self, device_id):
+        self.dev = device_id
+        if device_id != -1:
+            try:
+                devlib.set_device(device_id)
+            except Exception as e:
+                print(e)
+                print('may need to restart GUI')
+                return -1
+        if self.data_file.endswith('tif'):
+            try:
+                data_np = ut.read_tif(self.data_file)
+                print(data_np.shape)
+                data = devlib.from_numpy(data_np)
+            except Exception as e:
+                print(e)
+                return -1
+        elif self.data_file.endswith('npy'):
+            try:
+                data = devlib.load(self.data_file)
+            except Exception as e:
+                print(e)
+                return -1
+        else:
+            print('no data file found')
+            return -1
+
+        # in the formatted data the max is in the center, we want it in the corner, so do fft shift
+        self.data = devlib.fftshift(devlib.absolute(data))
+        self.dims = devlib.dims(self.data)[1:]
+        self.num_peaks = devlib.dims(self.data)[0]
+        print('data shape:', self.dims)
+        print('data sets:', self.num_peaks)
+
+        if self.need_save_data:
+            self.saved_data = devlib.copy(self.data)
+            self.need_save_data = False
+
+        return 0
+
+    def init(self, img_dir=None, gen=None):
+        if self.ds_image is not None:
+            first_run = False
+        elif img_dir is None or not os.path.isfile(img_dir + '/image.npy'):
+            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
+            first_run = True
+        else:
+            self.ds_image = devlib.load(img_dir + '/image.npy')
+            first_run = False
+        G_0 = 2*pi/self.params["lattice_size"]
+        self.G_vectors = devlib.array([[0, *x] for x in self.params["orientations"]]) * G_0
+        self.GdotG = devlib.array([devlib.dot(x, x) for x in self.G_vectors])
+        self.pk = 0  # This is the current peak that's being reconstructed
+        self.g_vec = self.G_vectors[0]
+        self.gdotg = self.GdotG[0]
+        self.density = devlib.array([1, 0, 0, 0])
+        self.shared_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1, 1])
+
+        iter_functions = [self.next,
+                          self.shrink_wrap_trigger,
+                          self.phase_support_trigger,
+                          self.to_reciprocal_space,
+                          self.modulus,
+                          self.to_direct_space,
+                          self.er,
+                          self.hio,
+                          self.twin_trigger,
+                          self.average_trigger,
+                          self.progress_trigger,
+                          self.switch_peaks]
+
+        flow_items_list = []
+        for f in iter_functions:
+            flow_items_list.append(f.__name__)
+
+        _, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+
+        self.flow = []
+        (op_no, iter_no) = flow.shape
+        for i in range(iter_no):
+            for j in range(op_no):
+                if flow[j, i] == 1:
+                    self.flow.append(iter_functions[j])
+
+        coeff = self.params["mp_taper"] / (self.params["mp_taper"] - 1)
+        self.proj_weight = devlib.square(devlib.cos(devlib.clip(devlib.linspace(coeff*1.57, 1.57, iter_no), 0, 2)))
+        self.proj_weight = self.proj_weight * self.params["mp_max_weight"]
+        self.aver = None
+        self.iter = -1
+        self.errs = []
+        self.gen = gen
+        self.prev_dir = img_dir
+        self.sigma = self.params['shrink_wrap_gauss_sigma']
+        self.support_obj = Support(self.params, self.dims, img_dir)
+
+        # for the fast GA the data needs to be saved, as it would be changed by each lr generation
+        # for non-fast GA the Rec object is created in each generation with the initial data
+        if self.saved_data is not None:
+            if self.params['low_resolution_generations'] > self.gen:
+                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+            else:
+                self.data = self.saved_data
+        else:
+            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
+                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+
+        if 'll_sigma' not in self.params or not first_run:
+            self.iter_data = self.data[0]
+        else:
+            self.iter_data = self.data.copy()[0]
+
+        if first_run:
+            max_data = devlib.amax(self.data)
+            self.ds_image *= get_norm(self.ds_image) * max_data
+
+            # the line below are for testing to set the initial guess to support
+            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
+
+            self.ds_image *= self.support_obj.get_support()
+        return 0
+
+    def iterate(self):
+        start_t = time.time()
+        for f in self.flow:
+            f()
+
+        print('iterate took ', (time.time() - start_t), ' sec')
+
+        if devlib.hasnan(self.ds_image):
+            print('reconstruction resulted in NaN')
+            return -1
+
+        if self.aver is not None:
+            ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
+            self.ds_image *= ratio / self.aver_iter
+
+        mx = devlib.amax(devlib.absolute(self.ds_image))
+        self.ds_image = self.ds_image / mx
+
+        return 0
+
+    def save_res(self, save_dir):
+        from array import array
+
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        devlib.save(save_dir + "/image", self.shared_image)
+        devlib.save(save_dir + "/shared_density", self.shared_image[:, :, :, 0])
+        devlib.save(save_dir + "/shared_u1", self.shared_image[:, :, :, 1])
+        devlib.save(save_dir + "/shared_u2", self.shared_image[:, :, :, 2])
+        devlib.save(save_dir + "/shared_u3", self.shared_image[:, :, :, 3])
+        devlib.save(save_dir + '/support', self.support_obj.get_support())
+        for i, hkl in enumerate(self.params["orientations"]):
+            self.g_vec = self.G_vectors[i]
+            self.gdotg = self.GdotG[i]
+            self.to_working_image()
+            suffix = ''
+            for v in hkl:
+                suffix += str(v)
+            devlib.save(save_dir + '/image_' + suffix, self.ds_image)
+        errs = array('f', self.errs)
+
+        with open(save_dir + "/errors.txt", "w+") as err_f:
+            err_f.write('\n'.join(map(str, errs)))
+
+        devlib.save(save_dir + '/errors', errs)
+
+        metric = dvut.all_metrics(self.ds_image, self.errs)
+        with open(save_dir + "/metrics.txt", "w+") as f:
+            f.write(str(metric))
+            # for key, value in metric.items():
+            #     f.write(key + ' : ' + str(value) + '\n')
+
+        return 0
+
+    def get_metric(self, metric_type):
+        return dvut.all_metrics(self.ds_image, self.errs)
+        # return dvut.get_metric(self.ds_image, self.errs, metric_type)
+
+    def next(self):
+        self.iter = self.iter + 1
+
+    def switch_peaks(self):
+        self.to_shared_image()
+        self.pk = random.choice([x for x in range(self.num_peaks) if x != self.pk])
+        self.iter_data = self.data[self.pk]
+        self.g_vec = self.G_vectors[self.pk]
+        self.gdotg = self.GdotG[self.pk]
+        self.to_working_image()
+        pass
+
+    def to_shared_image(self):
+        beta = self.proj_weight[self.iter]
+        old_u = (devlib.dot(self.shared_image, self.g_vec) / self.gdotg)[:, :, :, None] * self.g_vec
+        new_u = (devlib.angle(self.ds_image) / self.gdotg)[:, :, :, None] * self.g_vec
+        old_rho = devlib.dot(self.shared_image, self.density)[:, :, :, None] * self.density
+        new_rho = devlib.absolute(self.ds_image)[:, :, :, None] * self.density
+        self.shared_image = self.shared_image - beta*(old_u + old_rho) + beta*(new_u + new_rho)
+        self.shared_image = self.shared_image * self.support_obj.get_support()[:, :, :, None]
+
+    def to_working_image(self):
+        phi = devlib.dot(self.shared_image, self.g_vec)
+        rho = self.shared_image[:, :, :, 0]
+        self.ds_image = rho * devlib.exp(1j*phi)
+
+    def shrink_wrap_trigger(self):
+        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['shrink_wrap_threshold'])
+
+    def phase_support_trigger(self):
+        self.support_obj.update_phase(self.ds_image)
+
+    def to_reciprocal_space(self):
+        self.rs_amplitudes = devlib.ifft(self.ds_image)
+
+    def modulus(self):
+        ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
+        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / get_norm(self.iter_data)
+        self.errs.append(error)
+        self.rs_amplitudes *= ratio
+
+    def to_direct_space(self):
+        self.ds_image_raw = devlib.fft(self.rs_amplitudes)
+
+    def er(self):
+        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
+
+    def hio(self):
+        combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
+        support = self.support_obj.get_support()
+        self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
+
+    def twin_trigger(self):
+        # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
+        com = devlib.center_of_mass(self.ds_image)
+        sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
+        self.ds_image = devlib.shift(self.ds_image, sft)
+        dims = self.ds_image.shape
+        half_x = int((dims[0] + 1) / 2)
+        half_y = int((dims[1] + 1) / 2)
+        if self.params['twin_halves'][0] == 0:
+            self.ds_image[half_x:, :, :] = 0
+        else:
+            self.ds_image[: half_x, :, :] = 0
+        if self.params['twin_halves'][1] == 0:
+            self.ds_image[:, half_y:, :] = 0
+        else:
+            self.ds_image[:, : half_y, :] = 0
+
+    def average_trigger(self):
+        if self.aver is None:
+            self.aver = devlib.to_numpy(devlib.absolute(self.ds_image))
+            self.aver_iter = 1
+        else:
+            self.aver = self.aver + devlib.to_numpy(devlib.absolute(self.ds_image))
+            self.aver_iter += 1
+
+    def progress_trigger(self):
+        pk = self.params["orientations"][self.pk]
+        print(f'|  iter {self.iter:>4}  '
+              f'|  [{pk[0]:>2}, {pk[1]:>2}, {pk[2]:>2}]  '
+              f'|  err {self.errs[-1]:0.6f}  '
+              f'|  max {self.shared_image[:, :, :, 0].max():0.5g}'
+              )
 
     def get_ratio(self, divident, divisor):
         divisor = devlib.where((divisor != 0.0), divisor, 1.0)

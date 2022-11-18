@@ -79,8 +79,11 @@ def read_tif(filename):
     ndarray
         an array containing the data parsed from the file
     """
-    ar = tf.imread(filename.replace(os.sep, '/')).transpose()
-    return ar
+    ar = tf.imread(filename.replace(os.sep, '/'))
+    if len(ar.shape) == 4:
+        return ar
+    else:
+        return ar.transpose()
 
 
 def save_tif(arr, filename):

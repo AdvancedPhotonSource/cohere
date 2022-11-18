@@ -157,5 +157,10 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
             if 'progress_trigger' in params:
                 flow_arr[i] = trigger_row(params['progress_trigger'], iter_no)
                 flow_arr[i][-1] = 1
+        elif flow_items_list[i] == 'switch_peaks':
+            if 'switch_peak_trigger' in params:
+                flow_arr[i] = trigger_row(params['switch_peak_trigger'], iter_no)
+                flow_arr[i][-1] = 1
+
 
     return pc_start is not None, flow_arr

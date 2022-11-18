@@ -162,3 +162,12 @@ class cplib(cohlib):
 
     def conj(arr):
         return cp.conj(arr)
+
+    def cos(arr):
+        return cp.cos(arr)
+
+    def clip(arr, minval, maxval):
+        return cp.clip(arr, minval, maxval)
+
+    def linspace(start, stop, steps):
+        return cp.linspace(start, stop, steps)
