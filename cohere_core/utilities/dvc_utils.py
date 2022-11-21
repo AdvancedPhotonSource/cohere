@@ -495,7 +495,7 @@ def breed(breed_mode, alpha_dir, image):
         beta = amp * dvclib.exp(1j * ph_beta)
 
     elif breed_mode == 'pixel_switch':
-        cond = dvclib.random(dvclib.shape(beta))
+        cond = dvclib.random(beta.shape)
         beta = dvclib.where((cond > 0.5), beta, alpha)
 
     elif breed_mode == 'b_pa':
@@ -526,6 +526,6 @@ def breed(breed_mode, alpha_dir, image):
         beta = 0.5 * (alpha + beta)
 
     elif breed_mode == 'avg_ab_pa':
-        beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * (ph_alpha))
+        beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
 
     return beta
