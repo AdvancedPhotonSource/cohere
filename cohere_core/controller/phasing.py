@@ -221,6 +221,7 @@ class Rec:
         self.saved_data = None
 
     def init_dev(self, device_id):
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         self.dev = device_id
         if device_id != -1:
             try:
