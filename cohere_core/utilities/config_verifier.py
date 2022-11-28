@@ -166,6 +166,50 @@ def ver_config_rec(config_map):
     """
     import string
 
+    def get_no_iter(s):
+        seq = []
+        def parse_entry(ent):
+            r_e = ent.split('*')
+            seq.append([int(r_e[0]), r_e[1]])
+
+        s = s.replace(' ','')
+        entries = s.split('+')
+        i = 0
+        while i < len(entries):
+            entry = entries[i]
+            if '(' in entry:
+                group = []
+                rep_entry = entry.split('(')
+                repeat = int(rep_entry[0][:-1])
+                group.append(rep_entry[1])
+                i += 1
+                group_entry = entries[i]
+                while ')' not in group_entry:
+                    group.append(group_entry)
+                    i += 1
+                    group_entry = entries[i]
+                group.append(group_entry[:-1])
+                for _ in range(repeat):
+                    for group_entry in group:
+                        parse_entry(group_entry)
+                i += 1
+            else:
+                parse_entry(entry)
+                i += 1
+        return sum([e[0] for e in seq])
+
+
+    def verify_trigger(trigger, no_iter):
+        if len(trigger) == 0:
+            return ('empty trigger ' + str(trigger))
+        elif trigger[0] >= no_iter:
+            return ('trigger start ' + str(trigger[0]) + ' exceeds number of iterations ' + str(no_iter))
+        if len(trigger) == 3:
+            if trigger[2] >= no_iter:
+                return ('trigger end ' + str(trigger[2]) + ' exceeds number of iterations ' + str(no_iter))
+        return ''
+
+
     config_map_file = 'config_rec_error_map_file'
     fname = 'config_rec'
 
@@ -285,6 +329,12 @@ def ver_config_rec(config_map):
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(config_error)
             return (error_message)
+        # calculate number of iterations
+        try:
+            iter_no = get_no_iter(algorithm_sequence)
+        except Exception as e:
+            print(e)
+            return (e)
     else:
         config_error = 3
         error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -418,6 +468,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Twintrigger'
     if 'twin_trigger' in config_map:
         twin_trigger = config_map['twin_trigger']
+        m = verify_trigger(twin_trigger, iter_no)
+        if len(m) > 0:
+            return(m)
         if not ver_list_int('twin_trigger', twin_trigger):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -435,6 +488,9 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Shrinkwraptrigger'
     if 'shrink_wrap_trigger' in config_map:
+        m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no)
+        if len(m) > 0:
+            return(m)
         if not ver_list_int('shrink_wrap_trigger', config_map['shrink_wrap_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -475,6 +531,10 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Phasesupporttrigger'
     if 'phase_support_trigger' in config_map:
+        m = verify_trigger(config_map['phase_support_trigger'], iter_no)
+        print(m)
+        if len(m) > 0:
+            return(m)
         if not ver_list_int('phase_support_trigger', config_map['phase_support_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -507,6 +567,8 @@ def ver_config_rec(config_map):
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
+        if pc_interval >= iter_no:
+            return('pc_interval', pc_interval, 'exceeds number of iterations', iter_no)
 
         config_parameter = 'Pctype'
         if 'pc_type' in config_map:
@@ -556,6 +618,9 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Resolutiontrigger'
     if 'resolution_trigger' in config_map:
+        m = verify_trigger(config_map['resolution_trigger'], iter_no)
+        if len(m) > 0:
+            return(m)
         if not ver_list_int('resolution_trigger', config_map['resolution_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -582,6 +647,9 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Averagetrigger'
     if 'average_trigger' in config_map:
+        m = verify_trigger(config_map['average_trigger'], iter_no)
+        if len(m) > 0:
+            return(m)
         if not ver_list_int('average_trigger', config_map['average_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -590,6 +658,9 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Progresstrigger'
     if 'progress_trigger' in config_map:
+        m = verify_trigger(config_map['progress_trigger'], iter_no)
+        if len(m) > 0:
+            return(m)
         if not ver_list_int('progress_trigger', config_map['progress_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
