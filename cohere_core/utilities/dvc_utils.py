@@ -490,10 +490,6 @@ def breed(breed_mode, alpha_dir, image):
     if breed_mode == 'sqrt_ab':
         beta = dvclib.sqrt(dvclib.absolute(alpha) * dvclib.absolute(beta)) * dvclib.exp(0.5j * (ph_beta + ph_alpha))
 
-    elif breed_mode == 'dsqrt':
-        amp = dvclib.sqrt(dvclib.absolute(beta))
-        beta = amp * dvclib.exp(1j * ph_beta)
-
     elif breed_mode == 'pixel_switch':
         cond = dvclib.random(beta.shape)
         beta = dvclib.where((cond > 0.5), beta, alpha)

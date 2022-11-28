@@ -357,7 +357,7 @@ def ver_config_rec(config_map):
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print (error_message)
                 return (error_message)
-            breed_options = ['none', 'sqrt_ab', 'dsqrt', 'pixel_switch', 'b_pa', '2ab_a_b', '2a_b_pa', 'sqrt_ab_pa',\
+            breed_options = ['none', 'sqrt_ab', 'pixel_switch', 'b_pa', '2ab_a_b', '2a_b_pa', 'sqrt_ab_pa',\
 'sqrt_ab_pa_recip', 'sqrt_ab_recip', 'max_ab', 'max_ab_pa', 'min_ab_pa', 'avg_ab', 'avg_ab_pa']
             for breed in ga_breed_modes:
                 if breed not in breed_options:

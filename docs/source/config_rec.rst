@@ -285,7 +285,6 @@ GA
 | Breeding starts with choosing alpha image. The rest of the images are crossed with alpha. Before the crossing, the image, called beta is aligned with alpha, and phases in both of the arrays are normalized to derive ph_alpha = angle(alpha), and ph_beta = angle(beta)
 | supported:
 | - 'sqrt_ab': sqrt(abs(alpha) * abs(beta)) * exp(0.5j * (ph_beta + ph_alpha))
-| - 'dsqrt':  sqrt(abs(beta)) * exp(1j * ph_beta)
 | - 'pixel_switch': where((cond > 0.5), beta, alpha); cond = random(shape(beta))
 | - 'b_pa': abs(beta) * exp(1j * (ph_alpha))
 | - '2ab_a_b': 2 * (beta * alpha) / (beta + alpha)
@@ -302,7 +301,7 @@ GA
 | example:
 ::
 
-    ga_breed_modes = ["sqrt_ab", "dsqrt", "none"]
+    ga_breed_modes = ["sqrt_ab", "pixel_switch", "none"]
 
 - ga_cullings:
 | optional, defines how many worst samples to remove in a breeding phase for each generation. If not defined for the generation, the culling defaults to 0.
