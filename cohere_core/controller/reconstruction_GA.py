@@ -377,13 +377,31 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     pars = ut.read_config(conf_file)
     pars = set_ga_defaults(pars)
 
-    if pars['reconstructions'] < 2:
-        print ("GA not implemented for a single reconstruction")
-        return
-
     if pars['ga_generations'] < 2:
         print("number of generations must be greater than 1")
         return
+
+    if pars['reconstructions'] < 2:
+        print("GA not implemented for a single reconstruction")
+        return
+
+    if pars['ga_fast']:
+        reconstructions = min(pars['reconstructions'], len(devices))
+    else:
+        reconstructions = pars['reconstructions']
+
+    if 'ga_cullings' in pars:
+        cull_sum = sum(pars['ga_cullings'])
+        if reconstructions - cull_sum < 2:
+            print("At least two reconstructions should be left after culling. Number of starting reconstructions is", reconstructions, "but ga_cullings adds to", cull_sum)
+            return
+
+    if pars['init_guess'] == 'AI_guess':
+        # run AI part first
+        import cohere_core.controller.AI_guess as ai
+        ai_dir = ai.start_AI(pars, datafile, dir)
+        if ai_dir is None:
+            return
 
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
@@ -398,17 +416,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     if not os.path.isdir(alpha_dir):
         os.mkdir(alpha_dir)
 
-    if pars['ga_fast']:
-        reconstructions = min(pars['reconstructions'], len(devices))
-    else:
-        reconstructions = pars['reconstructions']
-
-    if pars['init_guess'] == 'AI_guess':
-        # run AI part first
-        import cohere_core.controller.AI_guess as ai
-        ai_dir = ai.start_AI(pars, datafile, dir)
-        if ai_dir is None:
-            return
     tracing = Tracing(reconstructions, pars, dir)
 
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
