@@ -81,17 +81,18 @@ def single_rec_process(metric_type, gen, rec_attrs):
     if worker.init_dev(thr.gpu) < 0:
         metric = None
     else:
-        worker.init(prev_dir, gen)
-
-        if gen is not None and gen > 0:
-            worker.breed()
-
-        ret_code = worker.iterate()
+        ret_code = worker.init(prev_dir, gen)
         if ret_code == 0:
-            worker.save_res(save_dir)
-            metric = worker.get_metric(metric_type)
-        else:    # bad reconstruction
+            if gen is not None and gen > 0:
+                worker.breed()
+
+            ret_code = worker.iterate()
+            if ret_code == 0:
+                worker.save_res(save_dir)
+                metric = worker.get_metric(metric_type)
+        if ret_code < 0:    # bad reconstruction
             metric = None
+
     return [metric, save_dir]
 
 

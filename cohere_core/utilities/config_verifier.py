@@ -13,6 +13,7 @@ Verification of configuration parameters.
 
 import os
 from cohere_core.utilities.config_errors_dict import *
+from cohere_core.controller.op_flow import algs
 
 __author__ = "Barbara Frosik, Dave Cyl"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
@@ -170,7 +171,10 @@ def ver_config_rec(config_map):
         seq = []
         def parse_entry(ent):
             r_e = ent.split('*')
+            if r_e[1] not in algs:
+                return r_e[1] + ' is not a valid entry in algorithm_sequence parameter'
             seq.append([int(r_e[0]), r_e[1]])
+            return ''
 
         s = s.replace(' ','')
         entries = s.split('+')
@@ -191,12 +195,16 @@ def ver_config_rec(config_map):
                 group.append(group_entry[:-1])
                 for _ in range(repeat):
                     for group_entry in group:
-                        parse_entry(group_entry)
+                        msg = parse_entry(group_entry)
+                        if len(msg) > 0:
+                            return msg, 0
                 i += 1
             else:
-                parse_entry(entry)
+                msg = parse_entry(entry)
+                if len(msg) > 0:
+                    return msg, 0
                 i += 1
-        return sum([e[0] for e in seq])
+        return '', sum([e[0] for e in seq])
 
 
     def verify_trigger(trigger, no_iter):
@@ -331,10 +339,13 @@ def ver_config_rec(config_map):
             return (error_message)
         # calculate number of iterations
         try:
-            iter_no = get_no_iter(algorithm_sequence)
+            msg, iter_no = get_no_iter(algorithm_sequence)
+            if len(msg) > 0:
+                print(msg)
+                return msg
         except Exception as e:
-            print(e)
-            return (e)
+            print('check algorithm_sequence')
+            return ('check algorithm_sequence')
     else:
         config_error = 3
         error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)

@@ -12,8 +12,6 @@ This module controls a single reconstruction process.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
 """
 
-import numpy as np
-import os
 import importlib
 import cohere_core.controller.phasing as calc
 import cohere_core.utilities.utils as ut
@@ -50,7 +48,9 @@ def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
     if worker.init_dev(device) < 0:
         return
 
-    worker.init(continue_dir)
+    ret_code = worker.init(continue_dir)
+    if ret_code < 0:
+        return
     ret_code = worker.iterate()
     if ret_code == 0:
         worker.save_res(save_dir)

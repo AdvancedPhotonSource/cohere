@@ -318,6 +318,8 @@ class Rec:
             flow_items_list.append(f.__name__)
 
         self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+        if flow is None:
+            return -1
 
         self.flow = []
         (op_no, iter_no) = flow.shape
@@ -644,8 +646,12 @@ def reconstruction(datafile, **kwargs):
         continue_dir = kwargs['continue_dir']
     else:
         continue_dir = None
-    worker.init(continue_dir)
+    ret_code = worker.init(continue_dir)
+    if ret_code < 0:
+        return
     ret_code = worker.iterate()
+    if ret_code < 0:
+        return
     if 'save_dir' in kwargs:
         save_dir = kwargs['save_dir']
     else:
