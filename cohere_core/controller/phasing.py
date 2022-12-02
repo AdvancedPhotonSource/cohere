@@ -526,7 +526,7 @@ class Rec:
         return ratio
 
 
-class CoupledRec:
+class CoupledRec(Rec):
     """
     Performs a coupled reconstruction of multiple Bragg peaks using iterative phase retrieval. It alternates between a
     shared object with a density and atomic displacement field and a working object with an amplitude and phase. The
@@ -548,75 +548,14 @@ class CoupledRec:
     __all__ = []
 
     def __init__(self, params, data_file):
-        if 'init_guess' not in params:
-            params['init_guess'] = 'random'
-        elif params['init_guess'] == 'AI_guess':
-            if 'AI_threshold' not in params:
-                params['AI_threshold'] = params['shrink_wrap_threshold']
-            if 'AI_sigma' not in params:
-                params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
-        if 'reconstructions' not in params:
-            params['reconstructions'] = 1
-        if 'hio_beta' not in params:
-            params['hio_beta'] = 0.9
-        if 'initial_support_area' not in params:
-            params['initial_support_area'] = (.5, .5, .5)
-        if 'twin_trigger' in params and 'twin_halves' not in params:
-            params['twin_halves'] = (0, 0)
-        if 'shrink_wrap_gauss_sigma' not in params:
-            params['shrink_wrap_gauss_sigma'] = 1.0
-        if 'shrink_wrap_threshold' not in params:
-            params['shrink_wrap_threshold'] = 0.1
-        if 'shrink_wrap_trigger' in params:
-            if 'shrink_wrap_type' not in params:
-                params['shrink_wrap_type'] = "GAUSS"
-        if 'phase_support_trigger' in params:
-            if 'phm_phase_min' not in params:
-                params['phm_phase_min'] = -1.57
-            if 'phm_phase_max' not in params:
-                params['phm_phase_max'] = 1.57
+        super().__init__(params, data_file)
+
         if "switch_peak_trigger" not in params:
             params["switch_peak_trigger"] = [0, 10]
         if "mp_max_weight" not in params:
             params["mp_max_weight"] = 0.9
         if "mp_taper" not in params:
             params["mp_taper"] = 0.75
-        self.ll_sigmas = None
-        self.ll_dets = None
-        if 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
-            # linespacing the sigmas and dets need a number of iterations
-            # The trigger should have three elements, the last one
-            # meaning the last iteration when the low resolution is
-            # applied. If the trigger does not have the limit,
-            # it is misconfigured, and the trigger will not be
-            # active
-            ll_iter = params['resolution_trigger'][2]
-            if 'shrink_wrap_trigger' not in params and 'lowpass_filter_sw_sigma_range' in params:
-                # The sigmas are used to find support, if the shrink wrap
-                # trigger is not active, it wil not be used
-                sigma_range = params['lowpass_filter_sw_sigma_range']
-                if len(sigma_range) > 0:
-                    first_sigma = sigma_range[0]
-                    if len(sigma_range) == 1:
-                        last_sigma = params['shrink_wrap_gauss_sigma']
-                    else:
-                        last_sigma = sigma_range[1]
-                    params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in
-                                           range(ll_iter)]
-            if 'lowpass_filter_range' in params:
-                det_range = params['lowpass_filter_range']
-                if type(det_range) == int:
-                    det_range = [det_range, 1.0]
-                    params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in
-                                         range(ll_iter)]
-            else:
-                params['ll_dets'] = None
-        # finished setting defaults
-        self.params = params
-        self.data_file = data_file
-        self.ds_image = None
-        self.need_save_data = False
-        self.saved_data = None
 
     def init_dev(self, device_id):
         self.dev = device_id
@@ -630,7 +569,6 @@ class CoupledRec:
         if self.data_file.endswith('tif'):
             try:
                 data_np = ut.read_tif(self.data_file)
-                print(data_np.shape)
                 data = devlib.from_numpy(data_np)
             except Exception as e:
                 print(e)
@@ -680,13 +618,20 @@ class CoupledRec:
         self.rho_hat = devlib.array([1, 0, 0, 0])  # This is the density "unit vector" in the shared object.
 
         iter_functions = [self.next,
+                          self.resolution_trigger,
+                          self.reset_resolution,
                           self.shrink_wrap_trigger,
                           self.phase_support_trigger,
                           self.to_reciprocal_space,
+                          self.new_func_trigger,
+                          self.pc_trigger,
+                          self.pc_modulus,
                           self.modulus,
+                          self.set_prev_pc_trigger,
                           self.to_direct_space,
                           self.er,
                           self.hio,
+                          self.new_alg,
                           self.twin_trigger,
                           self.average_trigger,
                           self.progress_trigger,
@@ -746,26 +691,6 @@ class CoupledRec:
             self.ds_image *= self.support_obj.get_support()
         return 0
 
-    def iterate(self):
-        start_t = time.time()
-        for f in self.flow:
-            f()
-
-        print('iterate took ', (time.time() - start_t), ' sec')
-
-        if devlib.hasnan(self.ds_image):
-            print('reconstruction resulted in NaN')
-            return -1
-
-        if self.aver is not None:
-            ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
-            self.ds_image *= ratio / self.aver_iter
-
-        mx = devlib.amax(devlib.absolute(self.ds_image))
-        self.ds_image = self.ds_image / mx
-
-        return 0
-
     def save_res(self, save_dir):
         from array import array
 
@@ -801,13 +726,6 @@ class CoupledRec:
 
         return 0
 
-    def get_metric(self, metric_type):
-        return dvut.all_metrics(self.ds_image, self.errs)
-        # return dvut.get_metric(self.ds_image, self.errs, metric_type)
-
-    def next(self):
-        self.iter = self.iter + 1
-
     def switch_peaks(self):
         self.to_shared_image()
         self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
@@ -830,58 +748,6 @@ class CoupledRec:
         rho = self.shared_image[:, :, :, 0]
         self.ds_image = rho * devlib.exp(1j*phi)
 
-    def shrink_wrap_trigger(self):
-        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['shrink_wrap_threshold'])
-
-    def phase_support_trigger(self):
-        self.support_obj.update_phase(self.ds_image)
-
-    def to_reciprocal_space(self):
-        self.rs_amplitudes = devlib.ifft(self.ds_image)
-
-    def modulus(self):
-        ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
-        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
-                                      0)) / get_norm(self.iter_data)
-        self.errs.append(error)
-        self.rs_amplitudes *= ratio
-
-    def to_direct_space(self):
-        self.ds_image_raw = devlib.fft(self.rs_amplitudes)
-
-    def er(self):
-        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
-
-    def hio(self):
-        combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
-        support = self.support_obj.get_support()
-        self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
-
-    def twin_trigger(self):
-        # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
-        com = devlib.center_of_mass(self.ds_image)
-        sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
-        self.ds_image = devlib.shift(self.ds_image, sft)
-        dims = self.ds_image.shape
-        half_x = int((dims[0] + 1) / 2)
-        half_y = int((dims[1] + 1) / 2)
-        if self.params['twin_halves'][0] == 0:
-            self.ds_image[half_x:, :, :] = 0
-        else:
-            self.ds_image[: half_x, :, :] = 0
-        if self.params['twin_halves'][1] == 0:
-            self.ds_image[:, half_y:, :] = 0
-        else:
-            self.ds_image[:, : half_y, :] = 0
-
-    def average_trigger(self):
-        if self.aver is None:
-            self.aver = devlib.to_numpy(devlib.absolute(self.ds_image))
-            self.aver_iter = 1
-        else:
-            self.aver = self.aver + devlib.to_numpy(devlib.absolute(self.ds_image))
-            self.aver_iter += 1
-
     def progress_trigger(self):
         pk = self.params["orientations"][self.pk]
         print(f'|  iter {self.iter:>4}  '
@@ -889,11 +755,6 @@ class CoupledRec:
               f'|  err {self.errs[-1]:0.6f}  '
               f'|  max {self.shared_image[:, :, :, 0].max():0.5g}'
               )
-
-    def get_ratio(self, divident, divisor):
-        divisor = devlib.where((divisor != 0.0), divisor, 1.0)
-        ratio = divident / divisor
-        return ratio
 
 
 def reconstruction(datafile, **kwargs):
