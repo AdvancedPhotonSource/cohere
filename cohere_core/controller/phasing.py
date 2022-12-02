@@ -528,14 +528,21 @@ class Rec:
 
 class CoupledRec:
     """
-    cohere_core.phasing.reconstruction(self, params, data_file)
-
-    Class, performs phasing using iterative algorithm.
+    Performs a coupled reconstruction of multiple Bragg peaks using iterative phase retrieval. It alternates between a
+    shared object with a density and atomic displacement field and a working object with an amplitude and phase. The
+    general outline of this process is as follows:
+    1. Initialize the shared object with random values.
+    2. Randomly select a diffraction pattern and corresponding reciprocal lattice vector G from the collected data.
+    3. Set the working object to the projection of the shared object onto G.
+    4. Apply standard phase retrieval techniques to the working object for a set number of iterations.
+    5. Update the G-projection of the shared object to be a weighted average of its current value with the working
+        object.
+    6. Repeat steps 2-5.
 
     params : dict
         parameters used in reconstruction. Refer to x for parameters description
-    data_dir : str
-        name of directory containing data for each peak to be reconstructed
+    data_file : str
+        name of file containing data for each peak to be reconstructed
 
     """
     __all__ = []
@@ -660,14 +667,17 @@ class CoupledRec:
         else:
             self.ds_image = devlib.load(img_dir + '/image.npy')
             first_run = False
+        # Define the shared image
+        self.shared_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1, 1])
+
+        # Define the vectors used when projecting to each peak
         G_0 = 2*pi/self.params["lattice_size"]
         self.G_vectors = devlib.array([[0, *x] for x in self.params["orientations"]]) * G_0
         self.GdotG = devlib.array([devlib.dot(x, x) for x in self.G_vectors])
-        self.pk = 0  # This is the current peak that's being reconstructed
         self.g_vec = self.G_vectors[0]
         self.gdotg = self.GdotG[0]
-        self.density = devlib.array([1, 0, 0, 0])
-        self.shared_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1, 1])
+        self.pk = 0  # This is the current peak that's being reconstructed
+        self.rho_hat = devlib.array([1, 0, 0, 0])  # This is the density "unit vector" in the shared object.
 
         iter_functions = [self.next,
                           self.shrink_wrap_trigger,
@@ -686,7 +696,7 @@ class CoupledRec:
         for f in iter_functions:
             flow_items_list.append(f.__name__)
 
-        _, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
 
         self.flow = []
         (op_no, iter_no) = flow.shape
@@ -695,9 +705,11 @@ class CoupledRec:
                 if flow[j, i] == 1:
                     self.flow.append(iter_functions[j])
 
+        # Define the multipeak projection weighting and tapering
         coeff = self.params["mp_taper"] / (self.params["mp_taper"] - 1)
         self.proj_weight = devlib.square(devlib.cos(devlib.clip(devlib.linspace(coeff*1.57, 1.57, iter_no), 0, 2)))
         self.proj_weight = self.proj_weight * self.params["mp_max_weight"]
+
         self.aver = None
         self.iter = -1
         self.errs = []
@@ -705,6 +717,8 @@ class CoupledRec:
         self.prev_dir = img_dir
         self.sigma = self.params['shrink_wrap_gauss_sigma']
         self.support_obj = Support(self.params, self.dims, img_dir)
+        if self.is_pc:
+            self.pc_obj = Pcdi(self.params, self.data, dir)
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -755,6 +769,7 @@ class CoupledRec:
     def save_res(self, save_dir):
         from array import array
 
+        self.shared_image = self.shared_image * self.support_obj.get_support()[:, :, :, None]
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         devlib.save(save_dir + "/image", self.shared_image)
@@ -795,7 +810,7 @@ class CoupledRec:
 
     def switch_peaks(self):
         self.to_shared_image()
-        self.pk = random.choice([x for x in range(self.num_peaks) if x != self.pk])
+        self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
         self.iter_data = self.data[self.pk]
         self.g_vec = self.G_vectors[self.pk]
         self.gdotg = self.GdotG[self.pk]
@@ -804,12 +819,11 @@ class CoupledRec:
 
     def to_shared_image(self):
         beta = self.proj_weight[self.iter]
-        old_u = (devlib.dot(self.shared_image, self.g_vec) / self.gdotg)[:, :, :, None] * self.g_vec
-        new_u = (devlib.angle(self.ds_image) / self.gdotg)[:, :, :, None] * self.g_vec
-        old_rho = devlib.dot(self.shared_image, self.density)[:, :, :, None] * self.density
-        new_rho = devlib.absolute(self.ds_image)[:, :, :, None] * self.density
-        self.shared_image = self.shared_image - beta*(old_u + old_rho) + beta*(new_u + new_rho)
-        self.shared_image = self.shared_image * self.support_obj.get_support()[:, :, :, None]
+        old_image = (devlib.dot(self.shared_image, self.g_vec) / self.gdotg)[:, :, :, None] * self.g_vec + \
+                    devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
+        new_image = (devlib.angle(self.ds_image) / self.gdotg)[:, :, :, None] * self.g_vec + \
+                    devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat
+        self.shared_image = self.shared_image + beta*(new_image - old_image)
 
     def to_working_image(self):
         phi = devlib.dot(self.shared_image, self.g_vec)
