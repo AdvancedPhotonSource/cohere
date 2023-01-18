@@ -25,11 +25,12 @@ __all__ = ['reconstruction']
 
 
 def set_lib(pkg):
-    global devlib
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
+    elif pkg == 'torch':
+        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
     calc.set_lib(devlib)
 
 

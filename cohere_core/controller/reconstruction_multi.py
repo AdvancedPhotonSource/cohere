@@ -47,6 +47,8 @@ def set_lib(pkg):
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
+    elif pkg == 'torch':
+        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
     calc.set_lib(devlib)
 
 

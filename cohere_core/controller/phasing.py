@@ -223,13 +223,12 @@ class Rec:
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         self.dev = device_id
-        if device_id != -1:
-            try:
-                devlib.set_device(device_id)
-            except Exception as e:
-                print(e)
-                print('may need to restart GUI')
-                return -1
+        try:
+            devlib.set_device(device_id)
+        except Exception as e:
+            print(e)
+            print('may need to restart GUI')
+            return -1
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
@@ -246,7 +245,6 @@ class Rec:
         else:
             print('no data file found')
             return -1
-
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
         self.data = devlib.fftshift(devlib.absolute(data))
         self.dims = devlib.dims(self.data)
@@ -504,10 +502,10 @@ class Rec:
 
     def twin_trigger(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
-        com = devlib.center_of_mass(self.ds_image)
-        sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
-        self.ds_image = devlib.shift(self.ds_image, sft)
-        dims = self.ds_image.shape
+        # com = devlib.center_of_mass(devlib.absolute(self.ds_image))
+        # sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
+        # self.ds_image = devlib.shift(self.ds_image, sft)
+        dims = devlib.dims(self.ds_image)
         half_x = int((dims[0] + 1) / 2)
         half_y = int((dims[1] + 1) / 2)
         if self.params['twin_halves'][0] == 0:

@@ -133,10 +133,12 @@ class Tracing:
 def set_lib(pkg):
     global dvclib
     if pkg == 'cp':
-        dvclib = importlib.import_module('cohere_core.lib.cplib').cplib
+        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
-        dvclib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(dvclib)
+        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
+    elif pkg == 'torch':
+        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
+    calc.set_lib(devlib)
 
 
 def set_ga_defaults(pars):

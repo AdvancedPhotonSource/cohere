@@ -8,7 +8,6 @@ setuptools.setup(
       version='3.2',
       packages=setuptools.find_packages(),
       install_requires=['numpy',
-                        'tensorflow',
                         'scikit-learn',
                         'tifffile',
                         ],
