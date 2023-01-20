@@ -54,9 +54,9 @@ class cplib(cohlib):
     def ifftshift(arr):
         return cp.fft.ifftshift(arr)
 
-    def shift(arr, sft):
+    def shift(arr, sft, axis=None):
         sft = [int(s) for s in sft]
-        return cp.roll(arr, sft)
+        return cp.roll(arr, sft, axis=axis)
 
     def fft(arr):
         return cp.fft.fftn(arr, norm='forward')
@@ -166,8 +166,8 @@ class cplib(cohlib):
     def cos(arr):
         return cp.cos(arr)
 
-    def clip(arr, minval, maxval):
-        return cp.clip(arr, minval, maxval)
-
     def linspace(start, stop, steps):
         return cp.linspace(start, stop, steps)
+
+    def diff(arr, axis=None, prepend=0):
+        return cp.diff(arr, axis=axis, prepend=prepend)

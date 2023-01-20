@@ -19,6 +19,9 @@ import os
 from math import pi
 import random
 import importlib
+
+import numpy as np
+
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.config_verifier as ver
@@ -132,6 +135,9 @@ class Support:
         phase = devlib.angle(ds_image)
         phase_condition = (phase > self.params['phm_phase_min']) & (phase < self.params['phm_phase_max'])
         self.support *= phase_condition
+
+    def flip(self):
+        self.support = devlib.conj(devlib.flip(self.support))
 
 
 class Rec:
@@ -373,6 +379,7 @@ class Rec:
 
 
     def iterate(self):
+        self.iter = -1
         start_t = time.time()
         for f in self.flow:
             f()
@@ -652,7 +659,7 @@ class CoupledRec(Rec):
 
         # Define the multipeak projection weighting and tapering
         coeff = self.params["mp_taper"] / (self.params["mp_taper"] - 1)
-        self.proj_weight = devlib.square(devlib.cos(devlib.clip(devlib.linspace(coeff*1.57, 1.57, iter_no), 0, 2)))
+        self.proj_weight = devlib.square(devlib.cos(devlib.linspace(coeff*1.57, 1.57, iter_no).clip(0, 2)))
         self.proj_weight = self.proj_weight * self.params["mp_max_weight"]
 
         self.aver = None
@@ -755,6 +762,22 @@ class CoupledRec(Rec):
               f'|  err {self.errs[-1]:0.6f}  '
               f'|  max {self.shared_image[:, :, :, 0].max():0.5g}'
               )
+
+    def get_density(self):
+        return self.shared_image[:, :, :, 0]
+
+    def get_distortion(self):
+        return self.shared_image[:, :, :, 1:].swapaxes(3, 2).swapaxes(2, 1).swapaxes(1, 0)
+
+    def flip(self):
+        self.shared_image = devlib.flip(self.shared_image, axis=(0, 1, 2))
+        self.shared_image[:, :, :, 1:] *= -1
+        self.support_obj.flip()
+
+    def shift_to_center(self, ind, cutoff=None):
+        shift_dist = -devlib.array(ind) + (self.dims[0]//2)
+        self.shared_image = devlib.shift(self.shared_image, shift_dist, axis=(0, 1, 2))
+        self.support_obj.support = devlib.shift(self.support_obj.support, shift_dist)
 
 
 def reconstruction(datafile, **kwargs):
