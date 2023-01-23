@@ -18,6 +18,7 @@ class torchlib(cohlib):
         else:
             torch.device(dev_id)
             torchlib.device = dev_id
+
         # the pytorch does not support very needed functions such as fft, ifft for
         # the GPU M1 (backendMPS), so for this platform it will be set to cpu until the
         # functions are supported
@@ -115,14 +116,18 @@ class torchlib(cohlib):
             print('not supported error: ' + repr(e))
 
     def fftconvolve(arr1, arr2):
-        return torch.nn.functional.conv3d(arr1, arr2)
-        # need to go back and revise
-        # if len(arr1.size(0)) == 1:
-        #     return torch.nn.functional.conv1d(arr1, arr2)
-        # elif len(arr1.size(0)) == 2:
-        #     return torch.nn.functional.conv2d(arr1, arr2)
-        # elif len(arr1.size(0)) == 3:
-        #     return torch.nn.functional.conv3d(arr1, arr2)
+        shape1 = arr1.size()
+        shape2 = arr2.size()
+        pad1 = tuple([d//2 for d in shape2 for _ in (0, 1)])
+        pad2 = tuple([d//2 for d in shape1 for _ in (0, 1)])
+        parr1 = torch.nn.functional.pad(arr1, pad1)
+        parr2 = torch.nn.functional.pad(arr2, pad2)
+        conv = torch.fft.ifftn(torch.fft.fftn(parr1) * torch.fft.fftn(parr2))
+
+        for i in range(len(shape2)):
+            splitted = torch.split(conv, [shape2[i] //2, shape1[i], shape2[i] //2], dim=i)
+            conv = splitted[1]
+        return conv
 
     def where(cond, x, y):
         return torch.where(cond, x, y)
@@ -144,10 +149,10 @@ class torchlib(cohlib):
         return torch.sum(arr)
 
     def real(arr):
-        torch.real(arr)
+        return arr.real
 
     def imag(arr):
-        torch.imag(arr)
+        return arr.imag
 
     def amax(arr):
         return torch.amax(arr)
@@ -179,8 +184,10 @@ class torchlib(cohlib):
     def angle(arr):
         return torch.angle(arr)
 
-    def flip(arr, axis):
-        torch.flip(arr, axis)
+    def flip(arr, axis=None):
+        if axis is None:
+            axis = [i for i in range(len(arr.size()))]
+        return torch.flip(arr, axis)
 
     def tile(arr, rep):
         return torch.tile(arr, rep)
@@ -238,3 +245,10 @@ class torchlib(cohlib):
     def conj(arr):
         return torch.conj(arr)
 
+# a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
+# a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])
+# conv = torchlib.fftconvolve(a1,a2)
+# print('torch conv', conv)
+# print(conv.real)
+# print(torch.abs(conv))
+# print(torch.nn.functional.conv1d(a1,a2))

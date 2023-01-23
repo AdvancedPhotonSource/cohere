@@ -468,7 +468,7 @@ class Rec:
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
 
     def pc_modulus(self):
-        abs_amplitudes = devlib.absolute(self.rs_amplitudes).copy()
+        abs_amplitudes = devlib.absolute(self.rs_amplitudes)
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = get_norm(
