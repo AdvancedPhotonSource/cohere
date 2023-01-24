@@ -41,7 +41,7 @@ def set_lib(pkg, ndim=None):
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(devlib, pkg=='af')
+    calc.set_lib(devlib)
 
 
 def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
