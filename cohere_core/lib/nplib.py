@@ -173,4 +173,13 @@ class nplib(cohlib):
     def conj(arr):
         return np.conj(arr)
 
+    def array_equal(arr1, arr2):
+        return np.array_equal(arr1, arr2)
         # print(nplib.real(nplib.fft(nplib.gaussian((3,4,5),(3.0,4.0,5.0)))))
+
+# a11 = np.array([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
+# a12 = np.array([10.1, 10.2, 10.3, 11.0])
+# print(np.convolve(a11,a12, mode='same'))
+# from scipy.signal import convolve, fftconvolve
+# print(convolve(a11,a12, mode='same'))
+# print(fftconvolve(a11,a12, mode='same'))

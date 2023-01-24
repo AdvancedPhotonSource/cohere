@@ -11,7 +11,8 @@ class cplib(cohlib):
         return cp.dot(arr1, arr2)
 
     def set_device(dev_id):
-        cp.cuda.Device(dev_id).use()
+        if dev_id != -1:
+            cp.cuda.Device(dev_id).use()
 
     def set_backend(proc):
         pass
@@ -171,3 +172,7 @@ class cplib(cohlib):
 
     def diff(arr, axis=None, prepend=0):
         return cp.diff(arr, axis=axis, prepend=prepend)
+
+    def array_equal(arr1, arr2):
+        return cp.array_equal(arr1, arr2)
+

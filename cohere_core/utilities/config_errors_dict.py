@@ -113,9 +113,9 @@ config_rec_error = {'File':['No configuration file',
                     'Generations':['ga_generations parameter should be int',
                                    'when running GA "reconstructions" parameter should be configured and greater than 1'],
                     'Gametrics':['ga_metrics is not a list',
-                                 'ga_metrics list can include only following strings: "chi", "sharpness", "summed_phase", "area"'],
+                                 'warning: ga_metrics list can include only following strings: "chi", "sharpness", "summed_phase", "area"'],
                     'Gabreedmodes':['ga_breed_mode is not a list',
-                                    'ga_breed_modes list can include only following strings: “none”, “sqrt_ab”, “dsqrt”,“pixel_switch”, “b_pa”, “2ab_a_b”, “2a_b_pa”,'
+                                    'warning: ga_breed_modes list can include only following strings: “none”, “sqrt_ab”, “pixel_switch”, “b_pa”, “2ab_a_b”, “2a_b_pa”,'
                                     ' “sqrt_ab_pa”, “sqrt_ab_pa_recip”, “sqrt_ab_recip”,“max_ab”, “max_ab_pa”, '
                                     '“min_ab_pa”, “avg_ab”, “avg_ab_pa"'],
                     'Gacullings':['ga_cullings parameter should be a ist of int',

@@ -1,16 +1,9 @@
 import math
-import importlib
-import os
 
 
-def set_lib(dlib, is_af):
+def set_lib(dlib):
     global dvclib
-    global dvclib2
     dvclib = dlib
-    if is_af:
-        dvclib2 = importlib.import_module('cohere_core.lib.aflib').aflib2
-    else:
-        dvclib2 = dvclib
 
 
 def crop_center(arr, shape):
@@ -276,17 +269,17 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
 
     # Compute kernels and obtain DFT by matrix products
     yl = list(range(-int(math.floor(nc / 2)), nc - int(math.floor(nc / 2))))
-    y = dvclib2.ifftshift(dvclib.array(yl)) * (-2j * math.pi / (nc * usfac))
+    y = dvclib.ifftshift(dvclib.array(yl)) * (-2j * math.pi / (nc * usfac))
     xl = list(range(-coff, noc - coff))
     x = dvclib.array(xl)
     yt = dvclib.tile(y, (len(xl), 1))
     xt = dvclib.tile(x, (len(yl), 1))
-    kernc = dvclib2.exp(yt.T * xt)
+    kernc = dvclib.exp(yt.T * xt)
 
     yl = list(range(-roff, nor - roff))
     y = dvclib.array(yl)
     xl = list(range(-int(math.floor(nr / 2)), nr - int(math.floor(nr / 2))))
-    x = dvclib2.ifftshift(dvclib.array(xl))
+    x = dvclib.ifftshift(dvclib.array(xl))
     yt = dvclib.tile(y, (len(xl), 1))
     xt = dvclib.tile(x, (len(yl), 1))
     kernr = dvclib.exp(yt * xt.T * (-2j * math.pi / (nr * usfac)))
@@ -321,11 +314,11 @@ def dftregistration(ref_arr, arr, usfac=2):
     # Embed Fourier data in a 2x larger array
     shape = ref_arr.shape
     large_shape = tuple(2 * x for x in ref_arr.shape)
-    c_c = pad_around(dvclib2.fftshift(ref_arr) * dvclib.conj(dvclib2.fftshift(arr)), large_shape, val=0j)
+    c_c = pad_around(dvclib.fftshift(ref_arr) * dvclib.conj(dvclib.fftshift(arr)), large_shape, val=0j)
 
     # Compute crosscorrelation and locate the peak
-    c_c = dvclib2.ifft(dvclib2.ifftshift(c_c))    #TODO will not work for aflib
-    max_coord = dvclib2.unravel_index(dvclib2.argmax(c_c), dvclib.dims(c_c))
+    c_c = dvclib.ifft(dvclib.ifftshift(c_c))    #TODO will not work for aflib
+    max_coord = dvclib.unravel_index(dvclib.argmax(c_c), dvclib.dims(c_c))
 
     if max_coord[0] > shape[0]:
         row_shift = max_coord[0] - large_shape[0]
@@ -343,15 +336,15 @@ def dftregistration(ref_arr, arr, usfac=2):
     if usfac > 2:
         # DFT computation
         # Initial shift estimate in upsampled grid
-        row_shift = dvclib2.round(row_shift * usfac) / usfac
-        col_shift = dvclib2.round(col_shift * usfac) / usfac
-        dftshift = dvclib2.fix(dvclib.ceil(usfac * 1.5) / 2)  # Center of output array at dftshift
+        row_shift = dvclib.round(row_shift * usfac) / usfac
+        col_shift = dvclib.round(col_shift * usfac) / usfac
+        dftshift = dvclib.fix(dvclib.ceil(usfac * 1.5) / 2)  # Center of output array at dftshift
         # Matrix multiply DFT around the current shift estimate
-        c_c = dvclib2.conj(dftups(arr * dvclib2.conj(ref_arr), int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
+        c_c = dvclib.conj(dftups(arr * dvclib.conj(ref_arr), int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
                              int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))) / \
               (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ^ 2)
         # Locate maximum and map back to original pixel grid
-        max_coord = dvclib2.unravel_index(dvclib2.argmax(c_c), dvclib2.dims(c_c))
+        max_coord = dvclib.unravel_index(dvclib.argmax(c_c), dvclib.dims(c_c))
         [rloc, cloc] = max_coord
 
         rloc = rloc - dftshift
@@ -378,9 +371,9 @@ def register_3d_reconstruction(ref_arr, arr):
     shift_2, shift_1, shift_0 : float, float
         pixel shifts between images
     """
-    r_shift_2, c_shift_2 = dftregistration(dvclib2.fft(dvclib.sum(ref_arr, 2)), dvclib2.fft(dvclib.sum(arr, 2)), 100)
-    r_shift_1, c_shift_1 = dftregistration(dvclib2.fft(dvclib.sum(ref_arr, 1)), dvclib2.fft(dvclib.sum(arr, 1)), 100)
-    r_shift_0, c_shift_0 = dftregistration(dvclib2.fft(dvclib.sum(ref_arr, 0)), dvclib2.fft(dvclib.sum(arr, 0)), 100)
+    r_shift_2, c_shift_2 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 2)), dvclib.fft(dvclib.sum(arr, 2)), 100)
+    r_shift_1, c_shift_1 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 1)), dvclib.fft(dvclib.sum(arr, 1)), 100)
+    r_shift_0, c_shift_0 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 0)), dvclib.fft(dvclib.sum(arr, 0)), 100)
 
     shift_2 = sum([r_shift_2, r_shift_1]) * 0.5
     shift_1 = sum([c_shift_2, r_shift_0]) * 0.5
@@ -464,7 +457,7 @@ def zero_phase_cc(arr1, arr2):
     return arr
 
 
-def breed(breed_mode, parent_dir, image):
+def breed(breed_mode, alpha_dir, image):
     """
     Aligns the image to breed from with the alpha image, and applies breed formula, to obtain a 'child' image.
 
@@ -478,15 +471,12 @@ def breed(breed_mode, parent_dir, image):
         a tuple containing two elements: directory where the image to breed from is stored, a 'parent', and a directory where the bred image, a 'child', will be stored.
 
     """
-    parent_dir = parent_dir.replace(os.sep, '/')
-    if os.path.basename(os.path.normpath(parent_dir)) == '0':
+    # load alpha from alpha dir
+    alpha = dvclib.load(alpha_dir + '/image.npy')
+    if dvclib.array_equal(image, alpha):
         # it is alpha, no breeding
         return zero_phase(image)
-    else:
-        # find and load alpha
-        gen_dir = os.path.dirname(parent_dir).replace(os.sep, '/')
-        alpha = dvclib.load(gen_dir + '/0/image.npy')
-        alpha = zero_phase(alpha)
+    alpha = zero_phase(alpha)
 
     # load image file
     beta = image
@@ -500,12 +490,8 @@ def breed(breed_mode, parent_dir, image):
     if breed_mode == 'sqrt_ab':
         beta = dvclib.sqrt(dvclib.absolute(alpha) * dvclib.absolute(beta)) * dvclib.exp(0.5j * (ph_beta + ph_alpha))
 
-    elif breed_mode == 'dsqrt':
-        amp = dvclib.sqrt(dvclib.absolute(beta))
-        beta = amp * dvclib.exp(1j * ph_beta)
-
     elif breed_mode == 'pixel_switch':
-        cond = dvclib.random(dvclib.shape(beta))
+        cond = dvclib.random(beta.shape)
         beta = dvclib.where((cond > 0.5), beta, alpha)
 
     elif breed_mode == 'b_pa':
@@ -536,65 +522,6 @@ def breed(breed_mode, parent_dir, image):
         beta = 0.5 * (alpha + beta)
 
     elif breed_mode == 'avg_ab_pa':
-        beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * (ph_alpha))
+        beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
 
     return beta
-
-
-# def save_results(image, support, coh, errs, save_dir):
-#     """
-#     Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy, optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
-#
-#
-#     Parameters
-#     ----------
-#     image : ndarray
-#         reconstructed image array
-#
-#     support : ndarray
-#         support array related to the image
-#
-#     coh : ndarray
-#         coherence array when pcdi feature is active, None otherwise
-#
-#     errs : ndarray
-#         errors "chi" by iterations
-#
-#     flow : ndarray
-#         for development, contains functions that can be activated in fast module during iteration
-#
-#     iter_array : ndarray
-#         for development, matrix indicating which function in fast module was active by iteration
-#
-#     save_dir : str
-#         directory to write the files
-#
-#     metrics : dict
-#         dictionary with metric type keys, and metric values
-#
-#     Returns
-#     -------
-#     nothing
-#     """
-#     print('in save results')
-#     save_dir = save_dir.replace(os.sep, '/')
-#     if not os.path.exists(save_dir):
-#         os.makedirs(save_dir)
-#     image_file = save_dir + '/image'
-#     dvclib.save(image_file, image)
-#     support_file = save_dir + '/support'
-#     dvclib.save(support_file, support)
-#
-#     errs_file = save_dir + '/errors'
-#     dvclib.save(errs_file, errs)
-#     if not coh is None:
-#         coh_file = save_dir + '/coherence'
-#         dvclib.save(coh_file, coh)
-#
-#     print ('will save metrics.txt')
-#     with open(save_dir + "/metrics.txt", "w+") as f:
-#         metric = all_metrics(image, errs)
-#         f.write(metric)
-#         print('saved metris.txt')
-#
-

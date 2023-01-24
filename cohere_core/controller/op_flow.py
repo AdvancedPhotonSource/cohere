@@ -65,6 +65,8 @@ def get_alg_rows(s, pc_conf_start):
     pc_start = None
     for entry in seq:
         repeat = entry[0]
+        if entry[1] not in algs:
+            return 'undefined algorithm ' + entry[1]
         row_keys = algs[entry[1]]
         for row_key in row_keys:
             rows[row_key][i:i+repeat] = 1
@@ -112,6 +114,9 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
     else:
         pc_conf_start = None
 
+    parsed_seq = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
+    if type(parsed_seq) == str:
+        return None, None
     alg_rows, iter_no, pc_start = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
 

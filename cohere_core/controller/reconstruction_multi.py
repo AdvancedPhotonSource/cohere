@@ -41,22 +41,15 @@ class Devices:
         self.index = self.index + 1
 
 
-def set_lib(pkg, ndim=None):
+def set_lib(pkg):
     global devlib
-    if pkg == 'af':
-        if ndim == 1:
-            devlib = importlib.import_module('cohere_core.lib.aflib').aflib1
-        elif ndim == 2:
-            devlib = importlib.import_module('cohere_core.lib.aflib').aflib2
-        elif ndim == 3:
-            devlib = importlib.import_module('cohere_core.lib.aflib').aflib3
-        else:
-            raise NotImplementedError
-    elif pkg == 'cp':
+    if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(devlib, pkg=='af')
+    elif pkg == 'torch':
+        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
+    calc.set_lib(devlib)
 
 
 def single_rec_process(metric_type, gen, rec_attrs):
@@ -66,7 +59,7 @@ def single_rec_process(metric_type, gen, rec_attrs):
     Parameters
     ----------
     proc : str
-        string defining library used 'cpu' or 'opencl' or 'cuda'
+        string defining library, supported 'np' and 'cp'
 
     pars : Object
         Params object containing parsed configuration
@@ -90,17 +83,18 @@ def single_rec_process(metric_type, gen, rec_attrs):
     if worker.init_dev(thr.gpu) < 0:
         metric = None
     else:
-        worker.init(prev_dir, gen)
-
-        if gen is not None and gen > 0:
-            worker.breed()
-
-        ret_code = worker.iterate()
+        ret_code = worker.init(prev_dir, gen)
         if ret_code == 0:
-            worker.save_res(save_dir)
-            metric = worker.get_metric(metric_type)
-        else:    # bad reconstruction
+            if gen is not None and gen > 0:
+                worker.breed()
+
+            ret_code = worker.iterate()
+            if ret_code == 0:
+                worker.save_res(save_dir)
+                metric = worker.get_metric(metric_type)
+        if ret_code < 0:    # bad reconstruction
             metric = None
+
     return [metric, save_dir]
 
 
@@ -114,8 +108,6 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         library acronym to use for reconstruction. Supported:
         np - to use numpy
         cp - to use cupy
-        af - to use arrayfire
-        cpu, opencl, or cuda - to use specified library of arrayfire
 
     save_dir : str
         a directory where the subdirectories will be created to save all the results for multiple reconstructions
@@ -148,35 +140,12 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
     -------
     None
     """
-    # evals = []
-    # prev_dir_seq =[]
     results = []
 
     def collect_result(result):
         results.append(result)
 
-    if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-        if datafile.endswith('tif') or datafile.endswith('tiff'):
-            try:
-                data = ut.read_tif(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        elif datafile.endswith('npy'):
-            try:
-                data = np.load(datafile)
-            except:
-                print ('could not load data file', datafile)
-                return
-        else:
-            print ('no data file found')
-            return
-        print('data shape', data.shape)
-        set_lib('af', len(data.shape))
-        if lib != 'af':
-            devlib.set_backend(lib)
-    else:
-        set_lib(lib)
+    set_lib(lib)
 
     workers = [calc.Rec(pars, datafile) for _ in range(no_recs)]
     dev_obj = Devices(devices)
@@ -210,8 +179,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
-        af - to use arrayfire,
-        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file name

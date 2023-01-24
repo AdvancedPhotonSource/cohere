@@ -10,7 +10,7 @@ cohere_core.phasing
 ===================
 
 Provides phasing capabilities for the Bragg CDI data.
-The software can run code utilizing different library, such as numpy, cupy, arrayfire (cpu, cuda, opencl). User configures the choice depending on hardware and installed software.
+The software can run code utilizing different library, such as numpy and cupy. User configures the choice depending on hardware and installed software.
 
 """
 
@@ -34,10 +34,10 @@ __all__ = ['reconstruction',
            'Rec']
 
 
-def set_lib(dlib, is_af):
+def set_lib(dlib):
     global devlib
     devlib = dlib
-    dvut.set_lib(devlib, is_af)
+    dvut.set_lib(devlib)
 
 
 def get_norm(arr):
@@ -229,14 +229,14 @@ class Rec:
         self.saved_data = None
 
     def init_dev(self, device_id):
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         self.dev = device_id
-        if device_id != -1:
-            try:
-                devlib.set_device(device_id)
-            except Exception as e:
-                print(e)
-                print('may need to restart GUI')
-                return -1
+        try:
+            devlib.set_device(device_id)
+        except Exception as e:
+            print(e)
+            print('may need to restart GUI')
+            return -1
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
@@ -253,7 +253,6 @@ class Rec:
         else:
             print('no data file found')
             return -1
-
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
         self.data = devlib.fftshift(devlib.absolute(data))
         self.dims = devlib.dims(self.data)
@@ -325,6 +324,8 @@ class Rec:
             flow_items_list.append(f.__name__)
 
         self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+        if flow is None:
+            return -1
 
         self.flow = []
         (op_no, iter_no) = flow.shape
@@ -371,8 +372,13 @@ class Rec:
 
     def breed(self):
         breed_mode = self.params['ga_breed_modes'][self.gen]
+        if self.prev_dir.endswith('alpha'):
+            alpha_dir = self.prev_dir
+        else:
+            alpha_dir = os.path.dirname(os.path.dirname(self.prev_dir)).replace(os.sep, '/') + '/alpha'
+
         if breed_mode != 'none':
-            self.ds_image = dvut.breed(breed_mode, self.prev_dir, self.ds_image)
+            self.ds_image = dvut.breed(breed_mode, alpha_dir, self.ds_image)
             self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_shrink_wrap_thresholds'][self.gen],
                                                        self.params['ga_shrink_wrap_gauss_sigmas'][self.gen])
         return 0
@@ -400,12 +406,16 @@ class Rec:
         return 0
 
 
-    def save_res(self, save_dir):
+    def save_res(self, save_dir, only_image=False):
         from array import array
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         devlib.save(save_dir + '/image', self.ds_image)
+
+        if only_image:
+            return 0
+
         devlib.save(save_dir + '/support', self.support_obj.get_support())
         if self.is_pc:
             devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
@@ -467,7 +477,7 @@ class Rec:
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
 
     def pc_modulus(self):
-        abs_amplitudes = devlib.absolute(self.rs_amplitudes).copy()
+        abs_amplitudes = devlib.absolute(self.rs_amplitudes)
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = get_norm(
@@ -501,10 +511,10 @@ class Rec:
 
     def twin_trigger(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
-        com = devlib.center_of_mass(self.ds_image)
-        sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
-        self.ds_image = devlib.shift(self.ds_image, sft)
-        dims = self.ds_image.shape
+        # com = devlib.center_of_mass(devlib.absolute(self.ds_image))
+        # sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
+        # self.ds_image = devlib.shift(self.ds_image, sft)
+        dims = devlib.dims(self.ds_image)
         half_x = int((dims[0] + 1) / 2)
         half_y = int((dims[1] + 1) / 2)
         if self.params['twin_halves'][0] == 0:
@@ -890,8 +900,12 @@ def reconstruction(datafile, **kwargs):
         continue_dir = kwargs['continue_dir']
     else:
         continue_dir = None
-    worker.init(continue_dir)
+    ret_code = worker.init(continue_dir)
+    if ret_code < 0:
+        return
     ret_code = worker.iterate()
+    if ret_code < 0:
+        return
     if 'save_dir' in kwargs:
         save_dir = kwargs['save_dir']
     else:

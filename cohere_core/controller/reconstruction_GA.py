@@ -28,22 +28,117 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def set_lib(pkg, ndim=None):
-    global dvclib
-    if pkg == 'af':
-        if ndim == 1:
-            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib1
-        elif ndim == 2:
-            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib2
-        elif ndim == 3:
-            dvclib = importlib.import_module('cohere_core.lib.aflib').aflib3
+class Tracing:
+    def __init__(self, reconstructions, pars, dir):
+        self.init_dirs = []
+        self.report_tracing = []
+
+        if 'init_guess' not in pars:
+            pars['init_guess'] = 'random'
+        if pars['init_guess'] == 'continue':
+            continue_dir = pars['continue_dir']
+            for sub in os.listdir(continue_dir):
+                image, support, coh = ut.read_results(continue_dir + '/' + sub + '/')
+                if image is not None:
+                    self.init_dirs.append(continue_dir + '/' + sub)
+                    self.report_tracing.append([continue_dir + '/' + sub])
+            if len(self.init_dirs) < reconstructions:
+                for i in range(reconstructions - len(self.init_dirs)):
+                    self.report_tracing.append(['random' + str(i)])
+                self.init_dirs = self.init_dirs + (reconstructions - len(self.init_dirs)) * [None]
+        elif pars['init_guess'] == 'AI_guess':
+            import cohere_core.controller.AI_guess as ai
+
+            self.report_tracing.append(['AI_guess'])
+            for i in range(reconstructions - 1):
+                self.report_tracing.append(['random' + str(i)])
+            # ai_dir = ai.start_AI(pars, datafile, dir)
+            # if ai_dir is None:
+            #     return
+            self.init_dirs = [dir + '/results_AI'] + (reconstructions - 1) * [None]
         else:
-            raise NotImplementedError
-    elif pkg == 'cp':
-        dvclib = importlib.import_module('cohere_core.lib.cplib').cplib
+            for i in range(reconstructions):
+                self.init_dirs.append(None)
+                self.report_tracing.append(['random' + str(i)])
+
+
+    def set_map(self, map):
+        self.map = map
+
+
+    def append_gen(self, gen_ranks):
+        for key in gen_ranks:
+            self.report_tracing[self.map[key]].append(gen_ranks[key])
+
+
+    def pretty_format_results(self):
+        """
+        Takes in a list of report traces and formats them into human-readable tables.
+        Performs data conversion in 1 pass and formatting in a second to determine
+        padding and spacing schemes.
+
+        Parameters
+        ----------
+        none
+
+        Returns
+        -------
+            report_output : str
+            a string containing the formatted report
+        """
+        col_gap = 2
+
+        num_gens = len(self.report_tracing[0]) - 1
+        fitnesses = list(self.report_tracing[0][1][1].keys())
+
+        report_table = []
+        report_table.append(['start'] + [f'generation {i}' for i in range(num_gens)])
+        report_table.append([''] * len(report_table[0]))
+
+        data_col_width = 15
+        start_col_width = 15
+        for pop_data in self.report_tracing:
+            report_table.append([str(pop_data[0])] + [str(ind_data[0]) for ind_data in pop_data[1:]])
+            start_col_width = max(len(pop_data[0]), start_col_width)
+
+            for fit in fitnesses:
+                fit_row = ['']
+                for ind_data in pop_data[1:]:
+                    data_out = f'{fit} : {ind_data[1][fit]}'
+                    data_col_width = max(len(data_out), data_col_width)
+                    fit_row.append(data_out)
+                report_table.append(fit_row)
+            report_table.append([''] * len(report_table[0]))
+
+        report_str = ''
+        for row in report_table:
+            report_str += row[0].ljust(start_col_width + col_gap)
+            report_str += (' ' * col_gap).join([cell.ljust(data_col_width) for cell in row[1:]]) + '\n'
+
+        return report_str
+
+
+    def save(self, save_dir):
+        try:
+            report_str = self.pretty_format_results()
+        except Exception as e:
+            print(f'WARNING: Report formatting failed due to {type(e)}: {e}! Falling back to raw formatting.')
+            report_str = '\n'.join([str(l) for l in self.report_tracing])
+
+        with open(save_dir + '/ranks.txt', 'w+') as rank_file:
+            rank_file.write(report_str)
+            rank_file.flush()
+
+
+def set_lib(pkg):
+    global dvclib
+    if pkg == 'cp':
+        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
-        dvclib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(dvclib, pkg=='af')
+        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
+    elif pkg == 'torch':
+        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
+    calc.set_lib(devlib)
 
 
 def set_ga_defaults(pars):
@@ -52,6 +147,9 @@ def set_ga_defaults(pars):
 
     if 'ga_generations' not in pars:
         pars['ga_generations'] = 1
+
+    if 'init_guess' not in pars:
+        pars['init_guess'] = 'random'
 
     # check if pc feature is on
     if 'pc' in pars['algorithm_sequence'] and 'pc_interval' in pars:
@@ -136,48 +234,59 @@ def set_ga_defaults(pars):
         if 'low_resolution_alg' not in pars:
             pars['low_resolution_alg'] = 'GAUSS'
 
+    print()
+
     return pars
 
 
-def order_dirs(tmp, dirs, evals, metric, first_gen):
+def order_dirs(tracing, dirs, evals, metric_type):
     """
     Orders results in generation directory in subdirectories numbered from 0 and up, the best result stored in the '0' subdirectory. The ranking is done by numbers in evals list, which are the results of the generation's metric to the image array.
 
     Parameters
     ----------
+    tracing : object
+        Tracing object that keeps fields related to tracing
     dirs : list
         list of directories where the reconstruction results files are saved
     evals : list
-        list of evaluation of the results in the directories from the dirs list. The evaluation is a number calculated for metric configured for this generation
+        list of evaluations of the results saved in the directories matching dirs list. The evaluations are dict
+        <metric type> : <eval result>
+    metric_type : metric type to be applied for evaluation
 
     Returns
     -------
-    ordered_prev_dirs : list
-        a list of previous directories ordered from best to worst
+    list :
+        a list of directories where results are saved ordered from best to worst
+    dict :
+        evaluations of the best results
     """
     # ranks keeps indexes of reconstructions from best to worst
     # for most of the metric types the minimum of the metric is best, but for
-    # 'summed_phase' and 'area' it is oposite, so reversing the order
-    metric_evals = [e[metric] for e in evals]
+    # 'summed_phase' and 'area' it is opposite, so reversing the order
+    metric_evals = [e[metric_type] for e in evals]
     ranks = np.argsort(metric_evals).tolist()
-    if metric == 'summed_phase' or metric == 'area':
+    if metric_type == 'summed_phase' or metric_type == 'area':
         ranks.reverse()
-    tracing = {}
-    if first_gen:
-        for i in range(len(ranks)):
-            prev_seq = int(os.path.basename(dirs[ranks[i]]))
-            tmp[prev_seq].append((i, evals[ranks[i]]))
-            tracing[i] = prev_seq
-    else:
-        prev_tracing = tmp.pop()
-        for i in range(len(ranks)):
-            prev_seq = int(os.path.basename(dirs[ranks[i]]))
-            inx = prev_tracing[prev_seq]
-            tmp[inx].append((i, evals[ranks[i]]))
-            tracing[i] = inx
-        prev_tracing.clear()
-    tmp.append(tracing)
+    best_metrics = evals[ranks[0]]
 
+    # Add tracing for the generation results
+    gen_ranks = {}
+    for i in range(len(evals)):
+        gen_ranks[ranks[i]] = (i, evals[ranks[i]])
+    tracing.append_gen(gen_ranks)
+
+    # find how the directories based on ranking, map to the initial start
+    prev_map = tracing.map
+    map = {}
+    for i in range(len(ranks)):
+        prev_seq = int(os.path.basename(dirs[ranks[i]]))
+        inx = prev_map[prev_seq]
+        map[i] = inx
+    prev_map.clear()
+    tracing.set_map(map)
+
+    # order directories by rank
     rank_dirs = []
     # append "_<rank>" to each result directory name
     for i in range(len(ranks)):
@@ -195,32 +304,43 @@ def order_dirs(tmp, dirs, evals, metric, first_gen):
         dest = parent_dir + '/' + last_sub.split('_')[-1]
         shutil.move(dir, dest)
         current_dirs.append(dest)
-    return current_dirs, tmp
+    return current_dirs, best_metrics
 
 
-def order_processes(proc_metrics, metric_type):
+def order_processes(tracing, proc_metrics, metric_type):
     """
     Orders results in generation directory in subdirectories numbered from 0 and up, the best result stored in the '0' subdirectory. The ranking is done by numbers in evals list, which are the results of the generation's metric to the image array.
 
     Parameters
     ----------
-    dirs : list
-        list of directories where the reconstruction results files are saved
-    evals : list
-        list of evaluation of the results in the directories from the dirs list. The evaluation is a number calculated for metric configured for this generation
+    tracing : object
+        Tracing object that keeps fields related to tracing
+    proc_metrics : dict
+        dictionary of <pid> : <evaluations> ; evaluations of the results saved in the directories matching dirs list. The evaluations are dict
+        <metric type> : <eval result>
+    metric_type : metric type to be applied for evaluation
 
     Returns
     -------
-    nothing
+    list :
+        a list of processes ids ordered from best to worst by the results the processes delivered
+    dict :
+        evaluations of the best results
     """
-    ranked_proc = sorted(proc_metrics.items(), key=lambda x: x[1], reverse=False)
+    proc_eval = [(key, proc_metrics[key][metric_type]) for key in proc_metrics.keys()]
+    ranked_proc = sorted(proc_eval, key=lambda x: x[1])
 
-    # ranks keeps indexes of reconstructions from best to worst
+    # ranks keeps indexes of reconstructions from best to worstpro
     # for most of the metric types the minimum of the metric is best, but for
     # 'summed_phase' and 'area' it is oposite, so reversing the order
     if metric_type == 'summed_phase' or metric_type == 'area':
         ranked_proc.reverse()
-    return ranked_proc
+    gen_ranks = {}
+    for i in range(len(ranked_proc)):
+        pid = ranked_proc[i][0]
+        gen_ranks[pid] = (i, proc_metrics[pid])
+    tracing.append_gen(gen_ranks)
+    return ranked_proc, proc_metrics[ranked_proc[0][0]]
 
 
 def cull(lst, no_left):
@@ -229,54 +349,6 @@ def cull(lst, no_left):
     else:
         return lst[0:no_left]
 
-
-def pretty_format_results(report_traces):
-    """
-    Takes in a list of report traces and formats them into human-readable tables.
-    Performs data conversion in 1 pass and formatting in a second to determine
-    padding and spacing schemes. 
-
-    Parameters
-    ----------
-    report_traces: list
-        list of the report trace data structures generated by the GA
-        Assumes report_traces is ordered by order_dirs
-
-    Returns
-    -------
-        report_output : str
-        a string containing the formatted report
-    """
-    col_gap = 2
-
-    num_gens = len(report_traces[0]) - 1
-    fitnesses = list(report_traces[0][1][1].keys())
-
-    report_table = []
-    report_table.append(['start'] + [f'generation {i}' for i in range(num_gens)])
-    report_table.append([''] * len(report_table[0]))
-
-    data_col_width = 15
-    start_col_width = 15
-    for pop_data in report_traces:
-        report_table.append([str(pop_data[0])] + [str(ind_data[0]) for ind_data in pop_data[1:]])
-        start_col_width = max(len(pop_data[0]), start_col_width)
-
-        for fit in fitnesses:
-            fit_row = ['']
-            for ind_data in pop_data[1:]:
-                data_out = f'{fit} : {ind_data[1][fit]}'
-                data_col_width = max(len(data_out), data_col_width)
-                fit_row.append(data_out)
-            report_table.append(fit_row)
-        report_table.append([''] * len(report_table[0]))
-        
-    report_str = ''
-    for row in report_table:
-        report_str += row[0].ljust(start_col_width + col_gap)
-        report_str += (' ' * col_gap).join([cell.ljust(data_col_width) for cell in row[1:]]) + '\n'
-    
-    return report_str
 
 def reconstruction(lib, conf_file, datafile, dir, devices):
     """
@@ -290,8 +362,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
-        af - to use arrayfire,
-        cpu, opencl, or cuda - to use specified library of arrayfire
 
     conf_file : str
         configuration file name
@@ -309,59 +379,68 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     pars = ut.read_config(conf_file)
     pars = set_ga_defaults(pars)
 
+    if pars['ga_generations'] < 2:
+        print("number of generations must be greater than 1")
+        return
+
+    if pars['reconstructions'] < 2:
+        print("GA not implemented for a single reconstruction")
+        return
+
+    if pars['ga_fast']:
+        reconstructions = min(pars['reconstructions'], len(devices))
+    else:
+        reconstructions = pars['reconstructions']
+
+    if 'ga_cullings' in pars:
+        cull_sum = sum(pars['ga_cullings'])
+        if reconstructions - cull_sum < 2:
+            print("At least two reconstructions should be left after culling. Number of starting reconstructions is", reconstructions, "but ga_cullings adds to", cull_sum)
+            return
+
+    if pars['init_guess'] == 'AI_guess':
+        # run AI part first
+        import cohere_core.controller.AI_guess as ai
+        ai_dir = ai.start_AI(pars, datafile, dir)
+        if ai_dir is None:
+            return
+
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
     else:
         filename = conf_file.split('/')[-1]
         save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
-    generations = pars['ga_generations']
-    if 'reconstructions' in pars:
-        reconstructions = pars['reconstructions']
-    else:
-        reconstructions = 1
 
-    if reconstructions < 2:
-        print ("GA not implemented for a single reconstruction")
-        return
+    # create alpha dir and placeholder for the alpha's metrics
+    alpha_dir = save_dir + '/alpha'
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+    if not os.path.isdir(alpha_dir):
+        os.mkdir(alpha_dir)
 
-    # the cupy does not run correctly with multiprocessing, but limiting number of runs to available devices will work as temporary fix
+    tracing = Tracing(reconstructions, pars, dir)
+
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
-        if lib == 'af' or lib == 'cpu' or lib == 'opencl' or lib == 'cuda':
-            if datafile.endswith('tif') or datafile.endswith('tiff'):
-                try:
-                    data = ut.read_tif(datafile)
-                except:
-                    print('could not load data file', datafile)
-                    return
-            elif datafile.endswith('npy'):
-                try:
-                    data = np.load(datafile)
-                except:
-                    print('could not load data file', datafile)
-                    return
-            else:
-                print('no data file found')
-                return
-            set_lib('af', len(data.shape))
-            if lib != 'af':
-                dvclib.set_backend(lib)
-        else:
-            set_lib(lib)
+        set_lib(lib)
 
-        reconstructions = min(reconstructions, len(devices))
-        workers = [calc.Rec(pars, datafile) for _ in range(reconstructions)]
+        workers = []
         processes = {}
+        tracing_map = {}
+        init_dirs = {}
 
-        for worker in workers:
+        for i in range(reconstructions):
+            workers.append(calc.Rec(pars, datafile))
             worker_qin = Queue()
             worker_qout = Queue()
-            process = Process(target=worker.fast_ga, args=(worker_qin, worker_qout))
+            process = Process(target=workers[i].fast_ga, args=(worker_qin, worker_qout))
             process.start()
             processes[process.pid] = [worker_qin, worker_qout]
+            init_dirs[process.pid] = tracing.init_dirs[i]
+            tracing_map[process.pid] = i
+        tracing.set_map(tracing_map)
 
-        prev_dirs = None
-        for g in range(generations):
-            print ('starting generation',g)
+        for g in range(pars['ga_generations']):
+            print ('starting generation', g)
             if g == 0:
                 for pid in processes:
                     worker_qin = processes[pid][0]
@@ -377,13 +456,15 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 # remove bad processes from dict (in the future we may reuse them)
                 for pid in bad_processes:
                     processes.pop(pid)
-            for pid in processes:
-                worker_qin = processes[pid][0]
-                if prev_dirs is None:
-                    prev_dir = None
-                else:
-                    prev_dir = prev_dirs[pid]
-                worker_qin.put(('init', prev_dir, g))
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                   # prev_dir = prev_dirs[pid]
+                    worker_qin.put(('init', init_dirs[pid], g))
+            else:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init', alpha_dir, g))
+
             for pid in processes:
                 worker_qout = processes[pid][1]
                 ret = worker_qout.get()
@@ -419,7 +500,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 metric = worker_qout.get()
                 proc_metrics[pid] = metric
             # order processes by metric
-            proc_ranks = order_processes(proc_metrics, metric_type)
+            proc_ranks, best_metrics = order_processes(tracing, proc_metrics, metric_type)
             # cull
             culled_proc_ranks = cull(proc_ranks, pars['ga_reconstructions'][g])
             # remove culled processes from list (in the future we may reuse them)
@@ -428,56 +509,43 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 worker_qin = processes[pid][0]
                 worker_qin.put('done')
                 processes.pop(pid)
-            # save results, we may modify it later to save only some
-            gen_save_dir = save_dir + '/g_' + str(g)
-            prev_dirs = {}
-            for i in range(len(culled_proc_ranks)):
-                pid = culled_proc_ranks[i][0]
+
+            # compare current alpha and previous. If previous is better, set it as alpha.
+            if (g == 0
+                    or
+                    best_metrics[metric_type] >= alpha_metrics[metric_type] and
+                    (metric_type == 'summed_phase' or metric_type == 'area')
+                    or
+                    best_metrics[metric_type] < alpha_metrics[metric_type] and
+                    (metric_type == 'chi' or metric_type == 'sharpness')):
+                pid = culled_proc_ranks[0][0]
                 worker_qin = processes[pid][0]
-                worker_qin.put(('save_res', gen_save_dir + '/' + str(i)))
-                prev_dirs[pid] = gen_save_dir + '/' + str(i)
-            for pid in processes:
+                worker_qin.put(('save_res', alpha_dir, True))
                 worker_qout = processes[pid][1]
                 ret = worker_qout.get()
+                alpha_metrics = best_metrics
+
+            # save results, we may modify it later to save only some
+            gen_save_dir = save_dir + '/g_' + str(g)
+            if g == pars['ga_generations'] -1:
+                for i in range(len(culled_proc_ranks)):
+                    pid = culled_proc_ranks[i][0]
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('save_res', gen_save_dir + '/' + str(i)))
+                for pid in processes:
+                    worker_qout = processes[pid][1]
+                    ret = worker_qout.get()
             if len(processes) == 0:
                 break
         for pid in processes:
             worker_qin = processes[pid][0]
             worker_qin.put('done')
     else:   # not fast GA
-        report_tracing = []
-        rec = multi
-        prev_dirs = []
-        if 'init_guess' not in pars:
-            pars['init_guess'] = 'random'
-        if pars['init_guess'] == 'continue':
-            continue_dir = pars['continue_dir']
-            for sub in os.listdir(continue_dir):
-                image, support, coh = ut.read_results(continue_dir + '/' + sub + '/')
-                if image is not None:
-                    prev_dirs.append(continue_dir + '/' + sub)
-                    report_tracing.append([continue_dir + '/' + sub])
-            if len(prev_dirs) < reconstructions:
-                for i in range(reconstructions - len(prev_dirs)):
-                    report_tracing.append(['random' + str(i)])
-                prev_dirs = prev_dirs + (reconstructions - len(prev_dirs)) * [None]
-        elif pars['init_guess'] == 'AI_guess':
-            import cohere_core.controller.AI_guess as ai
-            
-            report_tracing.append(['AI_guess'])
-            for i in range(reconstructions - 1):
-                report_tracing.append(['random' + str(i)])
-            ai_dir = ai.start_AI(pars, datafile, dir)
-            if ai_dir is None:
-                return
-            prev_dirs = [ai_dir] + (reconstructions - 1) * [None]
-        else:
-            for i in range(reconstructions):
-                prev_dirs.append(None)
-                report_tracing.append(['random' + str(i)])
-
         q = Queue()
-        for g in range(generations):
+        prev_dirs = tracing.init_dirs
+        tracing.set_map({i:i for i in range(len(prev_dirs))})
+        rec = multi
+        for g in range(pars['ga_generations']):
             # delete previous-previous generation
             if g > 1:
                 shutil.rmtree(save_dir + '/g_' + str(g-2))
@@ -500,24 +568,25 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
             # results are saved in a list of directories - save_dir
             # it will be ranked, and moved to temporary ranked directories
-            current_dirs, report_tracing = order_dirs(report_tracing, temp_dirs, evals, metric_type, first_gen=(g==0))
+            current_dirs, best_metrics = order_dirs(tracing, temp_dirs, evals, metric_type)
             reconstructions = pars['ga_reconstructions'][g]
             current_dirs = cull(current_dirs, reconstructions)
             prev_dirs = current_dirs
 
+            # compare current alpha and previous. If previous is better, set it as alpha.
+            # no need toset alpha  for last generation
+            if (g == 0
+                    or
+                    best_metrics[metric_type] >= alpha_metrics[metric_type] and
+                    (metric_type == 'summed_phase' or metric_type == 'area')
+                    or
+                    best_metrics[metric_type] < alpha_metrics[metric_type] and
+                    (metric_type == 'chi' or metric_type == 'sharpness')):
+                shutil.copyfile(current_dirs[0] + '/image.npy', alpha_dir + '/image.npy')
+                alpha_metrics = best_metrics
         # remove the previous gen
-        shutil.rmtree(save_dir + '/g_' + str(generations - 2))
-        # the report_tracing hold the ranking info. print it to a file
-        report_tracing.pop()
-        
-        try:
-            report_str = pretty_format_results(report_tracing)
-        except Exception as e:
-            print(f'WARNING: Report formatting failed due to {type(e)}: {e}! Falling back to raw formatting.')
-            report_str = '\n'.join([str(l) for l in report_tracing])
+        shutil.rmtree(save_dir + '/g_' + str(pars['ga_generations'] - 2))
 
-        with open(save_dir + '/ranks.txt', 'w+') as rank_file:
-            rank_file.write(report_str)
-            rank_file.flush()
+    tracing.save(save_dir)
 
     print('done gen')
