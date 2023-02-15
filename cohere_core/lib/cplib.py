@@ -176,3 +176,8 @@ class cplib(cohlib):
     def array_equal(arr1, arr2):
         return cp.array_equal(arr1, arr2)
 
+    def cos(arr):
+        return cp.cos(arr)
+
+    def linspace(start, stop, num):
+        return cp.linspace(start, stop, num)

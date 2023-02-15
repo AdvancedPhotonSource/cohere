@@ -137,7 +137,7 @@ class Support:
         self.support *= phase_condition
 
     def flip(self):
-        self.support = devlib.conj(devlib.flip(self.support))
+        self.support = devlib.flip(self.support)
 
 
 class Rec:
@@ -154,6 +154,25 @@ class Rec:
     """
     __all__ = []
     def __init__(self, params, data_file):
+        self.iter_functions = [self.next,
+                          self.resolution_trigger,
+                          self.reset_resolution,
+                          self.shrink_wrap_trigger,
+                          self.phase_support_trigger,
+                          self.to_reciprocal_space,
+                          self.new_func_trigger,
+                          self.pc_trigger,
+                          self.pc_modulus,
+                          self.modulus,
+                          self.set_prev_pc_trigger,
+                          self.to_direct_space,
+                          self.er,
+                          self.hio,
+                          self.new_alg,
+                          self.twin_trigger,
+                          self.average_trigger,
+                          self.progress_trigger]
+
         if 'init_guess' not in params:
             params['init_guess'] = 'random'
         elif params['init_guess'] == 'AI_guess':
@@ -291,6 +310,68 @@ class Rec:
                     ret = functions_dict[cmd[0]](*cmd[1:])
                 worker_qout.put(ret)
 
+    def init1(self, dir=None, gen=None):
+        if self.ds_image is not None:
+            first_run = False
+        elif dir is None or not os.path.isfile(dir + '/image.npy'):
+            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
+            first_run = True
+        else:
+            self.ds_image = devlib.load(dir + '/image.npy')
+            first_run = False
+
+        flow_items_list = []
+        for f in self.iter_functions:
+            flow_items_list.append(f.__name__)
+
+        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+        if flow is None:
+            return -1
+
+        self.flow = []
+        (op_no, self.iter_no) = flow.shape
+        for i in range(self.iter_no):
+            for j in range(op_no):
+                if flow[j, i] == 1:
+                    self.flow.append(self.iter_functions[j])
+
+        self.aver = None
+        self.iter = -1
+        self.errs = []
+        self.gen = gen
+        self.prev_dir = dir
+        self.sigma = self.params['shrink_wrap_gauss_sigma']
+        self.support_obj = Support(self.params, self.dims, dir)
+        if self.is_pc:
+            self.pc_obj = Pcdi(self.params, self.data, dir)
+
+        # for the fast GA the data needs to be saved, as it would be changed by each lr generation
+        # for non-fast GA the Rec object is created in each generation with the initial data
+        if self.saved_data is not None:
+            if self.params['low_resolution_generations'] > self.gen:
+                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+            else:
+                self.data = self.saved_data
+        else:
+            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
+                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+
+        if 'll_sigma' not in self.params or not first_run:
+            self.iter_data = self.data
+        else:
+            self.iter_data = self.data.copy()
+
+        if (first_run):
+            max_data = devlib.amax(self.data)
+            self.ds_image *= get_norm(self.ds_image) * max_data
+
+            # the line below are for testing to set the initial guess to support
+            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
+
+            self.ds_image *= self.support_obj.get_support()
+        return 0
+
+
     def init(self, dir=None, gen=None):
         if self.ds_image is not None:
             first_run = False
@@ -300,39 +381,21 @@ class Rec:
         else:
             self.ds_image = devlib.load(dir + '/image.npy')
             first_run = False
-        iter_functions = [self.next,
-                          self.resolution_trigger,
-                          self.reset_resolution,
-                          self.shrink_wrap_trigger,
-                          self.phase_support_trigger,
-                          self.to_reciprocal_space,
-                          self.new_func_trigger,
-                          self.pc_trigger,
-                          self.pc_modulus,
-                          self.modulus,
-                          self.set_prev_pc_trigger,
-                          self.to_direct_space,
-                          self.er,
-                          self.hio,
-                          self.new_alg,
-                          self.twin_trigger,
-                          self.average_trigger,
-                          self.progress_trigger]
 
-        flow_items_list = []
-        for f in iter_functions:
-            flow_items_list.append(f.__name__)
+        self.flow_items_list = []
+        for f in self.iter_functions:
+            self.flow_items_list.append(f.__name__)
 
-        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
+        self.is_pc, flow = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
         if flow is None:
             return -1
 
         self.flow = []
-        (op_no, iter_no) = flow.shape
-        for i in range(iter_no):
+        (op_no, self.iter_no) = flow.shape
+        for i in range(self.iter_no):
             for j in range(op_no):
                 if flow[j, i] == 1:
-                    self.flow.append(iter_functions[j])
+                    self.flow.append(self.iter_functions[j])
 
         self.aver = None
         self.iter = -1
@@ -340,7 +403,7 @@ class Rec:
         self.gen = gen
         self.prev_dir = dir
         self.sigma = self.params['shrink_wrap_gauss_sigma']
-        self.support_obj = Support(self.params, self.dims[:-1], dir)
+        self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pc:
             self.pc_obj = Pcdi(self.params, self.data, dir)
 
@@ -543,6 +606,27 @@ class Rec:
         return ratio
 
 
+class Peak:
+    """
+    Holds parameters related to peak
+    """
+
+    def __init__(self, dir_ornt, G_0):
+        (self.dir, self.orientation) = dir_ornt
+        self.g_vec = devlib.array([0, * self.orientation]) * G_0
+        self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
+
+    def set_data(self):
+        import tifffile as tf
+
+        fn = self.dir + '/phasing_data/data.tif'
+        data_np = tf.imread(fn.replace(os.sep, '/'))
+        data = devlib.from_numpy(data_np)
+
+        # in the formatted data the max is in the center, we want it in the corner, so do fft shift
+        self.data = devlib.fftshift(devlib.absolute(data))
+
+
 class CoupledRec(Rec):
     """
     Performs a coupled reconstruction of multiple Bragg peaks using iterative phase retrieval. It alternates between a
@@ -564,8 +648,11 @@ class CoupledRec(Rec):
     """
     __all__ = []
 
-    def __init__(self, params, data_file):
-        super().__init__(params, data_file)
+    def __init__(self, params, peak_dir_orient):
+        super().__init__(params, None)
+
+        # replace the progress_trigger function and add switch_peaks
+        self.iter_functions = self.iter_functions[0 : -1] + [self.progress_trigger, self.switch_peaks]
 
         if "switch_peak_trigger" not in params:
             params["switch_peak_trigger"] = [0, 10]
@@ -573,6 +660,11 @@ class CoupledRec(Rec):
             params["mp_max_weight"] = 0.9
         if "mp_taper" not in params:
             params["mp_taper"] = 0.75
+
+        G_0 = 2*pi/self.params["lattice_size"]
+        self.peak_objs = []
+        for dir_ornt in peak_dir_orient:
+            self.peak_objs.append(Peak(dir_ornt, G_0))
 
     def init_dev(self, device_id):
         self.dev = device_id
@@ -583,29 +675,16 @@ class CoupledRec(Rec):
                 print(e)
                 print('may need to restart GUI')
                 return -1
-        if self.data_file.endswith('tif'):
-            try:
-                data_np = ut.read_tif(self.data_file)
-                data = devlib.from_numpy(data_np)
-            except Exception as e:
-                print(e)
-                return -1
-        elif self.data_file.endswith('npy'):
-            try:
-                data = devlib.load(self.data_file)
-            except Exception as e:
-                print(e)
-                return -1
-        else:
-            print('no data file found')
-            return -1
 
-        # in the formatted data the max is in the center, we want it in the corner, so do fft shift
-        self.data = devlib.fftshift(devlib.absolute(data))
-        self.dims = devlib.dims(self.data)[1:]
-        self.num_peaks = devlib.dims(self.data)[0]
+        for or_obj in self.peak_objs:
+            or_obj.set_data()
+
+        self.num_peaks = len(self.peak_objs)
+        self.dims = devlib.dims(self.peak_objs[0].data)
         print('data shape:', self.dims)
         print('data sets:', self.num_peaks)
+        self.pk = 0  # index in list of current peak being reconstructed
+        self.data = self.peak_objs[self.pk].data
 
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
@@ -614,98 +693,18 @@ class CoupledRec(Rec):
         return 0
 
     def init(self, img_dir=None, gen=None):
-        if self.ds_image is not None:
-            first_run = False
-        elif img_dir is None or not os.path.isfile(img_dir + '/image.npy'):
-            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
-            first_run = True
-        else:
-            self.ds_image = devlib.load(img_dir + '/image.npy')
-            first_run = False
+        if super().init(img_dir, gen) == -1:
+            return -1
+
         # Define the shared image
         self.shared_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1, 1])
-
-        # Define the vectors used when projecting to each peak
-        G_0 = 2*pi/self.params["lattice_size"]
-        self.G_vectors = devlib.array([[0, *x] for x in self.params["orientations"]]) * G_0
-        self.GdotG = devlib.array([devlib.dot(x, x) for x in self.G_vectors])
-        self.g_vec = self.G_vectors[0]
-        self.gdotg = self.GdotG[0]
-        self.pk = 0  # This is the current peak that's being reconstructed
         self.rho_hat = devlib.array([1, 0, 0, 0])  # This is the density "unit vector" in the shared object.
-
-        iter_functions = [self.next,
-                          self.resolution_trigger,
-                          self.reset_resolution,
-                          self.shrink_wrap_trigger,
-                          self.phase_support_trigger,
-                          self.to_reciprocal_space,
-                          self.new_func_trigger,
-                          self.pc_trigger,
-                          self.pc_modulus,
-                          self.modulus,
-                          self.set_prev_pc_trigger,
-                          self.to_direct_space,
-                          self.er,
-                          self.hio,
-                          self.new_alg,
-                          self.twin_trigger,
-                          self.average_trigger,
-                          self.progress_trigger,
-                          self.switch_peaks]
-
-        flow_items_list = []
-        for f in iter_functions:
-            flow_items_list.append(f.__name__)
-
-        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
-
-        self.flow = []
-        (op_no, iter_no) = flow.shape
-        for i in range(iter_no):
-            for j in range(op_no):
-                if flow[j, i] == 1:
-                    self.flow.append(iter_functions[j])
 
         # Define the multipeak projection weighting and tapering
         coeff = self.params["mp_taper"] / (self.params["mp_taper"] - 1)
-        self.proj_weight = devlib.square(devlib.cos(devlib.linspace(coeff*1.57, 1.57, iter_no).clip(0, 2)))
+        self.proj_weight = devlib.square(devlib.cos(devlib.linspace(coeff*1.57, 1.57, self.iter_no).clip(0, 2)))
         self.proj_weight = self.proj_weight * self.params["mp_max_weight"]
 
-        self.aver = None
-        self.iter = -1
-        self.errs = []
-        self.gen = gen
-        self.prev_dir = img_dir
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
-        self.support_obj = Support(self.params, self.dims, img_dir)
-        if self.is_pc:
-            self.pc_obj = Pcdi(self.params, self.data, dir)
-
-        # for the fast GA the data needs to be saved, as it would be changed by each lr generation
-        # for non-fast GA the Rec object is created in each generation with the initial data
-        if self.saved_data is not None:
-            if self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
-            else:
-                self.data = self.saved_data
-        else:
-            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
-
-        if 'll_sigma' not in self.params or not first_run:
-            self.iter_data = self.data[0]
-        else:
-            self.iter_data = self.data.copy()[0]
-
-        if first_run:
-            max_data = devlib.amax(self.data)
-            self.ds_image *= get_norm(self.ds_image) * max_data
-
-            # the line below are for testing to set the initial guess to support
-            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
-
-            self.ds_image *= self.support_obj.get_support()
         return 0
 
     def save_res(self, save_dir):
@@ -720,14 +719,11 @@ class CoupledRec(Rec):
         devlib.save(save_dir + "/shared_u2", self.shared_image[:, :, :, 2])
         devlib.save(save_dir + "/shared_u3", self.shared_image[:, :, :, 3])
         devlib.save(save_dir + '/support', self.support_obj.get_support())
-        for i, hkl in enumerate(self.params["orientations"]):
-            self.g_vec = self.G_vectors[i]
-            self.gdotg = self.GdotG[i]
-            self.to_working_image()
-            suffix = ''
-            for v in hkl:
-                suffix += str(v)
-            devlib.save(save_dir + '/image_' + suffix, self.ds_image)
+
+        for peak in self.peak_objs:
+            self.to_working_image(peak)
+            devlib.save(peak.dir, self.ds_image)
+
         errs = array('f', self.errs)
 
         with open(save_dir + "/errors.txt", "w+") as err_f:
@@ -738,37 +734,34 @@ class CoupledRec(Rec):
         metric = dvut.all_metrics(self.ds_image, self.errs)
         with open(save_dir + "/metrics.txt", "w+") as f:
             f.write(str(metric))
-            # for key, value in metric.items():
-            #     f.write(key + ' : ' + str(value) + '\n')
 
         return 0
 
     def switch_peaks(self):
         self.to_shared_image()
         self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
-        self.iter_data = self.data[self.pk]
-        self.g_vec = self.G_vectors[self.pk]
-        self.gdotg = self.GdotG[self.pk]
-        self.to_working_image()
-        pass
+        self.iter_data = self.peak_objs[self.pk].data
+        self.to_working_image(self.peak_objs[self.pk])
 
     def to_shared_image(self):
         beta = self.proj_weight[self.iter]
-        old_image = (devlib.dot(self.shared_image, self.g_vec) / self.gdotg)[:, :, :, None] * self.g_vec + \
-                    devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
-        new_image = (devlib.angle(self.ds_image) / self.gdotg)[:, :, :, None] * self.g_vec + \
+        curr_peak = self.peak_objs[self.pk]
+        old_image = (devlib.dot(self.shared_image, curr_peak.g_vec) / curr_peak.gdotg)[:, :, :, None] * curr_peak.g_vec \
+                    + devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
+        new_image = (devlib.angle(self.ds_image) / curr_peak.gdotg)[:, :, :, None] * curr_peak.g_vec + \
                     devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat
-        self.shared_image = self.shared_image + beta*(new_image - old_image)
+        self.shared_image = self.shared_image + beta * (new_image - old_image)
 
-    def to_working_image(self):
-        phi = devlib.dot(self.shared_image, self.g_vec)
+    def to_working_image(self, peak_obj):
+        phi = devlib.dot(self.shared_image, peak_obj.g_vec)
         rho = self.shared_image[:, :, :, 0]
         self.ds_image = rho * devlib.exp(1j*phi)
 
     def progress_trigger(self):
         pk = self.params["orientations"][self.pk]
+        ornt = self.peak_objs[self.pk].orientation
         print(f'|  iter {self.iter:>4}  '
-              f'|  [{pk[0]:>2}, {pk[1]:>2}, {pk[2]:>2}]  '
+              f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  '
               f'|  err {self.errs[-1]:0.6f}  '
               f'|  max {self.shared_image[:, :, :, 0].max():0.5g}'
               )

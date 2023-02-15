@@ -99,6 +99,10 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.conj) and
                 hasattr(subclass, 'array_equal') and
                 callable(subclass.array_equal) or
+                hasattr(subclass, 'cos') and
+                callable(subclass.cos) or
+                hasattr(subclass, 'linspace') and
+                callable(subclass.linspace) or
                 NotImplemented)
 
     @abc.abstractmethod
@@ -292,4 +296,12 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def array_equal(arr1, arr2):
+        pass
+
+    @abc.abstractmethod
+    def cos(arr):
+        pass
+
+    @abc.abstractmethod
+    def linspace(start, stop, num):
         pass
