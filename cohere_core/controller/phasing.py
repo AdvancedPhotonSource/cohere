@@ -611,13 +611,14 @@ class Peak:
     Holds parameters related to peak
     """
 
-    def __init__(self, dir_ornt, G_0):
+    def __init__(self, dir_ornt):
         (self.dir, self.orientation) = dir_ornt
+
+    def set_data(self, G_0):
+        import tifffile as tf
+
         self.g_vec = devlib.array([0, * self.orientation]) * G_0
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
-
-    def set_data(self):
-        import tifffile as tf
 
         fn = self.dir + '/phasing_data/data.tif'
         data_np = tf.imread(fn.replace(os.sep, '/'))
@@ -625,6 +626,13 @@ class Peak:
 
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
         self.data = devlib.fftshift(devlib.absolute(data))
+
+
+    def save_res(self, image):
+        save_dir = self.dir + '/results_phasing'
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        devlib.save(save_dir + '/image', image)
 
 
 class CoupledRec(Rec):
@@ -651,8 +659,7 @@ class CoupledRec(Rec):
     def __init__(self, params, peak_dir_orient):
         super().__init__(params, None)
 
-        # replace the progress_trigger function and add switch_peaks
-        self.iter_functions = self.iter_functions[0 : -1] + [self.progress_trigger, self.switch_peaks]
+        self.iter_functions = self.iter_functions + [self.switch_peaks]
 
         if "switch_peak_trigger" not in params:
             params["switch_peak_trigger"] = [0, 10]
@@ -661,10 +668,10 @@ class CoupledRec(Rec):
         if "mp_taper" not in params:
             params["mp_taper"] = 0.75
 
-        G_0 = 2*pi/self.params["lattice_size"]
-        self.peak_objs = []
-        for dir_ornt in peak_dir_orient:
-            self.peak_objs.append(Peak(dir_ornt, G_0))
+        self.peak_objs = [Peak(dir_ornt) for dir_ornt in peak_dir_orient]
+        # for dir_ornt in peak_dir_orient:
+        #     self.peak_objs.append(Peak(dir_ornt))
+
 
     def init_dev(self, device_id):
         self.dev = device_id
@@ -676,15 +683,15 @@ class CoupledRec(Rec):
                 print('may need to restart GUI')
                 return -1
 
+        G_0 = 2*pi/self.params["lattice_size"]
         for or_obj in self.peak_objs:
-            or_obj.set_data()
+            or_obj.set_data(G_0)
 
         self.num_peaks = len(self.peak_objs)
-        self.dims = devlib.dims(self.peak_objs[0].data)
-        print('data shape:', self.dims)
-        print('data sets:', self.num_peaks)
         self.pk = 0  # index in list of current peak being reconstructed
         self.data = self.peak_objs[self.pk].data
+        self.iter_data = self.data
+        self.dims = self.data.shape
 
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
@@ -722,7 +729,7 @@ class CoupledRec(Rec):
 
         for peak in self.peak_objs:
             self.to_working_image(peak)
-            devlib.save(peak.dir, self.ds_image)
+            peak.save_res(self.ds_image)
 
         errs = array('f', self.errs)
 
@@ -746,11 +753,12 @@ class CoupledRec(Rec):
     def to_shared_image(self):
         beta = self.proj_weight[self.iter]
         curr_peak = self.peak_objs[self.pk]
-        old_image = (devlib.dot(self.shared_image, curr_peak.g_vec) / curr_peak.gdotg)[:, :, :, None] * curr_peak.g_vec \
-                    + devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
+        old_image = (devlib.dot(self.shared_image, curr_peak.g_vec) / curr_peak.gdotg)[:, :, :, None] * \
+                    curr_peak.g_vec + devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
         new_image = (devlib.angle(self.ds_image) / curr_peak.gdotg)[:, :, :, None] * curr_peak.g_vec + \
                     devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat
         self.shared_image = self.shared_image + beta * (new_image - old_image)
+
 
     def to_working_image(self, peak_obj):
         phi = devlib.dot(self.shared_image, peak_obj.g_vec)
@@ -758,7 +766,6 @@ class CoupledRec(Rec):
         self.ds_image = rho * devlib.exp(1j*phi)
 
     def progress_trigger(self):
-        pk = self.params["orientations"][self.pk]
         ornt = self.peak_objs[self.pk].orientation
         print(f'|  iter {self.iter:>4}  '
               f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  '

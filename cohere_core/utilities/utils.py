@@ -80,6 +80,7 @@ def read_tif(filename):
         an array containing the data parsed from the file
     """
     ar = tf.imread(filename.replace(os.sep, '/')).transpose()
+    return ar
 
 
 def save_tif(arr, filename):
