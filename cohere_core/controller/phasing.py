@@ -608,7 +608,7 @@ class Rec:
 
 class Peak:
     """
-    Holds parameters related to peak
+    Holds parameters related to a peak.
     """
 
     def __init__(self, dir_ornt):
@@ -626,13 +626,6 @@ class Peak:
 
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
         self.data = devlib.fftshift(devlib.absolute(data))
-
-
-    def save_res(self, image):
-        save_dir = self.dir + '/results_phasing'
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        devlib.save(save_dir + '/image', image)
 
 
 class CoupledRec(Rec):
@@ -654,6 +647,7 @@ class CoupledRec(Rec):
         name of file containing data for each peak to be reconstructed
 
     """
+    __author__ = "Nick Porter"
     __all__ = []
 
     def __init__(self, params, peak_dir_orient):
@@ -669,8 +663,6 @@ class CoupledRec(Rec):
             params["mp_taper"] = 0.75
 
         self.peak_objs = [Peak(dir_ornt) for dir_ornt in peak_dir_orient]
-        # for dir_ornt in peak_dir_orient:
-        #     self.peak_objs.append(Peak(dir_ornt))
 
 
     def init_dev(self, device_id):
@@ -726,10 +718,6 @@ class CoupledRec(Rec):
         devlib.save(save_dir + "/shared_u2", self.shared_image[:, :, :, 2])
         devlib.save(save_dir + "/shared_u3", self.shared_image[:, :, :, 3])
         devlib.save(save_dir + '/support', self.support_obj.get_support())
-
-        for peak in self.peak_objs:
-            self.to_working_image(peak)
-            peak.save_res(self.ds_image)
 
         errs = array('f', self.errs)
 
