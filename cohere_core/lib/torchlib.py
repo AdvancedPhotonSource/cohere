@@ -245,6 +245,12 @@ class torchlib(cohlib):
     def conj(arr):
         return torch.conj(arr)
 
+    def cos(arr):
+        return torch.cos(arr)
+
+    def linspace(start, stop, num):
+        return torch.linspace(start, stop, num)
+
 # a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])
 # conv = torchlib.fftconvolve(a1,a2)
