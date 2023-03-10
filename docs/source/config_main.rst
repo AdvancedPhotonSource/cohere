@@ -20,7 +20,7 @@ Parameters
      experiment_id = "ab"
 
 - scan:
-| optional (but typically needed), a single number, a range, or combination of numbers and ranges separated by comma, defining scans that will be read and combined to create data file
+| optional (but typically needed), string type encapsulating a single number, a range, or combination of numbers and ranges separated by comma, defining scans that will be read and combined to create data file. This parameter should not be set when running multi peak case.
 | example:
 ::
 
@@ -47,3 +47,9 @@ Parameters
 
     converter_ver = 0
 
+- multipeak:
+| optional, boolean parameter indicating whether it is multi peak case. Defaults to False.
+| example:
+::
+
+    multipeak = True
