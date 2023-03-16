@@ -235,7 +235,7 @@ class Rec:
                     params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in range(ll_iter)]
             if 'lowpass_filter_range' in params:
                 det_range = params['lowpass_filter_range']
-                if type(det_range) ==int:
+                if type(det_range) == int:
                     det_range = [det_range, 1.0]
                     params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in range(ll_iter)]
             else:
@@ -310,67 +310,6 @@ class Rec:
                     ret = functions_dict[cmd[0]](*cmd[1:])
                 worker_qout.put(ret)
 
-    def init1(self, dir=None, gen=None):
-        if self.ds_image is not None:
-            first_run = False
-        elif dir is None or not os.path.isfile(dir + '/image.npy'):
-            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
-            first_run = True
-        else:
-            self.ds_image = devlib.load(dir + '/image.npy')
-            first_run = False
-
-        flow_items_list = []
-        for f in self.iter_functions:
-            flow_items_list.append(f.__name__)
-
-        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
-        if flow is None:
-            return -1
-
-        self.flow = []
-        (op_no, self.iter_no) = flow.shape
-        for i in range(self.iter_no):
-            for j in range(op_no):
-                if flow[j, i] == 1:
-                    self.flow.append(self.iter_functions[j])
-
-        self.aver = None
-        self.iter = -1
-        self.errs = []
-        self.gen = gen
-        self.prev_dir = dir
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
-        self.support_obj = Support(self.params, self.dims, dir)
-        if self.is_pc:
-            self.pc_obj = Pcdi(self.params, self.data, dir)
-
-        # for the fast GA the data needs to be saved, as it would be changed by each lr generation
-        # for non-fast GA the Rec object is created in each generation with the initial data
-        if self.saved_data is not None:
-            if self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
-            else:
-                self.data = self.saved_data
-        else:
-            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
-
-        if 'll_sigma' not in self.params or not first_run:
-            self.iter_data = self.data
-        else:
-            self.iter_data = self.data.copy()
-
-        if (first_run):
-            max_data = devlib.amax(self.data)
-            self.ds_image *= get_norm(self.ds_image) * max_data
-
-            # the line below are for testing to set the initial guess to support
-            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
-
-            self.ds_image *= self.support_obj.get_support()
-        return 0
-
 
     def init(self, dir=None, gen=None):
         if self.ds_image is not None:
@@ -382,9 +321,7 @@ class Rec:
             self.ds_image = devlib.load(dir + '/image.npy')
             first_run = False
 
-        self.flow_items_list = []
-        for f in self.iter_functions:
-            self.flow_items_list.append(f.__name__)
+        self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
         self.is_pc, flow = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
         if flow is None:
@@ -507,6 +444,10 @@ class Rec:
         self.iter = self.iter + 1
 
 
+    def aa(self):
+        print('aa', self.iter)
+
+
     def resolution_trigger(self):
         if 'll_dets' in self.params:
             sigmas = [dim * self.params['ll_dets'][self.iter] for dim in self.dims]
@@ -534,6 +475,7 @@ class Rec:
         self.rs_amplitudes = devlib.ifft(self.ds_image)
 
     def new_func_trigger(self):
+        self.params['new_param'] = 1
         print('in new_func_trigger, new_param', self.params['new_param'])
 
     def pc_trigger(self):

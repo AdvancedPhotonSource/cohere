@@ -5,9 +5,10 @@ algs = {'ER': ('er', 'modulus'),
         'HIO': ('hio', 'modulus'),
         'ERpc': ('er', 'pc_modulus'),
         'HIOpc': ('hio', 'pc_modulus'),
-        'SF' : ('new_alg', 'pc_modulus')
+        'SF' : ('new_alg', 'pc_modulus'),
         }
-
+trigs = {'SW' : 'shrink_wrap_trigger',
+          'TST' : 'new_func_trigger'}
 
 def get_algs():
     return algs
@@ -15,9 +16,13 @@ def get_algs():
 
 def get_alg_rows(s, pc_conf_start):
     seq = []
-    def parse_entry(ent):
+    accum_iter = 0
+
+    def parse_entry(ent, accum_iter):
         r_e = ent.split('*')
-        seq.append([int(r_e[0]), r_e[1]])
+        seq.append([int(r_e[0]), r_e[1], accum_iter])
+        accum_iter += int(r_e[0])
+        return accum_iter
 
     if pc_conf_start is None:  # no pc in this
         # this is kind of hackish, but will be replaced by sequence for each generation
@@ -50,34 +55,43 @@ def get_alg_rows(s, pc_conf_start):
             group.append(group_entry[:-1])
             for _ in range(repeat):
                 for group_entry in group:
-                    parse_entry(group_entry)
+                    accum_iter = parse_entry(group_entry, accum_iter)
             i += 1
         else:
-            parse_entry(entry)
+            accum_iter = parse_entry(entry, accum_iter)
             i += 1
     iter_no = sum([e[0] for e in seq])
     rows = {}
+    sub_rows = {}
     row = np.zeros(iter_no, dtype=int)
     fs = set([i for sub in algs.values() for i in sub])
+    sub_fs = trigs.values()
     for f in fs:
         rows[f] = row.copy()
+    for f in sub_fs:
+        sub_rows[f] = row.copy()
     i = 0
     pc_start = None
     for entry in seq:
         repeat = entry[0]
-        if entry[1] not in algs:
-            return 'undefined algorithm ' + entry[1]
-        row_keys = algs[entry[1]]
+        funs = entry[1].split('.')
+        if funs[0] not in algs:
+            return 'undefined algorithm ' + funs[0]
+        row_keys = algs[funs[0]]
         for row_key in row_keys:
             rows[row_key][i:i+repeat] = 1
             if 'pc' in row_key and pc_start is None:
                 pc_start = i
+        for row_key in funs[1 :]:
+            # set subtrigger to 1
+            sub_rows[trigs[row_key]][entry[2] : entry[0] + entry[2]] = 1
         i += repeat
-    return rows, iter_no, pc_start
+    return rows, sub_rows, iter_no, pc_start
 
 
-def trigger_row(trig, iter_no):
-    row = np.zeros(iter_no, dtype=int)
+def trigger_row(trig, iter_no, row=None):
+    if row is None:
+        row = np.zeros(iter_no, dtype=int)
     if len(trig) ==1:
         trig_iter = trig[0]
         if trig_iter < 0:
@@ -117,7 +131,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
     parsed_seq = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
     if type(parsed_seq) == str:
         return None, None
-    alg_rows, iter_no, pc_start = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
+    alg_rows, sub_trig_rows, iter_no, pc_start = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
 
     is_res = False
@@ -166,6 +180,25 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
             if 'switch_peak_trigger' in params:
                 flow_arr[i] = trigger_row(params['switch_peak_trigger'], iter_no)
                 flow_arr[i][-1] = 1
+
+        if flow_items_list[i] in sub_trig_rows.keys():
+            sub_trig_row = sub_trig_rows[flow_items_list[i]]
+            sw = list(np.where(np.roll(sub_trig_row, 1) != sub_trig_row)[0])
+            if sub_trig_row[0] == 1:
+                sw.insert(0, 0)
+            if sub_trig_row[-1] == 1:
+                sw.append(len(sub_trig_row) - 1)
+            sub_trig_row = sub_trig_row * 0
+            trigger = params[flow_items_list[i]]
+            for b, e in [sw[n:n+2] for n in range(0, len(sw), 2)]:
+                trigger[0] += b
+                if len(trigger) == 2:
+                    trigger.append(e)
+                elif len(trigger) == 3:
+                    trigger[2] = e
+                sub_trig_row = trigger_row(trigger, iter_no, sub_trig_row)
+            flow_arr[i] = sub_trig_row
+
 
 
     return pc_start is not None, flow_arr

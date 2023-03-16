@@ -171,8 +171,8 @@ def ver_config_rec(config_map):
         seq = []
         def parse_entry(ent):
             r_e = ent.split('*')
-            if r_e[1] not in algs:
-                return r_e[1] + ' is not a valid entry in algorithm_sequence parameter'
+            # if r_e[1] not in algs:
+            #     return r_e[1] + ' is not a valid entry in algorithm_sequence parameter'
             seq.append([int(r_e[0]), r_e[1]])
             return ''
 
@@ -315,7 +315,7 @@ def ver_config_rec(config_map):
             print (config_error)
             return (error_message)
         # check for supported characters
-        alg_seq_chars = list(string.ascii_lowercase) + list(string.ascii_uppercase) + list(string.digits) + ['*', '+', '(', ')', ' ']
+        alg_seq_chars = list(string.ascii_lowercase) + list(string.ascii_uppercase) + list(string.digits) + ['.','*', '+', '(', ')', ' ']
         if 0 in [c in alg_seq_chars for c in algorithm_sequence]:
             config_error = 1
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
