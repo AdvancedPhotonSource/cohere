@@ -7,8 +7,8 @@ algs = {'ER': ('er', 'modulus'),
         'HIOpc': ('hio', 'pc_modulus'),
         'SF' : ('new_alg', 'pc_modulus'),
         }
-trigs = {'SW' : 'shrink_wrap_trigger',
-          'TST' : 'new_func_trigger'}
+trigs = {'SW' : 'sw_trigger',
+          'TST' : 'tst_func_trigger'}
 
 def get_algs():
     return algs
@@ -69,7 +69,7 @@ def get_alg_rows(s, pc_conf_start):
     for f in fs:
         rows[f] = row.copy()
     for f in sub_fs:
-        sub_rows[f] = row.copy()
+        sub_rows[f] = []
     i = 0
     pc_start = None
     for entry in seq:
@@ -84,7 +84,7 @@ def get_alg_rows(s, pc_conf_start):
                 pc_start = i
         for row_key in funs[1 :]:
             # set subtrigger to 1
-            sub_rows[trigs[row_key]][entry[2] : entry[0] + entry[2]] = 1
+            sub_rows[trigs[row_key]].append((entry[2], entry[0] + entry[2]))
         i += repeat
     return rows, sub_rows, iter_no, pc_start
 
@@ -146,9 +146,9 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
         elif flow_items_list[i] == 'reset_resolution':
             if is_res:
                 flow_arr[i] = trigger_row([params['resolution_trigger'][-1],], iter_no)
-        elif flow_items_list[i] == 'shrink_wrap_trigger':
-            if 'shrink_wrap_trigger' in params:
-                flow_arr[i] = trigger_row(params['shrink_wrap_trigger'], iter_no)
+        elif flow_items_list[i] == 'sw_trigger':
+            if 'sw_trigger' in params:
+                flow_arr[i] = trigger_row(params['sw_trigger'], iter_no)
         elif flow_items_list[i] == 'phase_support_trigger':
             if first_run and 'phase_support_trigger' in params:
                 flow_arr[i] = trigger_row(params['phase_support_trigger'], iter_no)
@@ -182,23 +182,16 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                 flow_arr[i][-1] = 1
 
         if flow_items_list[i] in sub_trig_rows.keys():
-            sub_trig_row = sub_trig_rows[flow_items_list[i]]
-            sw = list(np.where(np.roll(sub_trig_row, 1) != sub_trig_row)[0])
-            if sub_trig_row[0] == 1:
-                sw.insert(0, 0)
-            if sub_trig_row[-1] == 1:
-                sw.append(len(sub_trig_row) - 1)
-            sub_trig_row = sub_trig_row * 0
-            trigger = params[flow_items_list[i]]
-            for b, e in [sw[n:n+2] for n in range(0, len(sw), 2)]:
-                trigger[0] += b
-                if len(trigger) == 2:
-                    trigger.append(e)
-                elif len(trigger) == 3:
-                    trigger[2] = e
-                sub_trig_row = trigger_row(trigger, iter_no, sub_trig_row)
-            flow_arr[i] = sub_trig_row
-
-
+            if len(sub_trig_rows[flow_items_list[i]]):
+                sub_trig_row = np.zeros(iter_no, dtype=int)
+                trigger = params[flow_items_list[i]]
+                for (b, e) in sub_trig_rows[flow_items_list[i]]:
+                    trigger[0] += b
+                    if len(trigger) == 2:
+                        trigger.append(e)
+                    elif len(trigger) == 3:
+                        trigger[2] = min(e, trigger[0] + trigger[2])
+                    sub_trig_row = trigger_row(trigger, iter_no, sub_trig_row)
+                flow_arr[i] = sub_trig_row
 
     return pc_start is not None, flow_arr

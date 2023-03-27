@@ -187,33 +187,33 @@ def set_ga_defaults(pars):
         ga_reconstructions.append(reconstructions)
     pars['ga_reconstructions'] = ga_reconstructions
 
-    if 'shrink_wrap_threshold' in pars:
-        shrink_wrap_threshold = pars['shrink_wrap_threshold']
+    if 'sw_threshold' in pars:
+        sw_threshold = pars['sw_threshold']
     else:
-        shrink_wrap_threshold = .1
-    if 'ga_shrink_wrap_thresholds' in pars:
-        ga_shrink_wrap_thresholds = pars['ga_shrink_wrap_thresholds']
-        if len(ga_shrink_wrap_thresholds) == 1:
-            ga_shrink_wrap_thresholds = ga_shrink_wrap_thresholds * pars['ga_generations']
-        elif len(ga_shrink_wrap_thresholds) < pars['ga_generations']:
-            ga_shrink_wrap_thresholds = ga_shrink_wrap_thresholds + [shrink_wrap_threshold] * (pars['ga_generations'] - len(ga_shrink_wrap_thresholds))
+        sw_threshold = .1
+    if 'ga_sw_thresholds' in pars:
+        ga_sw_thresholds = pars['ga_sw_thresholds']
+        if len(ga_sw_thresholds) == 1:
+            ga_sw_thresholds = ga_sw_thresholds * pars['ga_generations']
+        elif len(ga_sw_thresholds) < pars['ga_generations']:
+            ga_sw_thresholds = ga_sw_thresholds + [sw_threshold] * (pars['ga_generations'] - len(ga_sw_thresholds))
     else:
-        ga_shrink_wrap_thresholds = [shrink_wrap_threshold] * pars['ga_generations']
-    pars['ga_shrink_wrap_thresholds'] = ga_shrink_wrap_thresholds
+        ga_sw_thresholds = [sw_threshold] * pars['ga_generations']
+    pars['ga_sw_thresholds'] = ga_sw_thresholds
 
-    if 'shrink_wrap_gauss_sigma' in pars:
-        shrink_wrap_gauss_sigma = pars['shrink_wrap_gauss_sigma']
+    if 'sw_gauss_sigma' in pars:
+        sw_gauss_sigma = pars['sw_gauss_sigma']
     else:
-        shrink_wrap_gauss_sigma = .1
-    if 'ga_shrink_wrap_gauss_sigmas' in pars:
-        ga_shrink_wrap_gauss_sigmas = pars['ga_shrink_wrap_gauss_sigmas']
-        if len(ga_shrink_wrap_gauss_sigmas) == 1:
-            ga_shrink_wrap_gauss_sigmas = ga_shrink_wrap_gauss_sigmas * pars['ga_generations']
-        elif len(pars['ga_shrink_wrap_gauss_sigmas']) < pars['ga_generations']:
-            ga_shrink_wrap_gauss_sigmas = ga_shrink_wrap_gauss_sigmas + [shrink_wrap_gauss_sigma] * (pars['ga_generations'] - len(ga_shrink_wrap_gauss_sigmas))
+        sw_gauss_sigma = .1
+    if 'ga_sw_gauss_sigmas' in pars:
+        ga_sw_gauss_sigmas = pars['ga_sw_gauss_sigmas']
+        if len(ga_sw_gauss_sigmas) == 1:
+            ga_sw_gauss_sigmas = ga_sw_gauss_sigmas * pars['ga_generations']
+        elif len(pars['ga_sw_gauss_sigmas']) < pars['ga_generations']:
+            ga_sw_gauss_sigmas = ga_sw_gauss_sigmas + [sw_gauss_sigma] * (pars['ga_generations'] - len(ga_sw_gauss_sigmas))
     else:
-        ga_shrink_wrap_gauss_sigmas = [shrink_wrap_gauss_sigma] * pars['ga_generations']
-    pars['ga_shrink_wrap_gauss_sigmas'] = ga_shrink_wrap_gauss_sigmas
+        ga_sw_gauss_sigmas = [sw_gauss_sigma] * pars['ga_generations']
+    pars['ga_sw_gauss_sigmas'] = ga_sw_gauss_sigmas
 
     if 'ga_breed_modes' not in pars:
         pars['ga_breed_modes'] = ['sqrt_ab'] * pars['ga_generations']
@@ -225,8 +225,8 @@ def set_ga_defaults(pars):
             ga_breed_modes = ga_breed_modes + ['sqrt_ab'] * (pars['ga_generations'] - len(ga_breed_modes))
     pars['ga_breed_modes'] = ga_breed_modes
 
-    if 'ga_lowpass_filter_sigmas' in pars:
-        pars['low_resolution_generations'] = len(pars['ga_lowpass_filter_sigmas'])
+    if 'ga_lpf_sigmas' in pars:
+        pars['low_resolution_generations'] = len(pars['ga_lpf_sigmas'])
     else:
         pars['low_resolution_generations'] = 0
 

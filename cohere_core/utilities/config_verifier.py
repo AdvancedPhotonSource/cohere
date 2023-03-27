@@ -442,27 +442,27 @@ def ver_config_rec(config_map):
                 return (error_message)
 
         config_parameter = 'Gashrinkwrapthresholds'
-        if 'ga_shrink_wrap_thresholds' in config_map:
-            ga_shrink_wrap_thresholds = config_map['ga_shrink_wrap_thresholds']
-            if not ver_list_float('ga_shrink_wrap_thresholds', ga_shrink_wrap_thresholds):
+        if 'ga_sw_thresholds' in config_map:
+            ga_sw_thresholds = config_map['ga_sw_thresholds']
+            if not ver_list_float('ga_sw_thresholds', ga_sw_thresholds):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
         config_parameter = 'Gashrinkwrapgausssigmas'
-        if 'ga_shrink_wrap_gauss_sigmas' in config_map:
-            ga_shrink_wrap_gauss_sigmas = config_map['ga_shrink_wrap_gauss_sigmas']
-            if not ver_list_float('ga_shrink_wrap_gauss_sigmas', ga_shrink_wrap_gauss_sigmas):
+        if 'ga_sw_gauss_sigmas' in config_map:
+            ga_sw_gauss_sigmas = config_map['ga_sw_gauss_sigmas']
+            if not ver_list_float('ga_sw_gauss_sigmas', ga_sw_gauss_sigmas):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
         config_parameter = 'Galowpassfiltersigmas'
-        if 'ga_lowpass_filter_sigmas' in config_map:
-            ga_lowpass_filter_sigmas = config_map['ga_lowpass_filter_sigmas']
-            if not ver_list_float('ga_lowpass_filter_sigmas', ga_lowpass_filter_sigmas):
+        if 'ga_lpf_sigmas' in config_map:
+            ga_lpf_sigmas = config_map['ga_lpf_sigmas']
+            if not ver_list_float('ga_lpf_sigmas', ga_lpf_sigmas):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 return (error_message)
@@ -498,55 +498,55 @@ def ver_config_rec(config_map):
                 return (error_message)
 
     config_parameter = 'Shrinkwraptrigger'
-    if 'shrink_wrap_trigger' in config_map:
-        m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no)
+    if 'sw_trigger' in config_map:
+        m = verify_trigger(config_map['sw_trigger'], iter_no)
         if len(m) > 0:
             return(m)
-        if not ver_list_int('shrink_wrap_trigger', config_map['shrink_wrap_trigger']):
+        if not ver_list_int('sw_trigger', config_map['sw_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
 
         config_parameter = 'Shrinkwraptype'
-        if 'shrink_wrap_type' in config_map:
-            shrink_wrap_type = config_map['shrink_wrap_type']
-            if type(shrink_wrap_type) != str:
+        if 'sw_type' in config_map:
+            sw_type = config_map['sw_type']
+            if type(sw_type) != str:
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print (error_message)
                 return (error_message)
-            if shrink_wrap_type != "GAUSS":
+            if sw_type != "GAUSS":
                 config_error = 1
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print (error_message)
                 return (error_message)
 
         config_parameter = 'Shrinkwrapthreshold'
-        if 'shrink_wrap_threshold' in config_map:
-            shrink_wrap_threshold = config_map['shrink_wrap_threshold']
-            if type(shrink_wrap_threshold) != float:
+        if 'sw_threshold' in config_map:
+            sw_threshold = config_map['sw_threshold']
+            if type(sw_threshold) != float:
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
         config_parameter = 'Shrinkwrapgausssigma'
-        if 'shrink_wrap_gauss_sigma' in config_map:
-            shrink_wrap_gauss_sigma = config_map['shrink_wrap_gauss_sigma']
-            if type(shrink_wrap_gauss_sigma) != float and type(shrink_wrap_gauss_sigma) != int:
+        if 'sw_gauss_sigma' in config_map:
+            sw_gauss_sigma = config_map['sw_gauss_sigma']
+            if type(sw_gauss_sigma) != float and type(sw_gauss_sigma) != int:
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
     config_parameter = 'Phasesupporttrigger'
-    if 'phase_support_trigger' in config_map:
-        m = verify_trigger(config_map['phase_support_trigger'], iter_no)
+    if 'phm_trigger' in config_map:
+        m = verify_trigger(config_map['phm_trigger'], iter_no)
         print(m)
         if len(m) > 0:
             return(m)
-        if not ver_list_int('phase_support_trigger', config_map['phase_support_trigger']):
+        if not ver_list_int('phm_trigger', config_map['phm_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
@@ -628,29 +628,29 @@ def ver_config_rec(config_map):
             return (error_message)
 
     config_parameter = 'Resolutiontrigger'
-    if 'resolution_trigger' in config_map:
-        m = verify_trigger(config_map['resolution_trigger'], iter_no)
+    if 'lpf_trigger' in config_map:
+        m = verify_trigger(config_map['lpf_trigger'], iter_no)
         if len(m) > 0:
             return(m)
-        if not ver_list_int('resolution_trigger', config_map['resolution_trigger']):
+        if not ver_list_int('lpf_trigger', config_map['lpf_trigger']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
 
         config_parameter = 'Lowpassfilterswsigmarange'
-        if 'lowpass_filter_sw_sigma_range' in config_map:
-            lowpass_filter_sw_sigma_range = config_map['lowpass_filter_sw_sigma_range']
-            if not ver_list_float('lowpass_filter_sw_sigma_range', lowpass_filter_sw_sigma_range):
+        if 'lpf_sw_sigma_range' in config_map:
+            lpf_sw_sigma_range = config_map['lpf_sw_sigma_range']
+            if not ver_list_float('lpf_sw_sigma_range', lpf_sw_sigma_range):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
         config_parameter = 'Lowpassfilterrange'
-        if 'lowpass_filter_range' in config_map:
-            lowpass_filter_range = config_map['lowpass_filter_range']
-            if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
+        if 'lpf_range' in config_map:
+            lpf_range = config_map['lpf_range']
+            if not ver_list_float('lpf_range', lpf_range):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)

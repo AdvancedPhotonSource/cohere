@@ -120,7 +120,7 @@ class Support:
         # The sigma can change if resolution trigger is active. When it
         # changes the distribution has to be recalculated using the given sigma
         # At some iteration the low resolution become inactive, and the sigma
-        # is set to shrink_wrap_gauss_sigma. The prev_sigma is kept to check if sigma changed
+        # is set to sw_gauss_sigma. The prev_sigma is kept to check if sigma changed
         # and thus the distribution must be updated
         self.distribution = None
         self.prev_sigma = 0
@@ -155,10 +155,10 @@ class Rec:
     __all__ = []
     def __init__(self, params, data_file):
         self.iter_functions = [self.next,
-                          self.resolution_trigger,
+                          self.lpf_trigger,
                           self.reset_resolution,
-                          self.shrink_wrap_trigger,
-                          self.phase_support_trigger,
+                          self.sw_trigger,
+                          self.phm_trigger,
                           self.to_reciprocal_space,
                           self.new_func_trigger,
                           self.pc_trigger,
@@ -177,9 +177,9 @@ class Rec:
             params['init_guess'] = 'random'
         elif params['init_guess'] == 'AI_guess':
             if 'AI_threshold' not in params:
-                params['AI_threshold'] = params['shrink_wrap_threshold']
+                params['AI_threshold'] = params['sw_threshold']
             if 'AI_sigma' not in params:
-                params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
+                params['AI_sigma'] = params['sw_gauss_sigma']
         if 'reconstructions' not in params:
             params['reconstructions'] = 1
         if 'hio_beta' not in params:
@@ -188,14 +188,14 @@ class Rec:
             params['initial_support_area'] = (.5, .5, .5)
         if 'twin_trigger' in params and 'twin_halves' not in params:
             params['twin_halves'] = (0, 0)
-        if 'shrink_wrap_gauss_sigma' not in params:
-            params['shrink_wrap_gauss_sigma'] = 1.0
-        if 'shrink_wrap_threshold' not in params:
-            params['shrink_wrap_threshold'] = 0.1
-        if 'shrink_wrap_trigger' in params:
-            if 'shrink_wrap_type' not in params:
-                params['shrink_wrap_type'] = "GAUSS"
-        if 'phase_support_trigger' in params:
+        if 'sw_gauss_sigma' not in params:
+            params['sw_gauss_sigma'] = 1.0
+        if 'sw_threshold' not in params:
+            params['sw_threshold'] = 0.1
+        if 'sw_trigger' in params:
+            if 'sw_type' not in params:
+                params['sw_type'] = "GAUSS"
+        if 'phm_trigger' in params:
             if 'phm_phase_min' not in params:
                 params['phm_phase_min'] = -1.57
             if 'phm_phase_max' not in params:
@@ -214,27 +214,27 @@ class Rec:
             self.is_pcdi = False
         self.ll_sigmas = None
         self.ll_dets = None
-        if 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
+        if 'lpf_trigger' in params and len(params['lpf_trigger']) == 3:
             # linespacing the sigmas and dets need a number of iterations
             # The trigger should have three elements, the last one
             # meaning the last iteration when the low resolution is
             # applied. If the trigger does not have the limit,
             # it is misconfigured, and the trigger will not be
             # active
-            ll_iter = params['resolution_trigger'][2]
-            if 'shrink_wrap_trigger' not in params and 'lowpass_filter_sw_sigma_range' in params:
+            ll_iter = params['lpf_trigger'][2]
+            if 'sw_trigger' not in params and 'lpf_sw_sigma_range' in params:
                 # The sigmas are used to find support, if the shrink wrap
                 # trigger is not active, it wil not be used
-                sigma_range = params['lowpass_filter_sw_sigma_range']
+                sigma_range = params['lpf_sw_sigma_range']
                 if len(sigma_range) > 0:
                     first_sigma = sigma_range[0]
                     if len(sigma_range) == 1:
-                        last_sigma = params['shrink_wrap_gauss_sigma']
+                        last_sigma = params['sw_gauss_sigma']
                     else:
                         last_sigma = sigma_range[1]
                     params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in range(ll_iter)]
-            if 'lowpass_filter_range' in params:
-                det_range = params['lowpass_filter_range']
+            if 'lpf_range' in params:
+                det_range = params['lpf_range']
                 if type(det_range) == int:
                     det_range = [det_range, 1.0]
                     params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in range(ll_iter)]
@@ -339,7 +339,7 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
+        self.sigma = self.params['sw_gauss_sigma']
         self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pc:
             self.pc_obj = Pcdi(self.params, self.data, dir)
@@ -348,12 +348,12 @@ class Rec:
         # for non-fast GA the Rec object is created in each generation with the initial data
         if self.saved_data is not None:
             if self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lpf_sigmas'][self.gen])
             else:
                 self.data = self.saved_data
         else:
             if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+                self.data = devlib.gaussian_filter(self.data, self.params['ga_lpf_sigmas'][self.gen])
 
         if 'll_sigma' not in self.params or not first_run:
             self.iter_data = self.data
@@ -379,8 +379,8 @@ class Rec:
 
         if breed_mode != 'none':
             self.ds_image = dvut.breed(breed_mode, alpha_dir, self.ds_image)
-            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_shrink_wrap_thresholds'][self.gen],
-                                                       self.params['ga_shrink_wrap_gauss_sigmas'][self.gen])
+            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_sw_thresholds'][self.gen],
+                                                       self.params['ga_sw_gauss_sigmas'][self.gen])
         return 0
 
 
@@ -448,7 +448,7 @@ class Rec:
         print('aa', self.iter)
 
 
-    def resolution_trigger(self):
+    def lpf_trigger(self):
         if 'll_dets' in self.params:
             sigmas = [dim * self.params['ll_dets'][self.iter] for dim in self.dims]
             distribution = devlib.gaussian(self.dims, sigmas)
@@ -463,12 +463,12 @@ class Rec:
 
     def reset_resolution(self):
         self.iter_data = self.data
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
+        self.sigma = self.params['sw_gauss_sigma']
 
-    def shrink_wrap_trigger(self):
-        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['shrink_wrap_threshold'])
+    def sw_trigger(self):
+        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['sw_threshold'])
 
-    def phase_support_trigger(self):
+    def phm_trigger(self):
         self.support_obj.update_phase(self.ds_image)
 
     def to_reciprocal_space(self):
@@ -726,7 +726,7 @@ def reconstruction(datafile, **kwargs):
 
     example of the simplest kwargs parameters:
         - algorithm_sequence ='3*(20*ER+180*HIO)+20*ER'
-        - shrink_wrap_trigger = [1, 1]
+        - sw_trigger = [1, 1]
         - twin_trigger = [2]
         - progress_trigger = [0, 20]
 
@@ -751,17 +751,17 @@ def reconstruction(datafile, **kwargs):
              example: [2]. Defines at which iteration to cut half of the array (i.e. multiply by 0s)
         twin_halves : list
             defines which half of the array is zeroed out in x and y dimensions. If 0, the first half in that dimension is zeroed out, otherwise, the second half.
-        shrink_wrap_trigger : list
+        sw_trigger : list
             example: [1, 1]. Defines when to update support array using the parameters below.
-        shrink_wrap_type : str
+        sw_type : str
             supporting "GAUSS" only. Defines which algorithm to use for shrink wrap.
-        shrink_wrap_threshold : float
+        sw_threshold : float
             only point with relative intensity greater than the threshold are selected
-        shrink_wrap_gauss_sigma : float
+        sw_gauss_sigma : float
             used to calculate the Gaussian filter
         initial_support_area : list
             If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support will be set to 1s to this dimensions centered.
-        phase_support_trigger : list
+        phm_trigger : list
             defines when to update support array using the parameters below by applaying phase constrain.
         phm_phase_min : float
             point with phase below this value will be removed from support area
@@ -775,11 +775,11 @@ def reconstruction(datafile, **kwargs):
             number of iterations used in Lucy algorithm
         pc_LUCY_kernel : list
             coherence kernel area.
-        resolution_trigger : list
+        lpf_trigger : list
             defines when to apply low resolution filter using the parameters below.
-        lowpass_filter_sw_sigma_range : list
-            used when applying low resolution to replace support sigma. The sigmas are linespaced for low resolution iterations from first value to last. If only one number given, the last sigma will default to shrink_wrap_gauss_sigma.
-        lowpass_filter_range : list
+        lpf_sw_sigma_range : list
+            used when applying low resolution to replace support sigma. The sigmas are linespaced for low resolution iterations from first value to last. If only one number given, the last sigma will default to sw_gauss_sigma.
+        lpf_range : list
             used when applying low resolution data filter while iterating. The det values are linespaced for low resolution iterations from first value to last. The filter is gauss with sigma of linespaced det. If only one number given, the last det will default to 1.
         average_trigger : list
             defines when to apply averaging. Negative start means it is offset from the last iteration.
