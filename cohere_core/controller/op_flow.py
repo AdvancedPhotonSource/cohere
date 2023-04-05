@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 
 algs = {'ER': ('er', 'modulus'),
@@ -8,7 +9,8 @@ algs = {'ER': ('er', 'modulus'),
         'SF' : ('new_alg', 'pc_modulus'),
         }
 trigs = {'SW' : 'sw_trigger',
-          'TST' : 'tst_func_trigger'}
+         'PHM' : 'phm_trigger',
+         'LPF' : 'lpf_trigger'}
 
 def get_algs():
     return algs
@@ -36,7 +38,7 @@ def get_alg_rows(s, pc_conf_start):
         if s == 'HIO':
             s = 'HIOpc'
 
-    s = s.replace(' ','')
+    s = s.replace(' ', '')
     entries = s.split('+')
     i = 0
     while i < len(entries):
@@ -82,9 +84,11 @@ def get_alg_rows(s, pc_conf_start):
             rows[row_key][i:i+repeat] = 1
             if 'pc' in row_key and pc_start is None:
                 pc_start = i
-        for row_key in funs[1 :]:
-            # set subtrigger to 1
-            sub_rows[trigs[row_key]].append((entry[2], entry[0] + entry[2]))
+        for row_key in funs[1:]:
+            match = re.match(r"([A-Z]+)([0-9]+)", row_key, re.I)
+            if match:
+                (feature, idx) = match.groups(0)
+                sub_rows[trigs[feature]].append((entry[2], entry[0] + entry[2], idx))
         i += repeat
     return rows, sub_rows, iter_no, pc_start
 
@@ -134,58 +138,72 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
     alg_rows, sub_trig_rows, iter_no, pc_start = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
 
+    sub_feats = {}
     is_res = False
+    # special case; during lowpass filter a lpf shrink wrap is applied, and shrink wrap suppressed
+    apply_sw_row = np.ones(iter_no, dtype=int)
     for i in range(len(flow_items_list)):
-        if flow_items_list[i] == 'next' or flow_items_list[i] == 'to_reciprocal_space' or flow_items_list[
-            i] == 'to_direct_space':
+        flow_item = flow_items_list[i]
+        if flow_item == 'next' or flow_item == 'to_reciprocal_space' or flow_item == 'to_direct_space':
             flow_arr[i, :] = 1
-        elif flow_items_list[i] == 'resolution_trigger':
-            if first_run and 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
-                flow_arr[i] = trigger_row(params['resolution_trigger'], iter_no)
+        elif flow_item == 'lpf_trigger':
+            if first_run and 'lpf_trigger' in params and len(params['lpf_trigger']) == 3:
+                flow_arr[i] = trigger_row(params['lpf_trigger'], iter_no)
+                apply_sw_row[params['lpf_trigger'][0]:params['lpf_trigger'][2]] = 0
                 is_res = True
-        elif flow_items_list[i] == 'reset_resolution':
+        elif flow_item == 'reset_resolution':
             if is_res:
-                flow_arr[i] = trigger_row([params['resolution_trigger'][-1],], iter_no)
-        elif flow_items_list[i] == 'sw_trigger':
+                flow_arr[i] = trigger_row([params['lpf_trigger'][-1],], iter_no)
+        elif flow_item == 'sw_trigger':
             if 'sw_trigger' in params:
-                flow_arr[i] = trigger_row(params['sw_trigger'], iter_no)
-        elif flow_items_list[i] == 'phase_support_trigger':
-            if first_run and 'phase_support_trigger' in params:
-                flow_arr[i] = trigger_row(params['phase_support_trigger'], iter_no)
-        elif flow_items_list[i] == 'new_func_trigger':
+                flow_arr[i] = trigger_row(params['sw_trigger'], iter_no) * apply_sw_row
+        elif flow_item == 'phm_trigger':
+            if first_run and 'phm_trigger' in params:
+                print('first run and ph')
+                flow_arr[i] = trigger_row(params['phm_trigger'], iter_no)
+        elif flow_item == 'new_func_trigger':
             if 'new_func_trigger' in [algs]:
                 flow_arr[i] = trigger_row(params['new_func_trigger'], iter_no)
-        elif flow_items_list[i] == 'pc_trigger':
+        elif flow_item == 'pc_trigger':
             if pc_start is not None:
                 pc_interval = params['pc_interval']
                 pc_trigger = [pc_start, pc_interval]
                 flow_arr[i] = trigger_row(pc_trigger, iter_no)
                 pc_row = i
-        elif flow_items_list[i] == 'set_prev_pc_trigger':
+        elif flow_item == 'set_prev_pc_trigger':
             if pc_start is not None:
                 flow_arr[i, : -1] = flow_arr[pc_row, 1:]
-        elif flow_items_list[i] in alg_rows.keys():
-            flow_arr[i] = alg_rows[flow_items_list[i]]
-        elif flow_items_list[i] == 'twin_trigger':
+        elif flow_item in alg_rows.keys():
+            flow_arr[i] = alg_rows[flow_item]
+        elif flow_item == 'twin_trigger':
             if first_run and 'twin_trigger' in params:
                 flow_arr[i] = trigger_row(params['twin_trigger'], iter_no)
-        elif flow_items_list[i] == 'average_trigger':
+        elif flow_item == 'average_trigger':
             if 'average_trigger' in params and curr_gen is not None and curr_gen == params['ga_generations'] -1:
                 flow_arr[i] = trigger_row(params['average_trigger'], iter_no)
-        elif flow_items_list[i] == 'progress_trigger':
+        elif flow_item == 'progress_trigger':
             if 'progress_trigger' in params:
                 flow_arr[i] = trigger_row(params['progress_trigger'], iter_no)
                 flow_arr[i][-1] = 1
-        elif flow_items_list[i] == 'switch_peaks':
+        elif flow_item == 'switch_peaks':
             if 'switch_peak_trigger' in params:
                 flow_arr[i] = trigger_row(params['switch_peak_trigger'], iter_no)
                 flow_arr[i][-1] = 1
 
-        if flow_items_list[i] in sub_trig_rows.keys():
-            if len(sub_trig_rows[flow_items_list[i]]):
+        if flow_item in sub_trig_rows.keys():
+            insert_sub_idx = flow_item.rfind('_')
+            feature = flow_item[0:insert_sub_idx]
+            if len(sub_trig_rows[flow_item]):
                 sub_trig_row = np.zeros(iter_no, dtype=int)
-                trigger = params[flow_items_list[i]]
-                for (b, e) in sub_trig_rows[flow_items_list[i]]:
+                sub_feats_row = np.zeros(iter_no, dtype=int)
+                for (b, e, idx) in sub_trig_rows[flow_item]:
+                    # find the sub-feature by inserting index after the first word
+                    sub_item = flow_item[0:insert_sub_idx] + idx + flow_item[insert_sub_idx:]
+                    sub_feats_row[b:e] = int(idx)
+                    # special case for lowpass filter feature that suppresses shrink wrap
+                    if flow_item == 'lpf_trigger':
+                        apply_sw_row[b:e] = 0
+                    trigger = params[sub_item].copy()
                     trigger[0] += b
                     if len(trigger) == 2:
                         trigger.append(e)
@@ -193,5 +211,10 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                         trigger[2] = min(e, trigger[0] + trigger[2])
                     sub_trig_row = trigger_row(trigger, iter_no, sub_trig_row)
                 flow_arr[i] = sub_trig_row
+                sub_feats_row = sub_feats_row * sub_trig_row
+                # suppress the shrink wrap during lowpass filtering
+                if flow_item == 'sw_trigger':
+                    sub_feats_row *= apply_sw_row
+                sub_feats[feature] = (sub_feats_row, sub_trig_rows[flow_item])
 
-    return pc_start is not None, flow_arr
+    return pc_start is not None, flow_arr, sub_feats
