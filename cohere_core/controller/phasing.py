@@ -100,10 +100,8 @@ class Pcdi:
 
 
 class Support:
-    def __init__(self, params, dims, dir=None):
-        self.params = params
-        self.dims = dims
-
+    def __init__(self, params, dims, sub_rows_trigs, dir=None):
+        # create or get initial support
         if dir is None or not os.path.isfile(dir + '/support.npy'):
             initial_support_area = params['initial_support_area']
             init_support = []
@@ -113,31 +111,256 @@ class Support:
                 else:
                     init_support.append(int(initial_support_area[i] * dims[i]))
             center = devlib.full(init_support, 1)
-            self.support = dvut.pad_around(center, self.dims, 0)
+            self.support = dvut.pad_around(center, dims, 0)
         else:
             self.support = devlib.load(dir + '/support.npy')
 
-        # The sigma can change if resolution trigger is active. When it
-        # changes the distribution has to be recalculated using the given sigma
-        # At some iteration the low resolution become inactive, and the sigma
-        # is set to sw_gauss_sigma. The prev_sigma is kept to check if sigma changed
-        # and thus the distribution must be updated
-        self.distribution = None
-        self.prev_sigma = 0
+        self.objs = {}
+        self.f = {}
+        self.create_objs(sub_rows_trigs, params)
+
+    class GaussSW:
+        def __init__(self, gauss_sigma, threshold):
+            self.gauss_sigma = gauss_sigma
+            self.threshold = threshold
+
+        def update_amp(self, ds_image):
+            print('in update_amp, sigma', self.gauss_sigma)
+            return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
+
+    class PhasePHM:
+        def __init__(self, phm_phase_min, phm_phase_max):
+            self.phm_phase_min = phm_phase_min
+            self.phm_phase_max = phm_phase_max
+
+        def update_phase(self, ds_image):
+            phase = devlib.angle(ds_image)
+            print('in update_phase, ph_min', self.phm_phase_min)
+            return (phase > self.phm_phase_min) & (phase < self.phm_phase_max)
+
+    class GaussLPF:
+        def __init__(self, sigma_range, iter_range, threshold):
+            self.threshold = threshold
+            self.iter_offset = iter_range[0]
+            self.sigmas = [(sigma_range[1] - sigma_range[0]) / (iter_range[1] - iter_range[0]) *
+                           (iter - self.iter_offset) + sigma_range[0]
+                           for iter in range(iter_range[0], iter_range[1])]
+
+        def apply_low_filter(self, ds_image, iter):
+            sigma = self.sigmas[iter - self.iter_offset]
+            print('in apply_low_filter, sigma', sigma)
+            return dvut.shrink_wrap(ds_image, self.threshold, sigma)
+
+    def create_objs(self, sub_rows_trigs, params):
+        def create_sw_obj(sub, params):
+            # set the defaults here
+            if sub + '_type' not in params:
+                type = 'GAUSS'
+            else:
+                type = params[sub + '_type']
+            if type == 'GAUSS':
+                if sub + '_gauss_sigma' not in params:
+                    sigma = 1.0
+                else:
+                    sigma = params[sub + '_gauss_sigma']
+                if sub + '_threshold' not in params:
+                    threshold = 0.1
+                else:
+                    threshold = params[sub + '_threshold']
+                return self.GaussSW(sigma, threshold)
+
+        def create_phm_obj(sub, params):
+            # set the defaults here
+            if sub + '_phase_min' not in params:
+                phase_min = -1.57
+            else:
+                phase_min = params[sub + '_phase_min']
+            if sub + '_phase_max' not in params:
+                phase_max = 1.57
+            else:
+                phase_max = params[sub + '_phase_max']
+            return self.PhasePHM(phase_min, phase_max)
+
+        def create_lpf_obj(sub, params, iter_info=None):
+            # in case of a all_iteration configuration the lowpass filter
+            # iteration can be read from lpf_trigger
+            if iter_info is None:
+                iter_range = (params[sub + '_trigger'][0], params[sub + '_trigger'][2])
+            # find iterations range from trigs, which is list of tuples
+            # holding beginning iter, ending iter, and index for every sub
+            else:
+                (idx, trigs) = iter_info
+                i = [int(t[2]) for t in trigs].index(idx)
+                iter_range = (trigs[i][0], trigs[i][1])
+            filter_range = params[sub + '_range']
+            if len(filter_range) == 1:
+                filter_range.append(1.0)
+            sigma_range = [1 / x for x in filter_range]
+            if sub + '_threshold' in params:
+                threshold = params[sub + '_threshold']
+            else:
+                threshold = .1
+            return self.GaussLPF(sigma_range, iter_range, threshold)
+
+        feats = {'sw':(self.update_amp_obj, self.update_amp_seq, create_sw_obj),
+                 'phm':(self.update_ph_obj, self.update_ph_seq, create_phm_obj),
+                 'lpf':(self.update_lpf_obj, self.update_lpf_seq, create_lpf_obj)}
+
+        for key, funs in feats.items():
+            if key in sub_rows_trigs.keys():
+                row = sub_rows_trigs[key][0]
+                idxs = set(row.tolist())
+                idxs.remove(0)
+                sub_objs = {}
+                for idx in idxs:
+                    sub = key + str(idx)
+                    if key == 'lpf':
+                        # special case for lowpass filter; need info about iterations
+                        sub_objs[idx] = funs[2](sub, params, (idx, sub_rows_trigs[key][1]))
+                    else:
+                        sub_objs[idx] = funs[2](sub, params)
+                trigs = [i for i in row.tolist() if i != 0]
+                # the operation of creating object might fail
+                # if conditions are not met, ex: the sw_type is not supported
+                # This should be already verified by a verifier, so no checking here
+                self.objs[key] = [sub_objs[idx] for idx in trigs]
+                self.f[key] = funs[1]
+            else:
+                if key + '_trigger' in params:
+                    self.objs[key] = funs[2](key, params)
+                    self.f[key] = funs[0]
 
     def get_support(self):
         return self.support
 
-    def update_amp(self, ds_image, sigma, threshold):
-        self.support = dvut.shrink_wrap(ds_image, threshold, sigma)
+    def update_amp_obj(self, ds_image):
+        self.support = self.objs['sw'].update_amp(ds_image)
+
+    def update_amp_seq(self, ds_image):
+        sub_obj = self.objs['sw'].pop(0)
+        self.support = sub_obj.update_amp(ds_image)
+
+    def update_amp(self, ds_image):
+        # the f is either update_amp_seq function or update_amp_seq
+        # The f is set in constructor depending on whether the trigger
+        # was defined for the entire span of iterations or multiple
+        # subtriggers were defined in algorithm sequence
+        self.f['sw'](ds_image)
+
+    def update_ph_obj(self, ds_image):
+        self.support *= self.objs['phm'].update_phase(ds_image)
+
+    def update_ph_seq(self, ds_image):
+        sub_obj = self.objs['phm'].pop(0)
+        self.support *= sub_obj.update_phase(ds_image)
 
     def update_phase(self, ds_image):
-        phase = devlib.angle(ds_image)
-        phase_condition = (phase > self.params['phm_phase_min']) & (phase < self.params['phm_phase_max'])
-        self.support *= phase_condition
+        # the f is either update_ph_seq function or update_ph_seq
+        # The f is set in constructor depending on whether the trigger
+        # was defined for the entire span of iterations or multiple
+        # subtriggers were defined in algorithm sequence
+        self.f['phm'](ds_image)
+
+    def update_lpf_obj(self, ds_image, iter):
+        self.support = self.objs['lpf'].apply_lowpass_filter(ds_image, iter)
+
+    def update_lpf_seq(self, ds_image, iter):
+        sub_obj = self.objs['lpf'].pop(0)
+        self.support = sub_obj.apply_lowpass_filter(ds_image, iter)
+
+    def apply_lowpass_filter(self, ds_image, iter):
+        # the f is either update_amp_seq function or update_amp_seq
+        # The f is set in constructor depending on whether the trigger
+        # was defined for the entire span of iterations or multiple
+        # subtriggers were defined in algorithm sequence
+        self.f['lpf'](ds_image, iter)
 
     def flip(self):
         self.support = devlib.flip(self.support)
+
+
+class LowPassFilter:
+    def __init__(self, params, sub_rows_trigs):
+        self.objs = {}
+        self.f = {}
+        self.create_objs(sub_rows_trigs, params)
+
+    class Filter:
+        def __init__(self, filter_range, iter_range):
+            self.iter_offset = iter_range[0]
+            self.filter_sigmas = [(filter_range[1] - filter_range[0]) / (iter_range[1] - iter_range[0]) *
+                                  (iter - self.iter_offset) + filter_range[0]
+                                  for iter in range(iter_range[0], iter_range[1])]
+
+        def apply_lowpass_filter(self, data, iter):
+            dims = data.shape
+            filter_sigma = self.filter_sigmas[iter - self.iter_offset]
+            print('in apply_low_filter, filter_sigma', filter_sigma)
+            sigmas = [dim * filter_sigma for dim in dims]
+            distribution = devlib.gaussian(dims, sigmas)
+            max_el = devlib.amax(distribution)
+            distribution = distribution / max_el
+
+            # data_shifted = devlib.fftshift(data)
+            # filtered = data_shifted * distribution
+            # return devlib.fftshift(filtered)
+            return devlib.fftshift(distribution)
+
+
+    def create_objs(self, sub_rows_trigs, params):
+        def create_lpf_obj(sub, params, iter_info=None):
+            # in case of all_iteration configuration the lowpass filter
+            # iteration can be read from lpf_trigger
+            if iter_info is None:
+                iter_range = (params[sub + '_trigger'][0], params[sub + '_trigger'][2])
+            # find iterations range from trigs, which is list of tuples
+            # holding beginning iter, ending iter, and index for every sub
+            else:
+                (idx, trigs) = iter_info
+                i = [int(t[2]) for t in trigs].index(idx)
+                iter_range = (trigs[i][0], trigs[i][1])
+            filter_range = params[sub + '_range']
+            if len(filter_range) == 1:
+                filter_range.append(1.0)
+
+            return self.Filter(filter_range, iter_range)
+
+
+        feats = { 'lpf':(self.update_lpf_obj, self.update_lpf_seq, create_lpf_obj)}
+
+        for key, funs in feats.items():
+            if key in sub_rows_trigs.keys():
+                row = sub_rows_trigs[key][0]
+                idxs = set(row.tolist())
+                idxs.remove(0)
+                sub_objs = {}
+                for idx in idxs:
+                    sub = key + str(idx)
+                    sub_objs[idx] = funs[2](sub, params, (idx, sub_rows_trigs[key][1]))
+                trigs = [i for i in row.tolist() if i != 0]
+                # the operation of creating object might fail
+                # if conditions are not met, ex: the sw_type is not supported
+                # This should be already verified by a verifier, so no checking here
+                self.objs[key] = [sub_objs[idx] for idx in trigs]
+                self.f[key] = funs[1]
+            else:
+                if key + '_trigger' in params:
+                    self.objs[key] = funs[2](key, params)
+                    self.f[key] = funs[0]
+
+    def update_lpf_obj(self, data, iter):
+        return self.objs['lpf'].apply_lowpass_filter(data, iter)
+
+    def update_lpf_seq(self, data, iter):
+        sub_obj = self.objs['lpf'].pop(0)
+        return sub_obj.apply_lowpass_filter(data, iter)
+
+    def apply_lowpass_filter(self, data, iter):
+        # the f is either update_amp_seq function or update_amp_seq
+        # The f is set in constructor depending on whether the trigger
+        # was defined for the entire span of iterations or multiple
+        # subtriggers were defined in algorithm sequence
+        return self.f['lpf'](data, iter)
 
 
 class Rec:
@@ -188,18 +411,6 @@ class Rec:
             params['initial_support_area'] = (.5, .5, .5)
         if 'twin_trigger' in params and 'twin_halves' not in params:
             params['twin_halves'] = (0, 0)
-        if 'sw_gauss_sigma' not in params:
-            params['sw_gauss_sigma'] = 1.0
-        if 'sw_threshold' not in params:
-            params['sw_threshold'] = 0.1
-        if 'sw_trigger' in params:
-            if 'sw_type' not in params:
-                params['sw_type'] = "GAUSS"
-        if 'phm_trigger' in params:
-            if 'phm_phase_min' not in params:
-                params['phm_phase_min'] = -1.57
-            if 'phm_phase_max' not in params:
-                params['phm_phase_max'] = 1.57
         if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
             self.is_pcdi = True
             if 'pc_type' not in params:
@@ -212,34 +423,6 @@ class Rec:
                 params['pc_LUCY_kernel'] = (16, 16, 16)
         else:
             self.is_pcdi = False
-        self.ll_sigmas = None
-        self.ll_dets = None
-        if 'lpf_trigger' in params and len(params['lpf_trigger']) == 3:
-            # linespacing the sigmas and dets need a number of iterations
-            # The trigger should have three elements, the last one
-            # meaning the last iteration when the low resolution is
-            # applied. If the trigger does not have the limit,
-            # it is misconfigured, and the trigger will not be
-            # active
-            ll_iter = params['lpf_trigger'][2]
-            if 'sw_trigger' not in params and 'lpf_sw_sigma_range' in params:
-                # The sigmas are used to find support, if the shrink wrap
-                # trigger is not active, it wil not be used
-                sigma_range = params['lpf_sw_sigma_range']
-                if len(sigma_range) > 0:
-                    first_sigma = sigma_range[0]
-                    if len(sigma_range) == 1:
-                        last_sigma = params['sw_gauss_sigma']
-                    else:
-                        last_sigma = sigma_range[1]
-                    params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in range(ll_iter)]
-            if 'lpf_range' in params:
-                det_range = params['lpf_range']
-                if type(det_range) == int:
-                    det_range = [det_range, 1.0]
-                    params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in range(ll_iter)]
-            else:
-                params['ll_dets'] = None
         # finished setting defaults
         self.params = params
         self.data_file = data_file
@@ -323,7 +506,7 @@ class Rec:
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
-        self.is_pc, flow = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
+        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
         if flow is None:
             return -1
 
@@ -339,10 +522,11 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
-        self.sigma = self.params['sw_gauss_sigma']
-        self.support_obj = Support(self.params, self.dims, dir)
+        self.support_obj = Support(self.params, self.dims, feats, dir)
         if self.is_pc:
             self.pc_obj = Pcdi(self.params, self.data, dir)
+        # create the object even if the feature inactive, it will be empty
+        self.lowpass_filter_obj = LowPassFilter(self.params, feats)
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -355,7 +539,7 @@ class Rec:
             if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
                 self.data = devlib.gaussian_filter(self.data, self.params['ga_lpf_sigmas'][self.gen])
 
-        if 'll_sigma' not in self.params or not first_run:
+        if 'lpf_range' not in self.params or not first_run:
             self.iter_data = self.data
         else:
             self.iter_data = self.data.copy()
@@ -449,26 +633,16 @@ class Rec:
 
 
     def lpf_trigger(self):
-        if 'll_dets' in self.params:
-            sigmas = [dim * self.params['ll_dets'][self.iter] for dim in self.dims]
-            distribution = devlib.gaussian(self.dims, sigmas)
-            max_el = devlib.amax(distribution)
-            distribution = distribution / max_el
-            data_shifted = devlib.fftshift(self.data)
-            masked = data_shifted * distribution
-            self.iter_data = devlib.fftshift(masked)
-
-        if 'll_sigmas' in self.params:
-            self.sigma = self.params['ll_sigmas'][self.iter]
+        self.iter_data *= self.lowpass_filter_obj.apply_lowpass_filter(self.data, self.iter)
 
     def reset_resolution(self):
         self.iter_data = self.data
-        self.sigma = self.params['sw_gauss_sigma']
 
     def sw_trigger(self):
-        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['sw_threshold'])
+        self.support_obj.update_amp(self.ds_image)
 
     def phm_trigger(self):
+        print('phase trig')
         self.support_obj.update_phase(self.ds_image)
 
     def to_reciprocal_space(self):
@@ -811,7 +985,6 @@ def reconstruction(datafile, **kwargs):
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
-        print('np')
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
     else:
         print('supporting cp and np processing')
