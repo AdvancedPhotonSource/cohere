@@ -292,8 +292,7 @@ class LowPassFilter:
                                   (iter - self.iter_offset) + filter_range[0]
                                   for iter in range(iter_range[0], iter_range[1])]
 
-        def apply_lowpass_filter(self, data, iter):
-            dims = data.shape
+        def apply_lowpass_filter(self, dims, iter):
             filter_sigma = self.filter_sigmas[iter - self.iter_offset]
             print('in apply_low_filter, filter_sigma', filter_sigma)
             sigmas = [dim * filter_sigma for dim in dims]
@@ -348,19 +347,19 @@ class LowPassFilter:
                     self.objs[key] = funs[2](key, params)
                     self.f[key] = funs[0]
 
-    def update_lpf_obj(self, data, iter):
-        return self.objs['lpf'].apply_lowpass_filter(data, iter)
+    def update_lpf_obj(self, dims, iter):
+        return self.objs['lpf'].apply_lowpass_filter(dims, iter)
 
-    def update_lpf_seq(self, data, iter):
+    def update_lpf_seq(self, dims, iter):
         sub_obj = self.objs['lpf'].pop(0)
-        return sub_obj.apply_lowpass_filter(data, iter)
+        return sub_obj.apply_lowpass_filter(dims, iter)
 
-    def apply_lowpass_filter(self, data, iter):
+    def apply_lowpass_filter(self, dims, iter):
         # the f is either update_amp_seq function or update_amp_seq
         # The f is set in constructor depending on whether the trigger
         # was defined for the entire span of iterations or multiple
         # subtriggers were defined in algorithm sequence
-        return self.f['lpf'](data, iter)
+        return self.f['lpf'](dims, iter)
 
 
 class Rec:
@@ -633,7 +632,7 @@ class Rec:
 
 
     def lpf_trigger(self):
-        self.iter_data *= self.lowpass_filter_obj.apply_lowpass_filter(self.data, self.iter)
+        self.iter_data *= self.lowpass_filter_obj.apply_lowpass_filter(self.data.shape, self.iter)
 
     def reset_resolution(self):
         self.iter_data = self.data
