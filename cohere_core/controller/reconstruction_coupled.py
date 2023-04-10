@@ -37,23 +37,21 @@ def set_lib(pkg, ndim=None):
 
 def rec_process(lib, pars, peak_dirs, dev, continue_dir):
     set_lib(lib)
-    # with the calling script it is assumed that the calling script uses peak_dirs containing
+    # It is assumed that the calling script uses peak_dirs containing
     # peak orientation. It is parsed here, and passed to the CoupledRec constractor as list of
     # touples (<data directory>, <peak orientation>)
     peak_dir_orient = []
+    packed_orientations = [(str(o[0]) + str(o[1]) + str(o[2])) for o in pars['orientations']]
+    # find the directory that matches the packed orientation
     for dir in peak_dirs:
-        ornt_str = dir.split('_')[-1]
-        orientation = [0, 0, 0]
+        found = False
         i = 0
-        mult = 1
-        for ind in range(len(ornt_str)):
-            if ornt_str[ind] == '-':
-                mult = -1
-            else:
-                orientation[i] = int(ornt_str[ind]) * mult
-                i += 1
-                mult = 1
-        peak_dir_orient.append((dir, orientation))
+        while i < len(packed_orientations) and not found:
+            if dir.endswith(packed_orientations[i]):
+                found = True
+                peak_dir_orient.append((dir, pars['orientations'][i]))
+            i += 1
+    print(peak_dir_orient)
 
     worker = calc.CoupledRec(pars, peak_dir_orient)
     if worker.init_dev(dev[0]) < 0:

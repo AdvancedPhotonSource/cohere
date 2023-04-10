@@ -1,6 +1,9 @@
-========
+=========
 config_mp
-========
+=========
+| Multi-peak reconstruction is marked by a parameter multipeak set to True in the config file.
+| For the multi-peak reconstruction the conf directory must have config_mp file with the parameters listed below..
+
 - scan:
 | mandatory, string type encapsulating scans or ranges of scans containing data for each peak. The scans/scan ranges should be arranged in ascending order.
 | example:
