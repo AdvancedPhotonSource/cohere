@@ -125,7 +125,6 @@ class Support:
             self.threshold = threshold
 
         def update_amp(self, ds_image):
-            print('in update_amp, sigma', self.gauss_sigma)
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
     class PhasePHM:
