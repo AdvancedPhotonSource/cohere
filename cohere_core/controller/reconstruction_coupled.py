@@ -5,10 +5,10 @@
 # #########################################################################
 
 """
-cohere_core.reconstruction_single
+cohere_core.reconstruction_coupled
 =================================
 
-This module controls a single reconstruction process.
+This module controls a multipeak reconstruction process.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
 """
 
@@ -68,9 +68,9 @@ def rec_process(lib, pars, peak_dirs, dev, continue_dir):
 
 def reconstruction(lib, pars, peak_dirs, dev=None):
     """
-    Controls single reconstruction.
+    Controls multipeak reconstruction.
 
-    This script is typically started with cohere-ui helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined, or starting from some saved state. It will set the initial guess accordingly and start phasing process. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere-ui helper functions. It will start based on the configuration. The config file must have multipeak parameter set to True. In addition the config_mp with the peaks parameters must be included. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------
@@ -80,17 +80,14 @@ def reconstruction(lib, pars, peak_dirs, dev=None):
         cp - to use cupy,
         torch - to use pytorch,
 
-    conf_map : dict
-        configuration
+    pars : dict
+        parameters reflecting configuration
 
-    datafiles : list
-        data files names
-
-    dir : str
-        a parent directory that holds the reconstructions. For example experiment directory or scan directory.
+    peak_dirs : list
+        list of directories with data taken at each peak
 
     dev : int
-        id defining GPU the this reconstruction will be utilizing, or -1 if running cpu
+        id defining GPU the this reconstruction will be utilizing
 
     """
     if 'init_guess' not in pars:
