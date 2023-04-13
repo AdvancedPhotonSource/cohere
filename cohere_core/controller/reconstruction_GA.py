@@ -187,8 +187,8 @@ def set_ga_defaults(pars):
         ga_reconstructions.append(reconstructions)
     pars['ga_reconstructions'] = ga_reconstructions
 
-    if 'sw_threshold' in pars:
-        sw_threshold = pars['sw_threshold']
+    if 'shrink_wrap_threshold' in pars:
+        sw_threshold = pars['shrink_wrap_threshold']
     else:
         sw_threshold = .1
     if 'ga_sw_thresholds' in pars:
