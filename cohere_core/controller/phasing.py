@@ -122,7 +122,7 @@ class Support:
             self.threshold = threshold
 
         def update_amp(self, ds_image):
-            print('updating amp, sigma', self.gauss_sigma)
+#            print('updating amp, sigma', self.gauss_sigma)
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
     class PhasePHM:
@@ -132,7 +132,7 @@ class Support:
 
         def update_phase(self, ds_image):
             phase = devlib.angle(ds_image)
-            print('in update_phase, ph_min', self.phm_phase_min)
+#            print('in update_phase, ph_min', self.phm_phase_min)
             return (phase > self.phm_phase_min) & (phase < self.phm_phase_max)
 
     class GaussLPF:
@@ -145,7 +145,7 @@ class Support:
 
         def apply_low_filter(self, ds_image, iter):
             sigma = self.sigmas[iter - self.iter_offset]
-            print('in apply_low_filter, sigma', sigma)
+#            print('in apply_low_filter, sigma', sigma)
             return dvut.shrink_wrap(ds_image, self.threshold, sigma)
 
     def create_objs(self, sub_rows_trigs, params):
@@ -320,7 +320,7 @@ class LowPassFilter:
 
         def apply_lowpass_filter(self, dims, iter):
             filter_sigma = self.filter_sigmas[iter - self.iter_offset]
-            print('in apply_low_filter, filter_sigma', filter_sigma)
+#            print('in apply_low_filter, filter_sigma', filter_sigma)
             sigmas = [dim * filter_sigma for dim in dims]
             distribution = devlib.gaussian(dims, sigmas)
             max_el = devlib.amax(distribution)
