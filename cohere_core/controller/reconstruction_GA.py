@@ -475,6 +475,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 for pid in processes:
                     worker_qout = processes[pid][1]
                     ret = worker_qout.get()
+                    if ret < 0:
+                        worker_qin = processes[pid][0]
+                        worker_qin.put('done')
+                        bad_processes.append(pid)
+            # remove bad processes from dict (in the future we may reuse them)
+            for pid in bad_processes:
+                processes.pop(pid)
             for pid in processes:
                 worker_qin = processes[pid][0]
                 worker_qin.put('iterate')

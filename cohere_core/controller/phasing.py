@@ -513,10 +513,19 @@ class Rec:
             else:
                 if type(cmd) == str:
                     # the function does not have any arguments
-                    ret = functions_dict[cmd]()
+                    try:
+                        ret = functions_dict[cmd]()
+                    except:
+                        print('cought exception')
+                        ret = -3
                 else:
+                    try:
                     # the function name is the first element in the cmd tuple, and the other elements are arguments
-                    ret = functions_dict[cmd[0]](*cmd[1:])
+                        ret = functions_dict[cmd[0]](*cmd[1:])
+                    except:
+                        print('cought exception')
+                        ret = -3
+
                 worker_qout.put(ret)
 
 
