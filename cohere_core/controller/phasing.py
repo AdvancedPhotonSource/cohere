@@ -209,7 +209,7 @@ class Support:
             # in case of a all_iteration configuration the lowpass filter
             # iteration can be read from lowpass_filter_trigger
             if index is None:
-                iter_range = (params['lowpass_filter_trigger'][0], params['lowPass_filter_trigger'][2])
+                iter_range = (params['lowpass_filter_trigger'][0], params['lowpass_filter_trigger'][2])
                 filter_range = params['lowpass_filter_range']
                 if 'lowpass_filter_threshold' in params:
                     threshold = params['lowpass_filter_threshold']
@@ -219,13 +219,13 @@ class Support:
             else:
                 iter_range = (beg, end)
                 filter_range = params['lowpass_filter_range'][index]
-                if len(filter_range) == 1:
-                    filter_range.append(1.0)
-                sigma_range = [1 / x for x in filter_range]
                 if 'lowpass_filter_threshold' not in params or len(params['lowpass_filter_threshold']) < index:
                     threshold = .1
                 else:
                     threshold = params['lowpass_filter_threshold'][index]
+            if len(filter_range) == 1:
+                filter_range.append(1.0)
+            sigma_range = [1 / x for x in filter_range]
             return self.GaussLPF(sigma_range, iter_range, threshold)
 
         feats = {'SW':(self.update_amp_obj, self.update_amp_seq, create_sw_obj),
@@ -253,7 +253,7 @@ class Support:
                 self.f[key] = funs[1]
             else:
                 if trig_param[key] in params:
-                    self.objs[key] = funs[2](key, params)
+                    self.objs[key] = funs[2](params)
                     self.f[key] = funs[0]
 
     def get_support(self):
@@ -318,18 +318,10 @@ class LowPassFilter:
                                   (iter - self.iter_offset) + filter_range[0]
                                   for iter in range(iter_range[0], iter_range[1])]
 
-        def apply_lowpass_filter(self, dims, iter):
+        def apply_lowpass_filter(self, data, iter):
             filter_sigma = self.filter_sigmas[iter - self.iter_offset]
 #            print('in apply_low_filter, filter_sigma', filter_sigma)
-            sigmas = [dim * filter_sigma for dim in dims]
-            distribution = devlib.gaussian(dims, sigmas)
-            max_el = devlib.amax(distribution)
-            distribution = distribution / max_el
-
-            # data_shifted = devlib.fftshift(data)
-            # filtered = data_shifted * distribution
-            # return devlib.fftshift(filtered)
-            return devlib.fftshift(distribution)
+            return devlib.gaussian_filter(data, filter_sigma)
 
 
     def create_objs(self, sub_rows_trigs, params):
@@ -337,18 +329,14 @@ class LowPassFilter:
             # in case of a all_iteration configuration the lowpass filter
             # iteration can be read from lowpass_filter_trigger
             if index is None:
-                iter_range = (params['lowpass_filter_trigger'][0], params['lowPass_filter_trigger'][2])
+                iter_range = (params['lowpass_filter_trigger'][0], params['lowpass_filter_trigger'][2])
                 filter_range = params['lowpass_filter_range']
-                if 'lowpass_filter_threshold' in params:
-                    threshold = params['lowpass_filter_threshold']
-                else:
-                    threshold = .1
             # otherwise the iterations to apply this instance are given as arguments
             else:
                 iter_range = (beg, end)
                 filter_range = params['lowpass_filter_range'][index]
-                if len(filter_range) == 1:
-                    filter_range.append(1.0)
+            if len(filter_range) == 1:
+                filter_range.append(1.0)
             return self.Filter(filter_range, iter_range)
 
         feats = { 'LPF':(self.update_lpf_obj, self.update_lpf_seq, create_lpf_obj)}
@@ -371,22 +359,22 @@ class LowPassFilter:
                 self.f[key] = funs[1]
             else:
                 if trig_param[key] in params:
-                    self.objs[key] = funs[2](key, params)
+                    self.objs[key] = funs[2](params)
                     self.f[key] = funs[0]
 
-    def update_lpf_obj(self, dims, iter):
-        return self.objs['LPF'].apply_lowpass_filter(dims, iter)
+    def update_lpf_obj(self, data, iter):
+        return self.objs['LPF'].apply_lowpass_filter(data, iter)
 
-    def update_lpf_seq(self, dims, iter):
+    def update_lpf_seq(self, data, iter):
         sub_obj = self.objs['LPF'].pop(0)
-        return sub_obj.apply_lowpass_filter(dims, iter)
+        return sub_obj.apply_lowpass_filter(data, iter)
 
-    def apply_lowpass_filter(self, dims, iter):
+    def apply_lowpass_filter(self, data, iter):
         # the f is either update_amp_seq function or update_amp_seq
         # The f is set in constructor depending on whether the trigger
         # was defined for the entire span of iterations or multiple
         # subtriggers were defined in algorithm sequence
-        return self.f['LPF'](dims, iter)
+        return self.f['LPF'](data, iter)
 
 
 class Rec:
@@ -668,7 +656,7 @@ class Rec:
 
 
     def lowpass_filter_trigger(self):
-        self.iter_data *= self.lowpass_filter_obj.apply_lowpass_filter(self.data.shape, self.iter)
+        self.iter_data = self.lowpass_filter_obj.apply_lowpass_filter(self.data, self.iter)
 
     def reset_resolution(self):
         self.iter_data = self.data
@@ -677,7 +665,6 @@ class Rec:
         self.support_obj.update_amp(self.ds_image)
 
     def phm_trigger(self):
-        print('phase trig')
         self.support_obj.update_phase(self.ds_image)
 
     def to_reciprocal_space(self):

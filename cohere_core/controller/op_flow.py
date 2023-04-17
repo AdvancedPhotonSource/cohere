@@ -144,6 +144,8 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
     is_res = False
     # special case; during lowpass filter a lpf shrink wrap is applied, and shrink wrap suppressed
     apply_sw_row = np.ones(iter_no, dtype=int)
+    # last iteration when lowpass filter is applied
+    last_lpf = 0
     for i in range(len(flow_items_list)):
         flow_item = flow_items_list[i]
         if flow_item == 'next' or flow_item == 'to_reciprocal_space' or flow_item == 'to_direct_space':
@@ -159,6 +161,8 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
         elif flow_item == 'reset_resolution':
             if is_res:
                 flow_arr[i] = trigger_row([params['lowpass_filter_trigger'][-1],], iter_no)
+            if last_lpf > 0:
+                flow_arr[i][last_lpf] = 1
         elif flow_item == 'shrink_wrap_trigger':
             if 'shrink_wrap_trigger' in params and type(params['shrink_wrap_trigger'][0]) == int:
                 flow_arr[i] = trigger_row(params['shrink_wrap_trigger'], iter_no) * apply_sw_row
@@ -205,6 +209,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                     # special case for lowpass filter feature that suppresses shrink wrap
                     if flow_item == 'lowpass_filter_trigger':
                         apply_sw_row[b:e] = 0
+                        last_lpf = e
                     trigger = params[flow_item][index].copy()
                     trigger[0] += b
                     if len(trigger) == 2:
@@ -219,5 +224,4 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                     sub_feats_row *= apply_sw_row
                     flow_arr[i] *= apply_sw_row
                 sub_feats[mne] = (sub_feats_row, sub_trig_rows[mne])
-
     return pc_start is not None, flow_arr, sub_feats
