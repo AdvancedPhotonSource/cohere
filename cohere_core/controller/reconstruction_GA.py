@@ -439,52 +439,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             tracing_map[process.pid] = i
         tracing.set_map(tracing_map)
 
-        for g in range(pars['ga_generations']):
-            print ('starting generation', g)
-            if g == 0:
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                    worker_qin.put(('init_dev', devices.pop()))
-                bad_processes = []
-                for pid in processes:
-                    worker_qout = processes[pid][1]
-                    ret = worker_qout.get()
-                    if ret < 0:
-                        worker_qin = processes[pid][0]
-                        worker_qin.put('done')
-                        bad_processes.append(pid)
-                # remove bad processes from dict (in the future we may reuse them)
-                for pid in bad_processes:
-                    processes.pop(pid)
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                   # prev_dir = prev_dirs[pid]
-                    worker_qin.put(('init', init_dirs[pid], g))
-            else:
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                    worker_qin.put(('init', alpha_dir, g))
-
-            for pid in processes:
-                worker_qout = processes[pid][1]
-                ret = worker_qout.get()
-            if g > 0:
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                    worker_qin.put('breed')
-                for pid in processes:
-                    worker_qout = processes[pid][1]
-                    ret = worker_qout.get()
-                    if ret < 0:
-                        worker_qin = processes[pid][0]
-                        worker_qin.put('done')
-                        bad_processes.append(pid)
-            # remove bad processes from dict (in the future we may reuse them)
-            for pid in bad_processes:
-                processes.pop(pid)
-            for pid in processes:
-                worker_qin = processes[pid][0]
-                worker_qin.put('iterate')
+        def handle_cmd():
             bad_processes = []
             for pid in processes:
                 worker_qout = processes[pid][1]
@@ -496,6 +451,33 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             # remove bad processes from dict (in the future we may reuse them)
             for pid in bad_processes:
                 processes.pop(pid)
+
+        for g in range(pars['ga_generations']):
+            print ('starting generation', g)
+            if g == 0:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init_dev', devices.pop()))
+                handle_cmd()
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init', init_dirs[pid], g))
+                handle_cmd()
+            else:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init', alpha_dir, g))
+                handle_cmd()
+            if g > 0:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put('breed')
+                handle_cmd()
+
+            for pid in processes:
+                worker_qin = processes[pid][0]
+                worker_qin.put('iterate')
+            handle_cmd()
             # get metric, i.e the goodness of reconstruction from each run
             proc_metrics = {}
             metric_type = pars['ga_metrics'][g]
