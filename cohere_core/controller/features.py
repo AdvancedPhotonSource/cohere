@@ -54,7 +54,6 @@ class Pcdi:
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
         converged_2 = devlib.fftconvolve(abs_amplitudes_2, self.kernel)
-        # converged_2 = devlib.where(converged_2 < 0.0, 0.0, converged_2)
         converged = devlib.sqrt(converged_2)
         return converged
 
@@ -111,7 +110,6 @@ class Support:
             self.threshold = threshold
 
         def update_amp(self, ds_image):
-#            print('updating amp, sigma', self.gauss_sigma)
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
     class PhasePHM:
@@ -121,7 +119,6 @@ class Support:
 
         def update_phase(self, ds_image):
             phase = devlib.angle(ds_image)
-#            print('in update_phase, ph_min', self.phm_phase_min)
             return (phase > self.phm_phase_min) & (phase < self.phm_phase_max)
 
     class GaussLPF:
@@ -134,7 +131,6 @@ class Support:
 
         def apply_low_filter(self, ds_image, iter):
             sigma = self.sigmas[iter - self.iter_offset]
-#            print('in apply_low_filter, sigma', sigma)
             return dvut.shrink_wrap(ds_image, self.threshold, sigma)
 
     def create_objs(self, sub_rows_trigs, params):
