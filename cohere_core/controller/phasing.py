@@ -93,14 +93,6 @@ class Rec:
             params['twin_halves'] = (0, 0)
         if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
             self.is_pcdi = True
-            if 'pc_type' not in params:
-                params['pc_type'] = "LUCY"
-            if 'pc_LUCY_iterations' not in params:
-                params['pc_LUCY_iterations'] = 20
-            if 'pc_normalize' not in params:
-                params['pc_normalize'] = True
-            if 'pc_LUCY_kernel' not in params:
-                params['pc_LUCY_kernel'] = (16, 16, 16)
         else:
             self.is_pcdi = False
         # finished setting defaults
@@ -231,7 +223,7 @@ class Rec:
         if 'lowpass_filter_range' not in self.params or not first_run:
             self.iter_data = self.data
         else:
-            self.iter_data = self.data.copy()
+            self.iter_data = devlib.copy(self.data)
 
         if (first_run):
             max_data = devlib.amax(self.data)
@@ -348,7 +340,7 @@ class Rec:
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = get_norm(
-            devlib.where((converged > 0.0), (devlib.absolute(converged) - self.iter_data), 0.0)) / get_norm(self.iter_data)
+            devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 

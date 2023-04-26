@@ -17,7 +17,22 @@ def set_lib(dlib):
 
 class Pcdi:
     def __init__(self, params, data, dir=None):
-        self.params = params
+        if 'pc_type' in params:
+            self.type = params['pc_type']
+        else:
+            self.type = "LUCY"
+        if 'pc_LUCY_iterations' in params:
+            self.iterations = params['pc_LUCY_iterations']
+        else:
+            self.iterations = 20
+        if 'pc_normalize' in params:
+            self.normalize = params['pc_normalize']
+        else:
+            self.normalize = True
+        if 'pc_LUCY_kernel' in params:
+            self.kernel_area = params['pc_LUCY_kernel']
+        else:
+            self.kernel_area = (16, 16, 16)
         if dir is None:
             self.kernel = None
         else:
@@ -27,26 +42,26 @@ class Pcdi:
                 self.kernel = None
 
         self.dims = devlib.dims(data)
-        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.params['pc_LUCY_kernel'])
-        if self.params['pc_normalize']:
+        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.kernel_area)
+        if self.normalize:
             self.sum_roi_data = devlib.sum(devlib.square(self.roi_data))
         if self.kernel is None:
-            self.kernel = devlib.full(self.params['pc_LUCY_kernel'], 0.5, dtype=devlib.dtype(data))
+            self.kernel = devlib.full(self.kernel_area, 0.5, dtype=devlib.dtype(data))
 
     def set_previous(self, abs_amplitudes):
-        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params['pc_LUCY_kernel'])
+        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.kernel_area)
 
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
         converged_2 = devlib.fftconvolve(abs_amplitudes_2, self.kernel)
-        converged_2 = devlib.where(converged_2 < 0.0, 0.0, converged_2)
+        # converged_2 = devlib.where(converged_2 < 0.0, 0.0, converged_2)
         converged = devlib.sqrt(converged_2)
         return converged
 
     def update_partial_coherence(self, abs_amplitudes):
-        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params['pc_LUCY_kernel'])
+        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.kernel_area)
         roi_combined_amp = 2 * roi_amplitudes - self.roi_amplitudes_prev
-        if self.params['pc_normalize']:
+        if self.normalize:
             amplitudes_2 = devlib.square(roi_combined_amp)
             sum_ampl = devlib.sum(amplitudes_2)
             ratio = self.sum_roi_data / sum_ampl
@@ -54,9 +69,9 @@ class Pcdi:
         else:
             amplitudes = roi_combined_amp
 
-        if self.params['pc_type'] == "LUCY":
+        if self.type == "LUCY":
             self.lucy_deconvolution(devlib.square(amplitudes), devlib.square(self.roi_data),
-                                    self.params['pc_LUCY_iterations'])
+                                    self.iterations)
 
     def lucy_deconvolution(self, amplitudes, data, iterations):
         data_mirror = devlib.flip(data)
