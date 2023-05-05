@@ -19,8 +19,10 @@ config_error = {'File':['File does not exist','Cannot Read File',
                                 'missing mandatory experiment_id parameter'],
                 'Scan':['scan parameter should be a string',
                         'scan parameter parsing error'],
-                'Specfile':['specfile parameter should be string',
-                            'specfile parameter parsing error']}
+                'Separatescans':['separate_scans parameter should be True or False'],
+                'Separatescanranges':['separate_scan_ranges parameter should be True or False'],
+                'Multipeak': ['multipeak parameter should be True or False']
+                }
 config_prep_error = {'File':['No configuration file',
                              'cannot read configuration file',
                              'Parsing error, check parenthesis,quotation syntax'],
@@ -33,28 +35,14 @@ config_prep_error = {'File':['No configuration file',
                                    'whitefield_filename parameter parsing error'],
                      'Excludescans':['exclude scans should be a list'],
                      'MinFiles':['min_files should be int',
-                                 'min_files parameter parsing error'],
-                     'Separatescans':['separate_scans parameter should be True or False'],
-                     'Separatescanranges':['separate_scan_ranges parameter should be True or False']}
+                                 'min_files parameter parsing error']}
 config_disp_error = {'File':['No configuration file',
                              'Cannot read configuration file',
                              'Parsing error, check parenthesis,quotation syntax'],
                      'Resultsdir':['results_dir parameter should be string'],
-                     'Diffractometer':['diffractometer parameter should be string'],
-                     'Detector':['detector parameter should be string'],
                      'Crop':['crop should be list',
                              'crop should be a list of int or float'],
-                     'Rampups':['rampups should be int'],
-                     'Energy':['energy should be float',
-                               'energy parameter parsing error'],
-                     'Delta':['delta should be float',
-                              'delta parameter parsing error'],
-                     'Gamma':['gamma should be float',
-                              'gamma parameter parsing error'],
-                     'Detdist':['detdist should be float',
-                                'detdist parameter parsing error'],
-                     'Dth':['dth should be float',
-                            'dth parameter parsing error']}
+                     'Rampups':['rampups should be int']}
 config_data_error = {'File':['No configuration file',
                              'Cannot read configuration file',
                              'Parsing error, check parenthesis,quotation syntax'],
@@ -163,8 +151,27 @@ config_rec_error = {'File':['No configuration file',
                     'Progresstrigger':['Trigger should be a list of int'],
                     }
 
+config_instr_error = { 'Diffractometer':['missing mandatory diffractometer parameter',
+                                         'diffractometer parameter should be string'],
+                       'Specfile': ['missing mandatory specfile parameter',
+                                    'specfile parameter should be string',
+                                    'specfile parameter parsing error'],
+                       'Detector':['detector parameter should be string'],
+                       'Energy':['energy should be float',
+                                 'energy parameter parsing error'],
+                       'Delta':['delta should be float',
+                                'delta parameter parsing error'],
+                       'Gamma':['gamma should be float',
+                                'gamma parameter parsing error'],
+                       'Detdist':['detdist should be float',
+                                  'detdist parameter parsing error'],
+                       'Dth':['dth should be float',
+                              'dth parameter parsing error']
+                    }
+
 config_map_names = {'config_error_map_file':config_error,
                     'config_prep_error_map_file':config_prep_error,
                     'config_disp_error_map_file':config_disp_error,
                     'config_data_error_map_file':config_data_error,
-                    'config_rec_error_map_file':config_rec_error}
+                    'config_rec_error_map_file':config_rec_error,
+                    'config_instr_error_map_file':config_instr_error}
