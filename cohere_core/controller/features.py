@@ -194,7 +194,7 @@ class ShrinkWrap(Feature):
             self.threshold = threshold
 
         def apply_trigger(self, *args):
-            print('shrink wrap, sigma', self.gauss_sigma)
+#            print('shrink wrap, sigma', self.gauss_sigma)
             ds_image = args[0]
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
@@ -243,7 +243,7 @@ class PhaseMod(Feature):
             self.phm_phase_max = phm_phase_max
 
         def apply_trigger(self, *args):
-            print('phm trig, phase min', self.phm_phase_min)
+#            print('phm trig, phase min', self.phm_phase_min)
             ds_image = args[0]
             phase = devlib.angle(ds_image)
             return (phase > self.phm_phase_min) & (phase < self.phm_phase_max)
@@ -292,7 +292,7 @@ class LowPassFilter(Feature):
             iter = args[1]
             ds_image = args[2]
             filter_sigma = self.filter_sigmas[iter - self.iter_offset]
-            print('in apply_low_filter, filter_sigma', filter_sigma)
+ #           print('in apply_low_filter, filter_sigma', filter_sigma)
             return (devlib.gaussian_filter(data, filter_sigma), dvut.shrink_wrap(ds_image, self.threshold, 1/filter_sigma))
 
 
