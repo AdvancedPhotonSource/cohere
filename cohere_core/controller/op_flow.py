@@ -1,16 +1,20 @@
 import numpy as np
 import re
 
-
+#
 algs = {'ER': ('er', 'modulus'),
         'HIO': ('hio', 'modulus'),
         'ERpc': ('er', 'pc_modulus'),
         'HIOpc': ('hio', 'pc_modulus'),
         'SF' : ('new_alg', 'pc_modulus'),
         }
-trigs = {'shrink_wrap_trigger': 'SW',
-         'phm_trigger': 'PHM',
-         'lowpass_filter_trigger': 'LPF'}
+
+# this map keeps the names of triggers that can be configured as sub-trigger, i.e. be a trigger for the iteration span
+# defined by preceding algorithm. The key is the trigger name and value is the mnemonic. The mnemonic is used in the
+# configuration.
+sub_triggers = {'shrink_wrap_trigger': 'SW',
+             'phm_trigger': 'PHM',
+             'lowpass_filter_trigger': 'LPF'}
 
 def get_algs():
     return algs
@@ -67,11 +71,10 @@ def get_alg_rows(s, pc_conf_start):
     sub_rows = {}
     row = np.zeros(iter_no, dtype=int)
     fs = set([i for sub in algs.values() for i in sub])
-    sub_fs = trigs.keys()
     for f in fs:
         rows[f] = row.copy()
-    # for f in sub_fs:
-    for f in trigs.values():
+    # for each possible subtrigger add entry
+    for f in sub_triggers.values():
         sub_rows[f] = []
     i = 0
     pc_start = None
@@ -85,6 +88,7 @@ def get_alg_rows(s, pc_conf_start):
             rows[row_key][i:i+repeat] = 1
             if 'pc' in row_key and pc_start is None:
                 pc_start = i
+        # find sub-triggers
         for row_key in funs[1:]:
             match = re.match(r"([A-Z]+)([0-9]+)", row_key, re.I)
             if match:
@@ -198,9 +202,10 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
                 flow_arr[i] = trigger_row(params['switch_peak_trigger'], iter_no)
                 flow_arr[i][-1] = 1
 
-        if flow_item in trigs.keys():
-            mne = trigs[flow_item]
-            if len(sub_trig_rows[trigs[flow_item]]):
+        # Determine features based on sub-triggers
+        if flow_item in sub_triggers.keys():
+            mne = sub_triggers[flow_item]
+            if len(sub_trig_rows[sub_triggers[flow_item]]):
                 sub_trig_row = np.zeros(iter_no, dtype=int)
                 sub_feats_row = np.zeros(iter_no, dtype=int)
                 for (b, e, idx) in sub_trig_rows[mne]:

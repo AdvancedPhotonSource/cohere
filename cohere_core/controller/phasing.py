@@ -43,6 +43,33 @@ def get_norm(arr):
     return devlib.sum(devlib.square(devlib.absolute(arr)))
 
 
+class Support:
+    """
+    Support class is a state holder for the support array. It initializes the support at creation time.
+    Features that modify support: shrink wrap, phase modifier, lowpass filter.
+    """
+    def __init__(self, params, dims, dir=None):
+        # create or get initial support
+        if dir is None or not os.path.isfile(dir + '/support.npy'):
+            initial_support_area = params['initial_support_area']
+            init_support = []
+            for i in range(len(initial_support_area)):
+                if type(initial_support_area[0]) == int:
+                    init_support.append(initial_support_area[i])
+                else:
+                    init_support.append(int(initial_support_area[i] * dims[i]))
+            center = devlib.full(init_support, 1)
+            self.support = dvut.pad_around(center, dims, 0)
+        else:
+            self.support = devlib.load(dir + '/support.npy')
+
+    def get_support(self):
+        return self.support
+
+    def flip(self):
+        self.support = devlib.flip(self.support)
+
+
 class Rec:
     """
     cohere_core.phasing.reconstruction(self, params, data_file)
@@ -176,6 +203,14 @@ class Rec:
 
 
     def init(self, dir=None, gen=None):
+        def create_feat_objects(params, feats):
+            if 'shrink_wrap_trigger' in params:
+                self.shrink_wrap_obj = ft.ShrinkWrap(params, feats)
+            if 'phm_trigger' in params:
+                self.phm_obj = ft.PhaseMod(params, feats)
+            if 'lowpass_filter_trigger' in params:
+                self.lowpass_filter_obj = ft.LowPassFilter(params, feats)
+
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(dir + '/image.npy'):
@@ -203,11 +238,11 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
-        self.support_obj = ft.Support(self.params, self.dims, feats, dir)
+        self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
         # create the object even if the feature inactive, it will be empty
-        self.lowpass_filter_obj = ft.LowPassFilter(self.params, feats)
+        create_feat_objects(self.params, feats)
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -304,26 +339,23 @@ class Rec:
         return dvut.all_metrics(self.ds_image, self.errs)
         # return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
-
     def next(self):
         self.iter = self.iter + 1
 
-
-    def aa(self):
-        print('aa', self.iter)
-
-
     def lowpass_filter_trigger(self):
-        self.iter_data = self.lowpass_filter_obj.apply_lowpass_filter(self.data, self.iter)
+        args = (self.data, self.iter, self.ds_image)
+        (self.iter_data, self.support_obj.support) = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
 
     def shrink_wrap_trigger(self):
-        self.support_obj.update_amp(self.ds_image)
+        args = (self.ds_image,)
+        self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
 
     def phm_trigger(self):
-        self.support_obj.update_phase(self.ds_image)
+        args = (self.ds_image,)
+        self.support_obj.support *= self.phm_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
