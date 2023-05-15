@@ -19,13 +19,11 @@ import os
 from math import pi
 import random
 import importlib
-
-import numpy as np
-
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.config_verifier as ver
 import cohere_core.controller.op_flow as of
+import cohere_core.controller.features as ft
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
@@ -38,72 +36,20 @@ def set_lib(dlib):
     global devlib
     devlib = dlib
     dvut.set_lib(devlib)
+    ft.set_lib(dlib)
 
 
 def get_norm(arr):
     return devlib.sum(devlib.square(devlib.absolute(arr)))
 
 
-class Pcdi:
-    def __init__(self, params, data, dir=None):
-        self.params = params
-        if dir is None:
-            self.kernel = None
-        else:
-            try:
-                self.kernel = devlib.load(dir + '/coherence.npy')
-            except:
-                self.kernel = None
-
-        self.dims = devlib.dims(data)
-        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.params['pc_LUCY_kernel'])
-        if self.params['pc_normalize']:
-            self.sum_roi_data = devlib.sum(devlib.square(self.roi_data))
-        if self.kernel is None:
-            self.kernel = devlib.full(self.params['pc_LUCY_kernel'], 0.5, dtype=devlib.dtype(data))
-
-    def set_previous(self, abs_amplitudes):
-        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params['pc_LUCY_kernel'])
-
-    def apply_partial_coherence(self, abs_amplitudes):
-        abs_amplitudes_2 = devlib.square(abs_amplitudes)
-        converged_2 = devlib.fftconvolve(abs_amplitudes_2, self.kernel)
-        converged_2 = devlib.where(converged_2 < 0.0, 0.0, converged_2)
-        converged = devlib.sqrt(converged_2)
-        return converged
-
-    def update_partial_coherence(self, abs_amplitudes):
-        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.params['pc_LUCY_kernel'])
-        roi_combined_amp = 2 * roi_amplitudes - self.roi_amplitudes_prev
-        if self.params['pc_normalize']:
-            amplitudes_2 = devlib.square(roi_combined_amp)
-            sum_ampl = devlib.sum(amplitudes_2)
-            ratio = self.sum_roi_data / sum_ampl
-            amplitudes = devlib.sqrt(amplitudes_2 * ratio)
-        else:
-            amplitudes = roi_combined_amp
-
-        if self.params['pc_type'] == "LUCY":
-            self.lucy_deconvolution(devlib.square(amplitudes), devlib.square(self.roi_data),
-                                    self.params['pc_LUCY_iterations'])
-
-    def lucy_deconvolution(self, amplitudes, data, iterations):
-        data_mirror = devlib.flip(data)
-        for i in range(iterations):
-            conv = devlib.fftconvolve(self.kernel, data)
-            devlib.where(conv == 0.0, 1.0, conv)
-            relative_blurr = amplitudes / conv
-            self.kernel = self.kernel * devlib.fftconvolve(relative_blurr, data_mirror)
-        self.kernel = devlib.real(self.kernel)
-        coh_sum = devlib.sum(devlib.absolute(self.kernel))
-        self.kernel = devlib.absolute(self.kernel) / coh_sum
-
-
 class Support:
+    """
+    Support class is a state holder for the support array. It initializes the support at creation time.
+    Features that modify support: shrink wrap, phase modifier, lowpass filter.
+    """
     def __init__(self, params, dims, dir=None):
-        self.params = params
-        self.dims = dims
-
+        # create or get initial support
         if dir is None or not os.path.isfile(dir + '/support.npy'):
             initial_support_area = params['initial_support_area']
             init_support = []
@@ -113,28 +59,12 @@ class Support:
                 else:
                     init_support.append(int(initial_support_area[i] * dims[i]))
             center = devlib.full(init_support, 1)
-            self.support = dvut.pad_around(center, self.dims, 0)
+            self.support = dvut.pad_around(center, dims, 0)
         else:
             self.support = devlib.load(dir + '/support.npy')
 
-        # The sigma can change if resolution trigger is active. When it
-        # changes the distribution has to be recalculated using the given sigma
-        # At some iteration the low resolution become inactive, and the sigma
-        # is set to shrink_wrap_gauss_sigma. The prev_sigma is kept to check if sigma changed
-        # and thus the distribution must be updated
-        self.distribution = None
-        self.prev_sigma = 0
-
     def get_support(self):
         return self.support
-
-    def update_amp(self, ds_image, sigma, threshold):
-        self.support = dvut.shrink_wrap(ds_image, threshold, sigma)
-
-    def update_phase(self, ds_image):
-        phase = devlib.angle(ds_image)
-        phase_condition = (phase > self.params['phm_phase_min']) & (phase < self.params['phm_phase_max'])
-        self.support *= phase_condition
 
     def flip(self):
         self.support = devlib.flip(self.support)
@@ -155,10 +85,10 @@ class Rec:
     __all__ = []
     def __init__(self, params, data_file):
         self.iter_functions = [self.next,
-                          self.resolution_trigger,
+                          self.lowpass_filter_trigger,
                           self.reset_resolution,
                           self.shrink_wrap_trigger,
-                          self.phase_support_trigger,
+                          self.phm_trigger,
                           self.to_reciprocal_space,
                           self.new_func_trigger,
                           self.pc_trigger,
@@ -188,58 +118,10 @@ class Rec:
             params['initial_support_area'] = (.5, .5, .5)
         if 'twin_trigger' in params and 'twin_halves' not in params:
             params['twin_halves'] = (0, 0)
-        if 'shrink_wrap_gauss_sigma' not in params:
-            params['shrink_wrap_gauss_sigma'] = 1.0
-        if 'shrink_wrap_threshold' not in params:
-            params['shrink_wrap_threshold'] = 0.1
-        if 'shrink_wrap_trigger' in params:
-            if 'shrink_wrap_type' not in params:
-                params['shrink_wrap_type'] = "GAUSS"
-        if 'phase_support_trigger' in params:
-            if 'phm_phase_min' not in params:
-                params['phm_phase_min'] = -1.57
-            if 'phm_phase_max' not in params:
-                params['phm_phase_max'] = 1.57
         if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
             self.is_pcdi = True
-            if 'pc_type' not in params:
-                params['pc_type'] = "LUCY"
-            if 'pc_LUCY_iterations' not in params:
-                params['pc_LUCY_iterations'] = 20
-            if 'pc_normalize' not in params:
-                params['pc_normalize'] = True
-            if 'pc_LUCY_kernel' not in params:
-                params['pc_LUCY_kernel'] = (16, 16, 16)
         else:
             self.is_pcdi = False
-        self.ll_sigmas = None
-        self.ll_dets = None
-        if 'resolution_trigger' in params and len(params['resolution_trigger']) == 3:
-            # linespacing the sigmas and dets need a number of iterations
-            # The trigger should have three elements, the last one
-            # meaning the last iteration when the low resolution is
-            # applied. If the trigger does not have the limit,
-            # it is misconfigured, and the trigger will not be
-            # active
-            ll_iter = params['resolution_trigger'][2]
-            if 'shrink_wrap_trigger' not in params and 'lowpass_filter_sw_sigma_range' in params:
-                # The sigmas are used to find support, if the shrink wrap
-                # trigger is not active, it wil not be used
-                sigma_range = params['lowpass_filter_sw_sigma_range']
-                if len(sigma_range) > 0:
-                    first_sigma = sigma_range[0]
-                    if len(sigma_range) == 1:
-                        last_sigma = params['shrink_wrap_gauss_sigma']
-                    else:
-                        last_sigma = sigma_range[1]
-                    params['ll_sigmas'] = [first_sigma + x * (last_sigma - first_sigma) / ll_iter for x in range(ll_iter)]
-            if 'lowpass_filter_range' in params:
-                det_range = params['lowpass_filter_range']
-                if type(det_range) ==int:
-                    det_range = [det_range, 1.0]
-                    params['ll_dets'] = [det_range[0] + x * (det_range[1] - det_range[0]) / ll_iter for x in range(ll_iter)]
-            else:
-                params['ll_dets'] = None
         # finished setting defaults
         self.params = params
         self.data_file = data_file
@@ -304,75 +186,31 @@ class Rec:
             else:
                 if type(cmd) == str:
                     # the function does not have any arguments
-                    ret = functions_dict[cmd]()
+                    try:
+                        ret = functions_dict[cmd]()
+                    except:
+                        print('cought exception')
+                        ret = -3
                 else:
+                    try:
                     # the function name is the first element in the cmd tuple, and the other elements are arguments
-                    ret = functions_dict[cmd[0]](*cmd[1:])
+                        ret = functions_dict[cmd[0]](*cmd[1:])
+                    except:
+                        print('cought exception')
+                        ret = -3
+
                 worker_qout.put(ret)
-
-    def init1(self, dir=None, gen=None):
-        if self.ds_image is not None:
-            first_run = False
-        elif dir is None or not os.path.isfile(dir + '/image.npy'):
-            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
-            first_run = True
-        else:
-            self.ds_image = devlib.load(dir + '/image.npy')
-            first_run = False
-
-        flow_items_list = []
-        for f in self.iter_functions:
-            flow_items_list.append(f.__name__)
-
-        self.is_pc, flow = of.get_flow_arr(self.params, flow_items_list, gen, first_run)
-        if flow is None:
-            return -1
-
-        self.flow = []
-        (op_no, self.iter_no) = flow.shape
-        for i in range(self.iter_no):
-            for j in range(op_no):
-                if flow[j, i] == 1:
-                    self.flow.append(self.iter_functions[j])
-
-        self.aver = None
-        self.iter = -1
-        self.errs = []
-        self.gen = gen
-        self.prev_dir = dir
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
-        self.support_obj = Support(self.params, self.dims, dir)
-        if self.is_pc:
-            self.pc_obj = Pcdi(self.params, self.data, dir)
-
-        # for the fast GA the data needs to be saved, as it would be changed by each lr generation
-        # for non-fast GA the Rec object is created in each generation with the initial data
-        if self.saved_data is not None:
-            if self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
-            else:
-                self.data = self.saved_data
-        else:
-            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
-
-        if 'll_sigma' not in self.params or not first_run:
-            self.iter_data = self.data
-        else:
-            self.iter_data = self.data.copy()
-
-        if (first_run):
-            max_data = devlib.amax(self.data)
-            self.ds_image *= get_norm(self.ds_image) * max_data
-
-            # the line below are for testing to set the initial guess to support
-            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
-
-            self.ds_image *= self.support_obj.get_support()
-        return 0
 
 
     def init(self, dir=None, gen=None):
+        def create_feat_objects(params, feats):
+            if 'shrink_wrap_trigger' in params:
+                self.shrink_wrap_obj = ft.ShrinkWrap(params, feats)
+            if 'phm_trigger' in params:
+                self.phm_obj = ft.PhaseMod(params, feats)
+            if 'lowpass_filter_trigger' in params:
+                self.lowpass_filter_obj = ft.LowPassFilter(params, feats)
+
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(dir + '/image.npy'):
@@ -382,11 +220,9 @@ class Rec:
             self.ds_image = devlib.load(dir + '/image.npy')
             first_run = False
 
-        self.flow_items_list = []
-        for f in self.iter_functions:
-            self.flow_items_list.append(f.__name__)
+        self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
-        self.is_pc, flow = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
+        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
         if flow is None:
             return -1
 
@@ -402,26 +238,27 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
         self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pc:
-            self.pc_obj = Pcdi(self.params, self.data, dir)
+            self.pc_obj = ft.Pcdi(self.params, self.data, dir)
+        # create the object even if the feature inactive, it will be empty
+        create_feat_objects(self.params, feats)
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
         if self.saved_data is not None:
             if self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lpf_sigmas'][self.gen])
             else:
                 self.data = self.saved_data
         else:
             if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params['ga_lowpass_filter_sigmas'][self.gen])
+                self.data = devlib.gaussian_filter(self.data, self.params['ga_lpf_sigmas'][self.gen])
 
-        if 'll_sigma' not in self.params or not first_run:
+        if 'lowpass_filter_range' not in self.params or not first_run:
             self.iter_data = self.data
         else:
-            self.iter_data = self.data.copy()
+            self.iter_data = devlib.copy(self.data)
 
         if (first_run):
             max_data = devlib.amax(self.data)
@@ -442,8 +279,8 @@ class Rec:
 
         if breed_mode != 'none':
             self.ds_image = dvut.breed(breed_mode, alpha_dir, self.ds_image)
-            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_shrink_wrap_thresholds'][self.gen],
-                                                       self.params['ga_shrink_wrap_gauss_sigmas'][self.gen])
+            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_sw_thresholds'][self.gen],
+                                                       self.params['ga_sw_gauss_sigmas'][self.gen])
         return 0
 
 
@@ -502,38 +339,29 @@ class Rec:
         return dvut.all_metrics(self.ds_image, self.errs)
         # return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
-
     def next(self):
         self.iter = self.iter + 1
 
-
-    def resolution_trigger(self):
-        if 'll_dets' in self.params:
-            sigmas = [dim * self.params['ll_dets'][self.iter] for dim in self.dims]
-            distribution = devlib.gaussian(self.dims, sigmas)
-            max_el = devlib.amax(distribution)
-            distribution = distribution / max_el
-            data_shifted = devlib.fftshift(self.data)
-            masked = data_shifted * distribution
-            self.iter_data = devlib.fftshift(masked)
-
-        if 'll_sigmas' in self.params:
-            self.sigma = self.params['ll_sigmas'][self.iter]
+    def lowpass_filter_trigger(self):
+        args = (self.data, self.iter, self.ds_image)
+        (self.iter_data, self.support_obj.support) = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
-        self.sigma = self.params['shrink_wrap_gauss_sigma']
 
     def shrink_wrap_trigger(self):
-        self.support_obj.update_amp(self.ds_image, self.sigma, self.params['shrink_wrap_threshold'])
+        args = (self.ds_image,)
+        self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
 
-    def phase_support_trigger(self):
-        self.support_obj.update_phase(self.ds_image)
+    def phm_trigger(self):
+        args = (self.ds_image,)
+        self.support_obj.support *= self.phm_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
 
     def new_func_trigger(self):
+        self.params['new_param'] = 1
         print('in new_func_trigger, new_param', self.params['new_param'])
 
     def pc_trigger(self):
@@ -544,7 +372,7 @@ class Rec:
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = get_norm(
-            devlib.where((converged > 0.0), (devlib.absolute(converged) - self.iter_data), 0.0)) / get_norm(self.iter_data)
+            devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
@@ -819,7 +647,7 @@ def reconstruction(datafile, **kwargs):
             used to calculate the Gaussian filter
         initial_support_area : list
             If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support will be set to 1s to this dimensions centered.
-        phase_support_trigger : list
+        phm_trigger : list
             defines when to update support array using the parameters below by applaying phase constrain.
         phm_phase_min : float
             point with phase below this value will be removed from support area
@@ -833,12 +661,12 @@ def reconstruction(datafile, **kwargs):
             number of iterations used in Lucy algorithm
         pc_LUCY_kernel : list
             coherence kernel area.
-        resolution_trigger : list
-            defines when to apply low resolution filter using the parameters below.
-        lowpass_filter_sw_sigma_range : list
-            used when applying low resolution to replace support sigma. The sigmas are linespaced for low resolution iterations from first value to last. If only one number given, the last sigma will default to shrink_wrap_gauss_sigma.
+        lowpass_filter_trigger : list
+            defines when to apply lowpass filter using the parameters below.
+        lowpass_filter_sw_threshold : float
+            used in Gass type shrink wrap when applying lowpass filter.
         lowpass_filter_range : list
-            used when applying low resolution data filter while iterating. The det values are linespaced for low resolution iterations from first value to last. The filter is gauss with sigma of linespaced det. If only one number given, the last det will default to 1.
+            used when applying low resolution data filter while iterating. The values are linespaced for lowpass filter iterations from first value to last. The filter is gauss with sigma of linespaced value. If only one number given, the last value will default to 1.
         average_trigger : list
             defines when to apply averaging. Negative start means it is offset from the last iteration.
         progress_trigger : list of int
@@ -869,7 +697,6 @@ def reconstruction(datafile, **kwargs):
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
-        print('np')
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
     else:
         print('supporting cp and np processing')

@@ -183,6 +183,9 @@ class nplib(cohlib):
     def linspace(start, stop, num):
         return np.linspace(start, stop, num)
 
+    def clip(arr, min, max=None):
+        return np.clip(arr, min, max)
+
 # a11 = np.array([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a12 = np.array([10.1, 10.2, 10.3, 11.0])
 # print(np.convolve(a11,a12, mode='same'))

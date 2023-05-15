@@ -17,17 +17,11 @@ then run the installation command::
 
     pip install cohere_core
 
-The cohere_core package can be run as installed running on numpy library. Other available libraries are cupy and arrayfire.
+The cohere_core package can be run as installed running on numpy library. Other available libraries are cupy and torch.
 Users has to install the library of theirs choice.
 
 if using cupy library::
 
     conda install cupy -c conda-forge
-
-if using arrayfire library::
-
-    pip install arrayfire
-
-and install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
 
 Cohere-core package does not install python packages used by user's scripts in cohere-ui package. If planning to use the scripts Refer to :ref:`use` page, section "Installing Scripts".

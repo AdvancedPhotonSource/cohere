@@ -219,7 +219,7 @@ class torchlib(cohlib):
     def gaussian_filter(arr, sigma, **kwargs):
         # will not work on M1 until the fft fuctions are supported
         dims = arr.size()
-        dist = torchlib.gaussian(dims, sigma)
+        dist = torchlib.gaussian(dims, 1/sigma)
         arr_f = torch.fft.ifftshift(torch.fft.fftn(torch.fft.ifftshift(arr)))
         filter = arr_f * dist
         filter = torch.fft.ifftshift(torch.fft.ifftn(torch.fft.ifftshift(filter)))
@@ -250,6 +250,9 @@ class torchlib(cohlib):
 
     def linspace(start, stop, num):
         return torch.linspace(start, stop, num)
+
+    def clip(arr, min, max=None):
+        return torch.clip(arr, min, max)
 
 # a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])

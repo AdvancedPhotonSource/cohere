@@ -188,32 +188,32 @@ def set_ga_defaults(pars):
     pars['ga_reconstructions'] = ga_reconstructions
 
     if 'shrink_wrap_threshold' in pars:
-        shrink_wrap_threshold = pars['shrink_wrap_threshold']
+        sw_threshold = pars['shrink_wrap_threshold']
     else:
-        shrink_wrap_threshold = .1
-    if 'ga_shrink_wrap_thresholds' in pars:
-        ga_shrink_wrap_thresholds = pars['ga_shrink_wrap_thresholds']
-        if len(ga_shrink_wrap_thresholds) == 1:
-            ga_shrink_wrap_thresholds = ga_shrink_wrap_thresholds * pars['ga_generations']
-        elif len(ga_shrink_wrap_thresholds) < pars['ga_generations']:
-            ga_shrink_wrap_thresholds = ga_shrink_wrap_thresholds + [shrink_wrap_threshold] * (pars['ga_generations'] - len(ga_shrink_wrap_thresholds))
+        sw_threshold = .1
+    if 'ga_sw_thresholds' in pars:
+        ga_sw_thresholds = pars['ga_sw_thresholds']
+        if len(ga_sw_thresholds) == 1:
+            ga_sw_thresholds = ga_sw_thresholds * pars['ga_generations']
+        elif len(ga_sw_thresholds) < pars['ga_generations']:
+            ga_sw_thresholds = ga_sw_thresholds + [sw_threshold] * (pars['ga_generations'] - len(ga_sw_thresholds))
     else:
-        ga_shrink_wrap_thresholds = [shrink_wrap_threshold] * pars['ga_generations']
-    pars['ga_shrink_wrap_thresholds'] = ga_shrink_wrap_thresholds
+        ga_sw_thresholds = [sw_threshold] * pars['ga_generations']
+    pars['ga_sw_thresholds'] = ga_sw_thresholds
 
-    if 'shrink_wrap_gauss_sigma' in pars:
-        shrink_wrap_gauss_sigma = pars['shrink_wrap_gauss_sigma']
+    if 'sw_gauss_sigma' in pars:
+        sw_gauss_sigma = pars['sw_gauss_sigma']
     else:
-        shrink_wrap_gauss_sigma = .1
-    if 'ga_shrink_wrap_gauss_sigmas' in pars:
-        ga_shrink_wrap_gauss_sigmas = pars['ga_shrink_wrap_gauss_sigmas']
-        if len(ga_shrink_wrap_gauss_sigmas) == 1:
-            ga_shrink_wrap_gauss_sigmas = ga_shrink_wrap_gauss_sigmas * pars['ga_generations']
-        elif len(pars['ga_shrink_wrap_gauss_sigmas']) < pars['ga_generations']:
-            ga_shrink_wrap_gauss_sigmas = ga_shrink_wrap_gauss_sigmas + [shrink_wrap_gauss_sigma] * (pars['ga_generations'] - len(ga_shrink_wrap_gauss_sigmas))
+        sw_gauss_sigma = .1
+    if 'ga_sw_gauss_sigmas' in pars:
+        ga_sw_gauss_sigmas = pars['ga_sw_gauss_sigmas']
+        if len(ga_sw_gauss_sigmas) == 1:
+            ga_sw_gauss_sigmas = ga_sw_gauss_sigmas * pars['ga_generations']
+        elif len(pars['ga_sw_gauss_sigmas']) < pars['ga_generations']:
+            ga_sw_gauss_sigmas = ga_sw_gauss_sigmas + [sw_gauss_sigma] * (pars['ga_generations'] - len(ga_sw_gauss_sigmas))
     else:
-        ga_shrink_wrap_gauss_sigmas = [shrink_wrap_gauss_sigma] * pars['ga_generations']
-    pars['ga_shrink_wrap_gauss_sigmas'] = ga_shrink_wrap_gauss_sigmas
+        ga_sw_gauss_sigmas = [sw_gauss_sigma] * pars['ga_generations']
+    pars['ga_sw_gauss_sigmas'] = ga_sw_gauss_sigmas
 
     if 'ga_breed_modes' not in pars:
         pars['ga_breed_modes'] = ['sqrt_ab'] * pars['ga_generations']
@@ -225,8 +225,8 @@ def set_ga_defaults(pars):
             ga_breed_modes = ga_breed_modes + ['sqrt_ab'] * (pars['ga_generations'] - len(ga_breed_modes))
     pars['ga_breed_modes'] = ga_breed_modes
 
-    if 'ga_lowpass_filter_sigmas' in pars:
-        pars['low_resolution_generations'] = len(pars['ga_lowpass_filter_sigmas'])
+    if 'ga_lpf_sigmas' in pars:
+        pars['low_resolution_generations'] = len(pars['ga_lpf_sigmas'])
     else:
         pars['low_resolution_generations'] = 0
 
@@ -439,45 +439,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             tracing_map[process.pid] = i
         tracing.set_map(tracing_map)
 
-        for g in range(pars['ga_generations']):
-            print ('starting generation', g)
-            if g == 0:
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                    worker_qin.put(('init_dev', devices.pop()))
-                bad_processes = []
-                for pid in processes:
-                    worker_qout = processes[pid][1]
-                    ret = worker_qout.get()
-                    if ret < 0:
-                        worker_qin = processes[pid][0]
-                        worker_qin.put('done')
-                        bad_processes.append(pid)
-                # remove bad processes from dict (in the future we may reuse them)
-                for pid in bad_processes:
-                    processes.pop(pid)
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                   # prev_dir = prev_dirs[pid]
-                    worker_qin.put(('init', init_dirs[pid], g))
-            else:
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                    worker_qin.put(('init', alpha_dir, g))
-
-            for pid in processes:
-                worker_qout = processes[pid][1]
-                ret = worker_qout.get()
-            if g > 0:
-                for pid in processes:
-                    worker_qin = processes[pid][0]
-                    worker_qin.put('breed')
-                for pid in processes:
-                    worker_qout = processes[pid][1]
-                    ret = worker_qout.get()
-            for pid in processes:
-                worker_qin = processes[pid][0]
-                worker_qin.put('iterate')
+        def handle_cmd():
             bad_processes = []
             for pid in processes:
                 worker_qout = processes[pid][1]
@@ -489,6 +451,33 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             # remove bad processes from dict (in the future we may reuse them)
             for pid in bad_processes:
                 processes.pop(pid)
+
+        for g in range(pars['ga_generations']):
+            print ('starting generation', g)
+            if g == 0:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init_dev', devices.pop()))
+                handle_cmd()
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init', init_dirs[pid], g))
+                handle_cmd()
+            else:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put(('init', alpha_dir, g))
+                handle_cmd()
+            if g > 0:
+                for pid in processes:
+                    worker_qin = processes[pid][0]
+                    worker_qin.put('breed')
+                handle_cmd()
+
+            for pid in processes:
+                worker_qin = processes[pid][0]
+                worker_qin.put('iterate')
+            handle_cmd()
             # get metric, i.e the goodness of reconstruction from each run
             proc_metrics = {}
             metric_type = pars['ga_metrics'][g]
