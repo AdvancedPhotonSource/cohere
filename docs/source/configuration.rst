@@ -6,6 +6,7 @@ Configuration
    :caption: Contents:
 
    config_main
+   config_instr
    config_prep
    config_data
    config_rec

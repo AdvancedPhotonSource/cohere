@@ -4,23 +4,15 @@
 config_rec
 ==========
 | The "config_rec" defines parameters used during reconstruction process.
-| Parameters are grouped by the function (feature) they are utilized for. There is a group of parameters that are not associated with any feature, and thus, we call them 'general'.
-| The features are controlled by triggers. If trigger is defined then the feature is active and related parameters are used when processing the feature. The section below explains how to configure a trigger.
+| Parameters are grouped by function (feature) they are utilized for. There is a group of parameters that are not associated with any feature, and thus, we call them 'general'.
+| The features are controlled by triggers. If trigger is defined then the feature is active and related parameters are used when processing the feature. Refer to :ref:`formula` page, for explanation of triggers, sub-triggers, and algorithm sequence.
 
-Trigger
-=======
-| Trigger can be defined as a single iteration, or multiple iterations.
-| examples:
-| [3] trigger at iteration 3
-| [20, 5] trigger starts at iteration 20, repeats every 5 iteration for the rest of run
-| [20, 5, 40] trigger starts at iteration 20, repeats every 5 iteration until iteration 40
-  
 Parameters
 ==========
 General
 +++++++
 - data_dir:
-| optional, used for specific cases, defualt is <experiment_dir>/phasing_data. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The standard preprocessed file, named data.tif should be in data_dir when starting reconstruction. If the data_dir parameter is configured then the data is read from this directory, otherwise from <experiment_dir>/data. This parameter is only accepted when running script from a command line. When using GUI, the data_dir is always default.
+| optional, used for specific cases, default is <experiment_dir>/phasing_data. Driven by the scripts, the experiment directory contains four directories: conf, prep, data, and results. The standard preprocessed file, named data.tif should be in data_dir when starting reconstruction. If the data_dir parameter is configured then the data is read from this directory, otherwise from <experiment_dir>/data. This parameter is only accepted when running script from a command line. When using GUI, the data_dir is always default.
 | example:
 ::
 
@@ -76,11 +68,12 @@ General
     device = [0,1,2,7]
 
 - algorithm_sequence:
-| mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi feature must be activated. If not activated, the phasing will use modulus function instead.
-| example:
+| mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. In second example the sequence contains subtriggers, explained in  :ref:`formula` page.
+| examples:
 ::
 
     algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
+    algorithm_sequence = "20*ER.LPF0.PHM0 + 180*HIO.LPF1 + 2* (20*ER.SW0 + 180*HIO.SW1) + 20*ER.SW2"
 
 - hio_beta:
 | optional, default is .9. A parameter used in hio algorithm.
@@ -88,6 +81,13 @@ General
 ::
 
     hio_beta = .9
+
+- initial_support_area:
+| optional, defaults to [.5,.5,.5]. The list define dimensions of initial support area. If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support array is centered.
+| example:
+::
+
+    initial_support_area = [.5,.5,.5]
 
 Twin
 ++++
@@ -113,49 +113,50 @@ Shrink wrap
 
 - shrink_wrap_trigger:
 | defines when to update support array using the parameters below.
-| example:
+| alternatively can be defined as list of sub-triggers. If sub-triggers are used, the parameters must be lists as well.
+| examples:
 ::
 
     shrink_wrap_trigger = [10, 1]
+    shrink_wrap_trigger = [[10, 1],[0,5,100],[0,2]]   # sub-triggers
 
 - shrink_wrap_type:
 | optional, defaults to "GAUSS" which applies gaussian filter. Currently only "GAUSS" is supported.
-| example:
+| Currently only the GAUSS type is supported.
+| examples:
 ::
 
     shrink_wrap_type = "GAUSS"
+    shrink_wrap_type = [GAUSS, GAUSS, GAUSS]  # sub-triggers
 
 - shrink_wrap_threshold:
 | optional, defaults to 0.1. A threshold value used in the gaussian filter algorithm.
-| example:
+| examples:
 ::
 
     shrink_wrap_threshold = 0.1
+    shrink_wrap_threshold = [0.1, 0.11, .12]  # sub-triggers
 
 - shrink_wrap_gauss_sigma:
 | optional, defaults to 1.0. A sigma value used in the gaussian filter algorithm.
-| example:
+| examples:
 ::
 
     shrink_wrap_gauss_sigma = 1.0
-
-- initial_support_area:
-| optional, defaults to [.5,.5,.5]. The list define dimensions of initial support area. If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support array is centered.
-| example:
-::
-
-    initial_support_area = [.5,.5,.5]
+    shrink_wrap_gauss_sigma = [1.0, 1.1, 1.2]  # sub-triggers
 
 Phase constrain
 +++++++++++++++
 | At the beginning iterations the support area is modified in respect to the phase. Support area will include only points with calculated phase intside of the defined bounds.
+| Alternatively can be defined as list of sub-triggers. If sub-triggers are used, the parameters must be lists as well.
 
 - phase_support_trigger:
 | defines when to update support array using the parameters below by applying phase constrain.
-| example:
+| examples:
 ::
 
     phase_support_trigger = [0, 1, 310]
+    phase_support_trigger = [[0, 1, 310], [0,2]]  # sub-triggers
 
 - phm_phase_min:
 | optional, defaults too -1.57. Defines lower bound phase.
@@ -163,13 +164,15 @@ Phase constrain
 ::
 
     phm_phase_min = -1.57
+    phm_phase_min = [-1.5, -1.57]  # sub-triggers
 
 - phm_phase_max:
 | optional, defaults too 1.57. Defines upper bound phase.
-| example:
+| examples:
 ::
 
     phm_phase_max = 1.57
+    phm_phase_max = [1.5, 1.57]  # sub-triggers
 
 Partial coherence
 +++++++++++++++++
@@ -210,29 +213,33 @@ Partial coherence
 
     pc_LUCY_kernel = [16, 16, 16]
 
-Low resolution
+Lowpass Filter
 ++++++++++++++
-| When this feature is activated the data is multiplied by Gaussian distribution magnifying the area with meaningful information and the sigma parameter used in calculation of support is modified gradually. The low resolution trigger is typically configured to be active at the beginning iterations and resume around the mid-run. Thus for the remaining iteration the data used in reconstruction is not modified.
-- resolution_trigger:
+| When this feature is activated a lowpass Gaussian filter is applied on data with sigma being line-spaced over the range parameter. Simultaneously, the Gaussian type of shrink wrap is applied with the reverse sigma. The low resolution trigger is typically configured to be active at the first part of iterations and resume around the mid-run.
+- lowpass_filter_trigger:
 | defines when to apply low resolution using the parameters below. Typically the last trigger is configured at half of total iterations.
-| example:
+| Alternatively can be defined as list of sub-triggers. If sub-triggers are used, the parameters must be lists as well.
+| examples:
 ::
 
-    resolution_trigger = [0, 1, 320]
-
-- lowpass_filter_sw_sigma_range:
-| used when applying low resolution to replace support sigma at low resolution iterations. The sigmas are linespaced across the defined range for low resolution iterations. If only one number given, the last sigma will default to support_sigma.
-| example:
-::
-
-    lowpass_filter_sw_sigma_range = [2.0]
+    lowpass_filter_trigger = [0, 1, 320]
+    lowpass_filter_trigger = [[0, 1], [0, 2, 100]]  # sub-triggers
 
 - lowpass_filter_range:
-| used when applying low resolution to calculate data gauss multiplier. The det values are linespaced for low resolution iterations from first value to last.  The multiplier array is a gauss distribution calculated with sigma of linespaced det across the low resolution iterations. If only one number is given, the last det will default to 1.
-| example:
+| The range is linespaced over iterations to form a list of sigmas. The sigmas are used to apply gaussian lowpass filter over data. The inverse of sigma is used in shrink wrap.ue to last. If only one number is given, the last det will default to 1.
+| examples:
 ::
 
-    lowpass_filter_range = [.7]
+    lowpass_filter_range = [.7, 1.0]
+    lowpass_filter_range = [[.7, .8], [.8, 1.0]]  # sub-triggers
+
+- lowpass_filter_sw_threshold:
+| during lowpass iterations a GAUSS type shrink wrap is applied with this threshold ans sigma calculated as reverse of low pass filter.
+| examples:
+::
+
+    lowpass_filter_sw_threshold = 2.0
+    lowpass_filter_sw_threshold = [2.0, 2.0]  # sub-triggers
 
 averaging
 +++++++++

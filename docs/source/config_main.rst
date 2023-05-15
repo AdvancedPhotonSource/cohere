@@ -26,13 +26,6 @@ Parameters
 
     scan = "2-7, 10, 15, 20-22"
 
-- specfile:
-| optional (but typically needed), specfile recorded when the experiment was conducted.
-| example:
-::
-
-    specfile = "/path/to/specfile/Staff20.spec"
-                                        
 - beamline:
 | optional, beamline where the experiment was conducted. If not configured, the beamline preprocessing and beamline visualization scripts are not available.
 | example:
@@ -40,16 +33,30 @@ Parameters
 
     beamline = "aps_34idc"
 
-- converter_ver:
-| optional, if not configured, it will be auto-updated by scripts to match the latest converter version.
-| example:
-::
-
-    converter_ver = 0
-
 - multipeak:
 | optional, boolean parameter indicating whether it is multi peak case. Defaults to False.
 | example:
 ::
 
     multipeak = True
+
+- separate_scans:
+| in typical scenario the data from all scans in experiment are combined. If specified as separate scans, each scan will be processed separately and will have sub-experiment name containing scan index ex. "scan_9", where 9 is scan index
+| example:
+::
+
+   separate_scans = False
+
+- separate_scan_ranges:
+| in typical scenario the data from all scans in experiment are combined. If specified as separate scan ranges, each scan or scan range in the experiment will be processed separately and will have sub-experiment name containing scan index ex. "scan_9", where 9 is scan index, or "scan_10-15", where 10-15 is the scan range. The scans and scan ranges are defined in main configuration "config" file as scan parameter, and are part of experiment name.
+| example:
+::
+
+   separate_scan_ranges = True
+
+- converter_ver:
+| optional, if not configured, it will be auto-updated by scripts to match the latest converter version.
+| example:
+::
+
+    converter_ver = 1
