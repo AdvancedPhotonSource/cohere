@@ -1188,7 +1188,7 @@ def ver_config_instr(config_map):
     error_message : str
         message describing parameter error or empty string if all parameters are verified
     """
-    config_map_file = 'config_disp_error_map_file'
+    config_map_file = 'config_instr_error_map_file'
     fname = 'config_instr'
 
     config_parameter = 'Diffractometer'
@@ -1203,7 +1203,7 @@ def ver_config_instr(config_map):
         config_error = 0
         error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
         print('missing mandatory diffractometer parameter')
-        return (error_message)
+        return ''
 
     config_parameter = 'Specfile'
     if 'specfile' in config_map:
@@ -1217,7 +1217,7 @@ def ver_config_instr(config_map):
         config_error = 0
         error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
         print('missing mandatory specfile parameter')
-        return (error_message)
+        return ''
 
     config_parameter = 'Detector'
     if 'detector' in config_map:
