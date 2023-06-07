@@ -5,40 +5,42 @@ develop
 
 Installation for development
 ============================
-Creating environment
-++++++++++++++++++++
-The best practice is to create conda environment allocated for the development. The Python version can be chosen by user:
-::
+The best practice is to create conda environment allocated for the development.
 
-    conda create -n cohere python=3.x
-    conda activate cohere
+  ::
 
-Pre-requisites
-++++++++++++++
-After activating conda environment install the packages/libraries that you wish to use.
-    - if using cupy library: conda install cupy -c conda-forge
-    - if using torch: pip install torch
-Other packages have to be installed if running with cohere-ui package. Refer to :ref:`use` page, section "Installing Scripts".
+    conda create -n <dev_env> python=3.x
+    conda activate <dev_env>
 
-Initialization
-++++++++++++++
-Clone the latest cohere repository from GitHub:
-::
+| Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such running scripts and example.
+  ::
 
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
+| After the package is installed checkout the Dev environment and create your branch. Then install the cohere into the environment:
+
+  ::
+
     cd cohere
-    git checkout -b <branch_name> # if you wish to create a new branch in repository
-
-The --recurse-submodules flag clones cohere-ui module into the environment.
-
-| install:
-
-::
-
+    git checkout Dev
+    git checkout -b <dev_branch>
     pip install -e .
-    python cohere-ui/setup.py
+| Go to cohere-ui directory and repeat the environment steps, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
+
+    ::
+
+    cd cohere-ui
+    git checkout Dev
+    git checkout -b <dev_branch>
+    python setup.py
     sh cohere-ui/install_pkgs.sh    # for Linux and OS_X
     cohere-ui/install_pkgs.bat      # for Windows
+| If planning to use GPUs, install the packages/libraries that you wish to use.
+
+    ::
+
+    conda install cupy -c conda-forge # if using cupy library
+    pip install torch # if using torch
+
 
 Adding new trigger
 ==================
