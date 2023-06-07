@@ -5,7 +5,7 @@ setuptools.setup(
       author = 'Barbara Frosik, Ross Harder',
       author_email = 'bfrosik@anl.gov',
       url='https://github.com/advancedPhotonSource/cohere',
-      version='3.2',
+      version='4.0',
       packages=setuptools.find_packages(),
       install_requires=['numpy',
                         'scikit-learn',
@@ -18,6 +18,7 @@ setuptools.setup(
             'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
+            'Programming Language :: Python :: 3.11',
       ],
 
 )
