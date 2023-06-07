@@ -76,7 +76,8 @@ The algorithm sequence defines functions executed during modulus projection and 
 Pypi Build
 ==========
 For a new build change version in and setup.py files to the new version and run pypi build:
-::
+
+    ::
 
     pip install .
     python setup.py check
@@ -85,15 +86,21 @@ For a new build change version in and setup.py files to the new version and run 
 
 Upload to the test server and test
 
+    ::
+
     pip install twine
     twine upload --repository testpypi dist/*
 
 Test in a new environment
+
+    ::
 
     pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ cohere_core --user
 
 Test Linux, Windows, and Mac
 
 - upload build to pypi cloud
+
+    ::
 
     twine upload dist/*
