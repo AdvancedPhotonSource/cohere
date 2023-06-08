@@ -13,6 +13,7 @@ The best practice is to create conda environment allocated for the development.
     conda activate <dev_env>
 
 | Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such running scripts and example.
+
   ::
 
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
@@ -24,9 +25,9 @@ The best practice is to create conda environment allocated for the development.
     git checkout Dev
     git checkout -b <dev_branch>
     pip install -e .
-| Go to cohere-ui directory and repeat the environment steps, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
+| Go to cohere-ui directory and repeat the environment steps, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.
 
-    ::
+  ::
 
     cd cohere-ui
     git checkout Dev
@@ -36,11 +37,10 @@ The best practice is to create conda environment allocated for the development.
     cohere-ui/install_pkgs.bat      # for Windows
 | If planning to use GPUs, install the packages/libraries that you wish to use.
 
-    ::
+  ::
 
     conda install cupy -c conda-forge # if using cupy library
     pip install torch # if using torch
-
 
 Adding new trigger
 ==================
@@ -59,12 +59,13 @@ If the new feature will be used in a context of sub-triggers, in addition to the
     - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with *args.
     - in cohere_core/controller/features.py add new feature class.
 
-       the feature class should be subclass of Feature and
-       have defined self.key = <feature mnemonic> and
-       have defined self.trig_name = <trigger name>
-       should have implemented create_obj function that creates sub-object(s)
-       should have defined the sub-object(s) class(es). The embedded class contains the apply_trigger function that has the trigger code. Some features can be configured to different types and therefore multiple classes can be defined.
-       the easiest way to implement the feature is to copy one already implemented and modify.
+       | The feature class should be subclass of Feature and
+       | have defined self.key = <feature mnemonic> and
+       | have defined self.trig_name = <trigger name>
+       | should have implemented create_obj function that creates sub-object(s)
+       | should have defined the sub-object(s) class(es). The embedded class contains the apply_trigger function that has the trigger code. Some features can be configured to different types and therefore multiple classes can be defined.
+       |
+       | The easiest way to implement the feature is to copy one already implemented and modify.
 
 Adding new algorithm
 ====================
@@ -77,30 +78,30 @@ Pypi Build
 ==========
 For a new build change version in and setup.py files to the new version and run pypi build:
 
-    ::
+  ::
 
     pip install .
     python setup.py check
     python setup.py sdist
     python setup.py bdist_wheel --universal
 
-Upload to the test server and test
+| Upload to the test server and test
 
-    ::
+  ::
 
     pip install twine
     twine upload --repository testpypi dist/*
 
-Test in a new environment
+| Test in a new environment
 
-    ::
+  ::
 
     pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ cohere_core --user
 
-Test Linux, Windows, and Mac
+| Test Linux, Windows, and Mac
 
-- upload build to pypi cloud
+| upload build to pypi cloud
 
-    ::
+  ::
 
     twine upload dist/*
