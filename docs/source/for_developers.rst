@@ -17,6 +17,7 @@ The best practice is to create conda environment allocated for the development.
   ::
 
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
+
 | After the package is installed checkout the Dev environment and create your branch. Then install the cohere into the environment:
 
   ::
@@ -25,6 +26,7 @@ The best practice is to create conda environment allocated for the development.
     git checkout Dev
     git checkout -b <dev_branch>
     pip install -e .
+
 | Go to cohere-ui directory and repeat the environment steps, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.
 
   ::
@@ -35,6 +37,7 @@ The best practice is to create conda environment allocated for the development.
     python setup.py
     sh cohere-ui/install_pkgs.sh    # for Linux and OS_X
     cohere-ui/install_pkgs.bat      # for Windows
+
 | If planning to use GPUs, install the packages/libraries that you wish to use.
 
   ::
@@ -105,3 +108,4 @@ For a new build change version in and setup.py files to the new version and run 
   ::
 
     twine upload dist/*
+
