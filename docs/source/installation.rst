@@ -17,7 +17,7 @@ To create and activate the environment run the commands below::
     conda activate <env_name>
 then run the installation command::
 
-    pip install cohere_core
+    pip install cohere-core
 The cohere_core package can be run as installed running on numpy library. Other available libraries are cupy and torch.
 User has to install the preferred library.
 
