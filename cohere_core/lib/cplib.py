@@ -181,3 +181,27 @@ class cplib(cohlib):
 
     def linspace(start, stop, num):
         return cp.linspace(start, stop, num)
+
+    def gradient(arr, dx=1):
+        return cp.gradient(arr, dx)
+
+    def argmin(arr, axis=None):
+        return cp.argmin(arr, axis)
+
+    def take_along_axis(a, indices, axis):
+        return cp.take_along_axis(a, indices, axis)
+
+    def moveaxis(arr, source, dest):
+        return cp.moveaxis(arr, source, dest)
+
+    def lstsq(A, B):
+        return cp.linalg.lstsq(A, B, rcond=None)
+
+    def zeros(shape):
+        return cp.zeros(shape)
+
+    def indices(dims):
+        return cp.indices(dims)
+
+    def concatenate(tup, axis=0):
+        return cp.concatenate(tup, axis)
