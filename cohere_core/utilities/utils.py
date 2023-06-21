@@ -229,14 +229,8 @@ def get_centered(arr, center_shift):
     ndarray
         centered array
     """
-    max_coordinates = list(np.unravel_index(np.argmax(arr), arr.shape))
-    max_coordinates = np.add(max_coordinates, center_shift)
-    shape = arr.shape
-    centered = arr
-    for i in range(len(max_coordinates)):
-        centered = np.roll(centered, int(shape[i] / 2) - max_coordinates[i], i)
-
-    return centered
+    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
+    return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
 
 
 def get_zero_padded_centered(arr, new_shape):
