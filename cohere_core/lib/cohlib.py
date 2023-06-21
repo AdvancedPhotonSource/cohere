@@ -103,6 +103,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.cos) or
                 hasattr(subclass, 'linspace') and
                 callable(subclass.linspace) or
+                hasattr(subclass, 'clip') and
+                callable(subclass.clip) or
                 NotImplemented)
 
     @abc.abstractmethod
@@ -304,4 +306,8 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def linspace(start, stop, num):
+        pass
+
+    @abc.abstractmethod
+    def clip(arr, min, max=None):
         pass

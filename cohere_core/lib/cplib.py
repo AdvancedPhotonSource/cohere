@@ -67,6 +67,7 @@ class cplib(cohlib):
 
     def fftconvolve(arr1, arr2):
         return cupyx.scipy.ndimage.convolve(arr1, arr2)
+        # return cupyx.scipy.signal.aoconvolve(arr1, arr2, mode='same')
 
     def where(cond, x, y):
         return cp.where(cond, x, y)
@@ -181,6 +182,9 @@ class cplib(cohlib):
 
     def linspace(start, stop, num):
         return cp.linspace(start, stop, num)
+
+    def clip(arr, min, max=None):
+        return cp.clip(arr, min, max)
 
     def gradient(arr, dx=1):
         return cp.gradient(arr, dx)

@@ -8,6 +8,7 @@ Welcome to cohere documentation!
    about
    installation
    how_to_use
+   define_formula
    api_standard_preprocess
    api_phasing
    api_utils

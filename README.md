@@ -12,6 +12,7 @@ Important features:
 A trained model must be provided when using this feature. User can download trained model by clicking the following link
 https://g-29c18.fd635.8443.data.globus.org/cherukara/cohere-trained_model.hdf5
 - AutoAlien1 algorithm - a method to remove aliens by automatic means during standard data preprocessing. Based on work "Removal of spurious data in Bragg coherent diffraction imaging: an algorithm for automated data preprocessing" by Kenley Pelzer et. al.
+- Multipeak - support for an experiment where data is collected for adjacent peaks simultaneously and reconstructing this multipeak scenario. Implemented by Jason (Nick) Porter.
 
 The tools offer a full solution for reading data, formatting the data, reconstruction, and visualization. Each of the componenet can be utilized independently. The project was implemented for the Advanced Photon Source beamline 34-ID-C and thus the data preparation and data visualization is customized for that specific beamline. The measurements and parameters that are used during the experiment are parsed specifically for the beamline setup. We offer the code, as the community would benefit from it when customizing for own case.
 

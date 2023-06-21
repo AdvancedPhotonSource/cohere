@@ -9,3 +9,5 @@ Phasing API
    :members:
 .. automodule:: cohere_core.reconstruction_GA
    :members:
+.. automodule:: cohere_core.reconstruction_coupled
+   :members:

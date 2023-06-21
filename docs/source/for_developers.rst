@@ -5,54 +5,73 @@ develop
 
 Installation for development
 ============================
-Creating environment
-++++++++++++++++++++
-The best practice is to create coda environment allocated for the development. The Python version can be chosen by user:
-::
+The best practice is to create conda environment allocated for the development.
 
-    conda create -n cohere3.8 python=3.8
-    conda activate cohere3.8
+  ::
 
+    conda create -n <dev_env> python=3.x
+    conda activate <dev_env>
 
-Pre-requisites
-++++++++++++++
-After activating conda environment install the packages/libraries that you wish to use.
-    - if using cupy library: conda install cupy -c conda-forge
-    - if using arrayfire: pip install arrayfire, install arrayfire library according to https://github.com/arrayfire/arrayfire-python/blob/master/README.md
-Other packages have to be installed if running with cohere-ui package. Refer to :ref:`use` page, section "Installing Scripts".
+| Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such running scripts and example.
+  ::
 
-Initialization
-++++++++++++++
-Clone the latest cohere repository from GitHub:
-::
+    git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
+| After the package is installed checkout the Dev environment and create your branch. Then install the cohere into the environment:
 
-    git clone https://github.com/advancedPhotonSource/cohere
+  ::
+
     cd cohere
+    git checkout Dev
+    git checkout -b <dev_branch>
+    pip install -e .
+| Go to cohere-ui directory and repeat the environment steps, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
 
-| install:
+    ::
 
-::
+    cd cohere-ui
+    git checkout Dev
+    git checkout -b <dev_branch>
+    python setup.py
+    sh cohere-ui/install_pkgs.sh    # for Linux and OS_X
+    cohere-ui/install_pkgs.bat      # for Windows
+| If planning to use GPUs, install the packages/libraries that you wish to use.
 
-    python setup.py develop
+    ::
 
-compile and install
-+++++++++++++++++++
-After changing code run the following command from 'cohere' directory:
-::
+    conda install cupy -c conda-forge # if using cupy library
+    pip install torch # if using torch
 
-    python setup.py develop
 
 Adding new trigger
 ==================
-The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications need to be done to add a new feature:
-    - In cohere_core/controller/phasing.py, Rec.init, insert a new function to the to the iter_functions list in the correct order.
-    - Implement the new function in cohere_core/controller/phasing.py, Rec class.
+The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications/additions need to be done to add a new feature:
+    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name to the self.iter_functions list in the correct order.
+    - Implement the new trigger function in cohere_core/controller/phasing.py, Rec class.
     - In cohere_core/controller/op_flow.py add code to add the new trigger row into flow array.
     - In cohere_core/controller/params.py add code to parse trigger and parameters applicable to the new feature.
+    - In utilities/config_verifier.py add code to verify added parameters
+
+Adding new feature for sub-trigger
+==================================
+If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
+    - In cohere_core/controller/op_flow.py add entry in the sub_triggers, where key is the trigger function name, and value is the feature mnemonics
+    - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same as shrink_wrap_obj, and other features.
+    - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with *args.
+    - in cohere_core/controller/features.py add new feature class.
+
+       the feature class should be subclass of Feature and
+       have defined self.key = <feature mnemonic> and
+       have defined self.trig_name = <trigger name>
+       should have implemented create_obj function that creates sub-object(s)
+       should have defined the sub-object(s) class(es). The embedded class contains the apply_trigger function that has the trigger code. Some features can be configured to different types and therefore multiple classes can be defined.
+       the easiest way to implement the feature is to copy one already implemented and modify.
 
 Adding new algorithm
 ====================
-todo
+The algorithm sequence defines functions executed during modulus projection and during modulus. Adding new algorithm requires the following steps:
+    - In cohere_core/controller/op_flow.py add entry in the algs dictionary, where key is the mnemonic used in algorithm_sequence, and value is the tuple defining functions, ex: 'ER': ('er', 'modulus')
+    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name to the self.iter_functions list in the correct order.
+    - In cohere_core/controller/phasing.py, Rec class add the new algorithm function(s).
 
 Pypi Build
 ==========

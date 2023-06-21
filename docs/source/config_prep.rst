@@ -48,20 +48,6 @@ Parameters
 
     exclude_scans = [78,81]
 
-- separate_scans:
-| in typical scenario the data from all scans in experiment are combined. If specified as separate scans, each scan will be processed separately and will have sub-experiment name containing scan index ex. "scan_9", where 9 is scan index
-| example:
-::
-
-   separate_scans = False
-
-- separate_scan_ranges:
-| in typical scenario the data from all scans in experiment are combined. If specified as separate scan ranges, each scan or scan range in the experiment will be processed separately and will have sub-experiment name containing scan index ex. "scan_9", where 9 is scan index, or "scan_10-15", where 10-15 is the scan range. The scans and scan ranges are defined in main configuration "config" file as scan parameter, and are part of experiment name.
-| example:
-::
-
-   separate_scan_ranges = True
-
 - Imult:
 | Optional, defaults to the average of the whitefield. A multiplication factor used to renormalize the whitefield correction.
 | example:

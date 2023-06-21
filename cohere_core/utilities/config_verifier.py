@@ -148,6 +148,33 @@ def ver_config(config_map):
             print(error_message)
             return (error_message)
 
+    config_parameter = 'Separatescans'
+    if 'separate_scans' in config_map:
+        separate_scans = config_map['separate_scans']
+        if type(separate_scans) != bool:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    config_parameter = 'Separatescanranges'
+    if 'separate_scan_ranges' in config_map:
+        separate_scan_ranges = config_map['separate_scan_ranges']
+        if type(separate_scan_ranges) != bool:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    config_parameter = 'Multipeak'
+    if 'multipeak' in config_map:
+        separate_scans = config_map['multipeak']
+        if type(separate_scans) != bool:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
     return ("")
 
 
@@ -171,8 +198,8 @@ def ver_config_rec(config_map):
         seq = []
         def parse_entry(ent):
             r_e = ent.split('*')
-            if r_e[1] not in algs:
-                return r_e[1] + ' is not a valid entry in algorithm_sequence parameter'
+            # if r_e[1] not in algs:
+            #     return r_e[1] + ' is not a valid entry in algorithm_sequence parameter'
             seq.append([int(r_e[0]), r_e[1]])
             return ''
 
@@ -315,7 +342,7 @@ def ver_config_rec(config_map):
             print (config_error)
             return (error_message)
         # check for supported characters
-        alg_seq_chars = list(string.ascii_lowercase) + list(string.ascii_uppercase) + list(string.digits) + ['*', '+', '(', ')', ' ']
+        alg_seq_chars = list(string.ascii_lowercase) + list(string.ascii_uppercase) + list(string.digits) + ['.','*', '+', '(', ')', ' ']
         if 0 in [c in alg_seq_chars for c in algorithm_sequence]:
             config_error = 1
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
@@ -442,27 +469,27 @@ def ver_config_rec(config_map):
                 return (error_message)
 
         config_parameter = 'Gashrinkwrapthresholds'
-        if 'ga_shrink_wrap_thresholds' in config_map:
-            ga_shrink_wrap_thresholds = config_map['ga_shrink_wrap_thresholds']
-            if not ver_list_float('ga_shrink_wrap_thresholds', ga_shrink_wrap_thresholds):
+        if 'ga_sw_thresholds' in config_map:
+            ga_sw_thresholds = config_map['ga_sw_thresholds']
+            if not ver_list_float('ga_sw_thresholds', ga_sw_thresholds):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
         config_parameter = 'Gashrinkwrapgausssigmas'
-        if 'ga_shrink_wrap_gauss_sigmas' in config_map:
-            ga_shrink_wrap_gauss_sigmas = config_map['ga_shrink_wrap_gauss_sigmas']
-            if not ver_list_float('ga_shrink_wrap_gauss_sigmas', ga_shrink_wrap_gauss_sigmas):
+        if 'ga_sw_gauss_sigmas' in config_map:
+            ga_sw_gauss_sigmas = config_map['ga_sw_gauss_sigmas']
+            if not ver_list_float('ga_sw_gauss_sigmas', ga_sw_gauss_sigmas):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
         config_parameter = 'Galowpassfiltersigmas'
-        if 'ga_lowpass_filter_sigmas' in config_map:
-            ga_lowpass_filter_sigmas = config_map['ga_lowpass_filter_sigmas']
-            if not ver_list_float('ga_lowpass_filter_sigmas', ga_lowpass_filter_sigmas):
+        if 'ga_lpf_sigmas' in config_map:
+            ga_lpf_sigmas = config_map['ga_lpf_sigmas']
+            if not ver_list_float('ga_lpf_sigmas', ga_lpf_sigmas):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 return (error_message)
@@ -499,76 +526,122 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Shrinkwraptrigger'
     if 'shrink_wrap_trigger' in config_map:
-        m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no)
-        if len(m) > 0:
-            return(m)
-        if not ver_list_int('shrink_wrap_trigger', config_map['shrink_wrap_trigger']):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
-
-        config_parameter = 'Shrinkwraptype'
-        if 'shrink_wrap_type' in config_map:
-            shrink_wrap_type = config_map['shrink_wrap_type']
-            if type(shrink_wrap_type) != str:
-                config_error = 0
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print (error_message)
-                return (error_message)
-            if shrink_wrap_type != "GAUSS":
-                config_error = 1
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print (error_message)
-                return (error_message)
-
-        config_parameter = 'Shrinkwrapthreshold'
-        if 'shrink_wrap_threshold' in config_map:
-            shrink_wrap_threshold = config_map['shrink_wrap_threshold']
-            if type(shrink_wrap_threshold) != float:
+        if '.SW' not in config_map['algorithm_sequence']:
+            m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no)
+            if len(m) > 0:
+                return(m)
+            if not ver_list_int('shrink_wrap_trigger', config_map['shrink_wrap_trigger']):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
-        config_parameter = 'Shrinkwrapgausssigma'
-        if 'shrink_wrap_gauss_sigma' in config_map:
-            shrink_wrap_gauss_sigma = config_map['shrink_wrap_gauss_sigma']
-            if type(shrink_wrap_gauss_sigma) != float and type(shrink_wrap_gauss_sigma) != int:
-                config_error = 0
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
+            config_parameter = 'Shrinkwraptype'
+            if 'shrink_wrap_type' in config_map:
+                shrink_wrap_type = config_map['shrink_wrap_type']
+                if type(shrink_wrap_type) != str:
+                    config_error = 0
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print (error_message)
+                    return (error_message)
+                if shrink_wrap_type != "GAUSS":
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print (error_message)
+                    return (error_message)
+
+            config_parameter = 'Shrinkwrapthreshold'
+            if 'shrink_wrap_threshold' in config_map:
+                shrink_wrap_threshold = config_map['shrink_wrap_threshold']
+                if type(shrink_wrap_threshold) != float:
+                    config_error = 0
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
+            config_parameter = 'Shrinkwrapgausssigma'
+            if 'shrink_wrap_gauss_sigma' in config_map:
+                shrink_wrap_gauss_sigma = config_map['shrink_wrap_gauss_sigma']
+                if type(shrink_wrap_gauss_sigma) != float and type(shrink_wrap_gauss_sigma) != int:
+                    config_error = 0
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+        else:
+            for t in config_map['shrink_wrap_trigger']:
+                if not ver_list_int('shrink_wrap_trigger', t):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+            config_parameter = 'Shrinkwrapthreshold'
+            if 'shrink_wrap_threshold' in config_map:
+                if not ver_list_float('shrink_wrap_threshold', config_map['shrink_wrap_threshold']):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
+            config_parameter = 'Shrinkwrapgausssigma'
+            if 'shrink_wrap_gauss_sigma' in config_map:
+                if not ver_list_float('shrink_wrap_gauss_sigma', config_map['shrink_wrap_gauss_sigma']):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
 
     config_parameter = 'Phasesupporttrigger'
-    if 'phase_support_trigger' in config_map:
-        m = verify_trigger(config_map['phase_support_trigger'], iter_no)
-        print(m)
-        if len(m) > 0:
-            return(m)
-        if not ver_list_int('phase_support_trigger', config_map['phase_support_trigger']):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
-
-        config_parameter = 'Phmphasemin'
-        if 'phm_phase_min' in config_map:
-            phm_phase_min = config_map['phm_phase_min']
-            if type(phm_phase_min) != float:
+    if 'phm_trigger' in config_map:
+        if '.PHM' not in config_map['algorithm_sequence']:
+            m = verify_trigger(config_map['phm_trigger'], iter_no)
+            print(m)
+            if len(m) > 0:
+                return(m)
+            if not ver_list_int('phm_trigger', config_map['phm_trigger']):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
-        config_parameter = 'Phmphasemax'
-        if 'phm_phase_max' in config_map:
-            phm_phase_max = config_map['phm_phase_max']
-            if type(phm_phase_max) != float:
-                config_error = 0
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
+            config_parameter = 'Phmphasemin'
+            if 'phm_phase_min' in config_map:
+                phm_phase_min = config_map['phm_phase_min']
+                if type(phm_phase_min) != float:
+                    config_error = 0
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
+            config_parameter = 'Phmphasemax'
+            if 'phm_phase_max' in config_map:
+                phm_phase_max = config_map['phm_phase_max']
+                if type(phm_phase_max) != float:
+                    config_error = 0
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+        else:
+            for t in config_map['phm_trigger']:
+                if not ver_list_int('phm_trigger', t):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+            config_parameter = 'Phmphasemin'
+            if 'phm_phase_min' in config_map:
+                if not ver_list_float('phm_phase_min', config_map['phm_phase_min']):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
+            config_parameter = 'Phmphasemax'
+            if 'phm_phase_max' in config_map:
+                if not ver_list_float('phm_phase_max', config_map['phm_phase_max']):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
 
     config_parameter = 'Pcinterval'
     if 'pc_interval' in config_map:
@@ -628,33 +701,69 @@ def ver_config_rec(config_map):
             return (error_message)
 
     config_parameter = 'Resolutiontrigger'
-    if 'resolution_trigger' in config_map:
-        m = verify_trigger(config_map['resolution_trigger'], iter_no)
-        if len(m) > 0:
-            return(m)
-        if not ver_list_int('resolution_trigger', config_map['resolution_trigger']):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
-
-        config_parameter = 'Lowpassfilterswsigmarange'
-        if 'lowpass_filter_sw_sigma_range' in config_map:
-            lowpass_filter_sw_sigma_range = config_map['lowpass_filter_sw_sigma_range']
-            if not ver_list_float('lowpass_filter_sw_sigma_range', lowpass_filter_sw_sigma_range):
+    if 'lowpass_filter_trigger' in config_map:
+        if '.LPF' not in config_map['algorithm_sequence']:
+            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no)
+            if len(m) > 0:
+                return(m)
+            if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
-        config_parameter = 'Lowpassfilterrange'
-        if 'lowpass_filter_range' in config_map:
-            lowpass_filter_range = config_map['lowpass_filter_range']
-            if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
-                config_error = 0
+            config_parameter = 'Lowpassfilterswthreshold'
+            if 'lowpass_filter_sw_threshold' in config_map:
+                lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
+                if type(lowpass_filter_sw_threshold) != float:
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
+            config_parameter = 'Lowpassfilterrange'
+            if 'lowpass_filter_range' in config_map:
+                lowpass_filter_range = config_map['lowpass_filter_range']
+                if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
+                    config_error = 0
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+            else:
+                config_error = 2
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
+        else:
+            for t in config_map['lowpass_filter_trigger']:
+                if not ver_list_int('lowpass_filter_trigger', t):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
+            config_parameter = 'Lowpassfilterrange'
+            if 'lowpass_filter_range' in config_map:
+                for r in config_map['lowpass_filter_range']:
+                    if not ver_list_float('lowpass_filter_range', r):
+                        config_error = 1
+                        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                        print(error_message)
+                        return (error_message)
+            else:
+                config_error = 2
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print(error_message)
+                return (error_message)
+
+            config_parameter = 'Lowpassfilterswthreshold'
+            if 'lowpass_filter_sw_threshold' in config_map:
+                lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
+                if not ver_list_float('lowpass_filter_sw_threshold', lowpass_filter_sw_threshold):
+                    config_error = 1
+                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                    print(error_message)
+                    return (error_message)
+
 
     config_parameter = 'Averagetrigger'
     if 'average_trigger' in config_map:
@@ -945,24 +1054,6 @@ def ver_config_prep(config_map):
             print (error_message)
             return (error_message)
 
-    config_parameter = 'Separatescans'
-    if 'separate_scans' in config_map:
-        separate_scans = config_map['separate_scans']
-        if type(separate_scans) != bool:
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
-
-    config_parameter = 'Separatescanranges'
-    if 'separate_scan_ranges' in config_map:
-        separate_scan_ranges = config_map['separate_scan_ranges']
-        if type(separate_scan_ranges) != bool:
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
-
     return ("")
 
 
@@ -1082,6 +1173,133 @@ def ver_config_disp(config_map):
     return ("")
 
 
+
+def ver_config_instr(config_map):
+    """
+    This function verifies experiment config_disp file
+
+    Parameters
+    ----------
+    fname : str
+        configuration file name
+
+    Returns
+    -------
+    error_message : str
+        message describing parameter error or empty string if all parameters are verified
+    """
+    config_map_file = 'config_instr_error_map_file'
+    fname = 'config_instr'
+
+    config_parameter = 'Diffractometer'
+    if 'diffractometer' in config_map:
+        diffractometer = config_map['diffractometer']
+        if type(diffractometer) != str:
+            config_error = 1
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('diffractometer parameter should be string')
+            return (error_message)
+    else:
+        config_error = 0
+        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+        print('missing mandatory diffractometer parameter')
+        return ''
+
+    config_parameter = 'Specfile'
+    if 'specfile' in config_map:
+        specfile = config_map['specfile']
+        if type(specfile) != str:
+            config_error = 1
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('specfile parameter should be string')
+            return (error_message)
+    else:
+        config_error = 0
+        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+        print('missing mandatory specfile parameter')
+        return ''
+
+    config_parameter = 'Detector'
+    if 'detector' in config_map:
+        detector = config_map['detector']
+        if type(detector) != str:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('detector parameter should be string')
+            return (error_message)
+
+    config_parameter = 'Crop'
+    if 'crop' in config_map:
+        crop = config_map['crop']
+        if not issubclass(type(crop), list):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('crop should be list')
+            return (error_message)
+        for e in crop:
+            if type(e) != int and type(e) != float:
+                config_error = 1
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print('crop should be a list of int or float')
+                return (error_message)
+
+    config_parameter = 'Rampups'
+    if 'rampups' in config_map:
+        rampups = config_map['rampups']
+        if type(rampups) != int:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('rampups should be float')
+            return (error_message)
+
+    config_parameter = 'Energy'
+    if 'energy' in config_map:
+        energy = config_map['energy']
+        if type(energy) != float:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('energy should be float')
+            return (error_message)
+
+    config_parameter = 'Delta'
+    if 'delta' in config_map:
+        delta = config_map['delta']
+        if type(delta) != float:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('delta should be float')
+            return (error_message)
+
+    config_parameter = 'Gamma'
+    if 'gamma' in config_map:
+        gamma = config_map['gamma']
+        if type(gamma) != float:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('gamma should be float')
+            return (error_message)
+
+    config_parameter = 'Detdist'
+    if 'detdist' in config_map:
+        detdist = config_map['detdist']
+        if type(detdist) != float:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('detdist should be float')
+            return (error_message)
+
+    config_parameter = 'Dth'
+    if 'dth' in config_map:
+        dth = config_map['dth']
+        if type(dth) != float:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('dth should be float')
+            return (error_message)
+
+    return ("")
+
+
 def verify(file_name, conf_map):
     """
     Verifies parameters.
@@ -1109,5 +1327,7 @@ def verify(file_name, conf_map):
         return ver_config_rec(conf_map)
     elif file_name == 'config_disp':
         return ver_config_disp(conf_map)
+    elif file_name == 'config_instr':
+        return ver_config_instr(conf_map)
     else:
         return ('verifier has no fumction to check config file named', file_name)

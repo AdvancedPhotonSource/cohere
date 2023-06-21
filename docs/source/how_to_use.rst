@@ -2,37 +2,37 @@
 
 Using cohere with cohere-ui package
 ========================================
-| User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-ui. The cohere-ui package, is a supplemental git repository that contains executable python scripts for every stage of CDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User with other instruments than those defined in 34-ID-C suite can easily add own code that would encapsulate user's beamline specifics. In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
+| User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-ui. The cohere-ui package, is a supplemental git repository that contains executable python scripts for every stage of BCDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User with other instruments than those defined in 34-ID-C suite can easily add own code that would encapsulate user's beamline specifics. In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
 
 Installing Scripts
 ##################
 | There are three ways to get the cohere-ui package onto your local computer, or remote computer.
-| Is is assumed the user activated the environment where cohere was installed.
+| It is assumed the user activated the environment where cohere was installed.
 
   ::
 
     conda activate <env_name>
 
-1. The cohere-ui package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-ui and clicking the green “Code” button and selecting “Download ZIP”.
+1. The cohere-ui package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-ui and clicking the green “Code” button and selecting “Download ZIP”. Unzip this directory and rename to cohere-ui or a name of your choice.
 
-2. Alternatively one can clone the repository using git. This will create the cohere-ui directory containing all of the cohere-ui content. In this code below we clone it to cohere-ui-main directory.
-   
+2. Alternatively one can clone the repository using git. This will create the cohere-ui directory containing all of the cohere-ui content. In this code below we clone it to cohere-ui directory.
+
   ::
 
-        git clone https://github.com/advancedPhotonSource/cohere-ui cohere-ui-main
+        git clone https://github.com/advancedPhotonSource/cohere-ui
 
-3. Another way to get the cohere-ui package on your machine is with the wget command:
-   
+3. Another way to get the cohere-ui package on your machine is with the wget command. After unzipping rename the directory to cohere-ui or a name of your choice.
+
   ::
 
         wget https://github.com/AdvancedPhotonSource/cohere-ui/archive/main.zip
         unzip main.zip
 
-| After the package is installed change directory to cohere-ui-main and run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
-   
+| After the package is installed run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
+
   ::
 
-        cd cohere-ui-main
+        cd cohere-ui
         python setup.py
         sh install_pkgs.sh    # for Linux and OS_X
         install_pkgs.bat      # for Windows
