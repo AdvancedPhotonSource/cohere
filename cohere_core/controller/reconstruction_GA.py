@@ -161,7 +161,7 @@ def set_ga_defaults(pars):
         pars['ga_fast'] = False
 
     if 'ga_metrics' not in pars:
-        pars['ga_metrics'] = ['chi'] * pars['ga_generations']
+        metrics = ['chi'] * pars['ga_generations']
     else:
         metrics = pars['ga_metrics']
         if len(metrics) == 1:
@@ -216,7 +216,7 @@ def set_ga_defaults(pars):
     pars['ga_sw_gauss_sigmas'] = ga_sw_gauss_sigmas
 
     if 'ga_breed_modes' not in pars:
-        pars['ga_breed_modes'] = ['sqrt_ab'] * pars['ga_generations']
+        ga_breed_modes = ['sqrt_ab'] * pars['ga_generations']
     else:
         ga_breed_modes = pars['ga_breed_modes']
         if len(ga_breed_modes) == 1:
@@ -376,6 +376,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         list of GPUs available for this reconstructions
 
     """
+    print('ga reconstruction')
     pars = ut.read_config(conf_file)
     pars = set_ga_defaults(pars)
 
@@ -388,10 +389,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         return
 
     if pars['ga_fast']:
-        reconstructions = min(pars['reconstructions'], len(devices))
+        reconstructions = min(pars['reconstructions'], int(len(devices)/2))
     else:
         reconstructions = pars['reconstructions']
-
+    print('reconstructions', reconstructions)
     if 'ga_cullings' in pars:
         cull_sum = sum(pars['ga_cullings'])
         if reconstructions - cull_sum < 2:
@@ -421,6 +422,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     tracing = Tracing(reconstructions, pars, dir)
 
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
+        print('fast GA')
         set_lib(lib)
 
         workers = []
@@ -461,12 +463,12 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 handle_cmd()
                 for pid in processes:
                     worker_qin = processes[pid][0]
-                    worker_qin.put(('init', init_dirs[pid], g))
+                    worker_qin.put(('init', init_dirs[pid], alpha_dir, g))
                 handle_cmd()
             else:
                 for pid in processes:
                     worker_qin = processes[pid][0]
-                    worker_qin.put(('init', alpha_dir, g))
+                    worker_qin.put(('init', None, alpha_dir, g))
                 handle_cmd()
             if g > 0:
                 for pid in processes:
@@ -530,6 +532,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             worker_qin = processes[pid][0]
             worker_qin.put('done')
     else:   # not fast GA
+        print('not fast')
         q = Queue()
         prev_dirs = tracing.init_dirs
         tracing.set_map({i:i for i in range(len(prev_dirs))})
@@ -542,7 +545,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             gen_save_dir = save_dir + '/g_' + str(g)
             metric_type = pars['ga_metrics'][g]
             reconstructions = len(prev_dirs)
-            p = Process(target=rec.multi_rec, args=(lib, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, q))
+            p = Process(target=rec.multi_rec, args=(lib, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, alpha_dir, q))
             p.start()
             p.join()
 
