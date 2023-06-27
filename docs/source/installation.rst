@@ -10,7 +10,7 @@ Conda Installation
 This will install latest official release.
 
 First you must have `Conda <http://continuum.io/downloads>` installed.
-It is highly recommended to install the cohere_core package in conda environment. Supported python versions are 3.6 - 3.11 for Linux and Mac, and 3.6 - 3.9 for Windows.
+It is highly recommended to install the cohere_core package in conda environment. Supported python versions are 3.6 - 3.11 for Linux and Mac, and 3.6 - 3.10 for Windows.
 To create and activate the environment run the commands below::
 
     conda create --name <env_name> python=3.x -c conda-forge
@@ -25,6 +25,8 @@ if using cupy library::
 
     conda install cupy -c conda-forge
 Cohere-core package does not install python packages used by user's scripts in cohere-ui package. If planning to use the scripts Refer to :ref:`use` page, section "Installing Scripts".
+
+Note: The cupy installation on Windows may result in incompatible libraries, which makes the environment unusable. Run the repack.bat script from cohere-ui package and try running again.
 
 Latest development installation
 ===============================
