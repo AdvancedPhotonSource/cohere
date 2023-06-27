@@ -627,18 +627,6 @@ class CoupledRec(Rec):
         return jacobian
 
     def switch_peaks(self):
-        # if self.iter > 0.95*self.iter_no:
-        #     img = devlib.to_numpy(devlib.absolute(devlib.fftshift(self.rs_amplitudes)))[90]
-        #     mask = devlib.to_numpy(devlib.fftshift(self.peak_objs[self.pk].mask))[90]
-        #     im2 = np.where(mask, img, np.nan)
-        #     plt.subplot(221, xticks=[], yticks=[], title="Enforced")
-        #     plt.imshow(np.log(im2 + 1), cmap="plasma")
-        #     plt.subplot(222, xticks=[], yticks=[], title="Fwd model")
-        #     plt.imshow(np.log(img + 1), cmap="plasma")
-        #     plt.subplot2grid((2, 2), (1, 0), colspan=2, yscale="log", title="Horizontal lineout")
-        #     plt.plot(img[91])
-        #     plt.tight_layout()
-        #     plt.show()
         self.to_shared_image()
         self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
         self.iter_data = self.peak_objs[self.pk].data
@@ -658,16 +646,6 @@ class CoupledRec(Rec):
         rho = self.shared_image[:, :, :, 0]
         self.ds_image = rho * devlib.exp(1j*phi)
 
-    # def modulus(self):
-    #     ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
-    #     error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
-    #                                   0)) / get_norm(self.iter_data)
-    #     self.errs.append(error)
-    #     if self.iter < 0.3*self.iter_no:
-    #         self.rs_amplitudes *= ratio
-    #     else:
-    #         self.rs_amplitudes[self.peak_objs[self.pk].mask] *= ratio[self.peak_objs[self.pk].mask]
-    #
     def progress_trigger(self):
         ornt = self.peak_objs[self.pk].orientation
         print(f'|  iter {self.iter:>4}  '
