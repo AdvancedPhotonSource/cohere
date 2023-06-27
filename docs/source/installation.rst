@@ -10,14 +10,14 @@ Conda Installation
 This will install latest official release.
 
 First you must have `Conda <http://continuum.io/downloads>` installed.
-It is highly recommended to install the cohere_core package in conda environment. Supported python versions are 3.6 - 3.10.
+It is highly recommended to install the cohere_core package in conda environment. Supported python versions are 3.6 - 3.11.
 To create and activate the environment run the commands below::
 
     conda create --name <env_name> python=3.x -c conda-forge
     conda activate <env_name>
 then run the installation command::
 
-    pip install cohere_core
+    pip install cohere-core
 The cohere_core package can be run as installed running on numpy library. Other available libraries are cupy and torch.
 User has to install the preferred library.
 
