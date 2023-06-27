@@ -254,6 +254,34 @@ class torchlib(cohlib):
     def clip(arr, min, max=None):
         return torch.clip(arr, min, max)
 
+    def diff(arr, axis=None, prepend=0):
+        raise NotImplementedError
+
+    def gradient(arr, dx=1):
+        raise NotImplementedError
+
+    def argmin(arr, axis=None):
+        raise NotImplementedError
+
+    def take_along_axis(a, indices, axis):
+        raise NotImplementedError
+
+    def moveaxis(arr, source, dest):
+        raise NotImplementedError
+
+    def lstsq(A, B):
+        raise NotImplementedError
+
+    def zeros(shape):
+        raise NotImplementedError
+
+    def indices(dims):
+        raise NotImplementedError
+
+    def concatenate(tup, axis=0):
+        raise NotImplementedError
+
+
 # a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])
 # conv = torchlib.fftconvolve(a1,a2)

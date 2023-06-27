@@ -165,15 +165,6 @@ class cplib(cohlib):
     def conj(arr):
         return cp.conj(arr)
 
-    def cos(arr):
-        return cp.cos(arr)
-
-    def linspace(start, stop, steps):
-        return cp.linspace(start, stop, steps)
-
-    def diff(arr, axis=None, prepend=0):
-        return cp.diff(arr, axis=axis, prepend=prepend)
-
     def array_equal(arr1, arr2):
         return cp.array_equal(arr1, arr2)
 
@@ -185,6 +176,9 @@ class cplib(cohlib):
 
     def clip(arr, min, max=None):
         return cp.clip(arr, min, max)
+
+    def diff(arr, axis=None, prepend=0):
+        return cp.diff(arr, axis=axis, prepend=prepend)
 
     def gradient(arr, dx=1):
         return cp.gradient(arr, dx)

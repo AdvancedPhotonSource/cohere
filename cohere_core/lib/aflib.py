@@ -333,3 +333,31 @@ class aflib3(aflib):
         correction = arr_sum / af.sum(convag)
         convag *= correction
         return convag
+
+    def diff(arr, axis=None, prepend=0):
+        raise NotImplementedError
+
+    def gradient(arr, dx=1):
+        raise NotImplementedError
+
+    def argmin(arr, axis=None):
+        raise NotImplementedError
+
+    def take_along_axis(a, indices, axis):
+        raise NotImplementedError
+
+    def moveaxis(arr, source, dest):
+        raise NotImplementedError
+
+    def lstsq(A, B):
+        raise NotImplementedError
+
+    def zeros(shape):
+        raise NotImplementedError
+
+    def indices(dims):
+        raise NotImplementedError
+
+    def concatenate(tup, axis=0):
+        raise NotImplementedError
+
