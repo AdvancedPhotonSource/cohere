@@ -376,7 +376,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         list of GPUs available for this reconstructions
 
     """
-    print('ga reconstruction')
     pars = ut.read_config(conf_file)
     pars = set_ga_defaults(pars)
 
@@ -392,7 +391,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         reconstructions = min(pars['reconstructions'], int(len(devices)/2))
     else:
         reconstructions = pars['reconstructions']
-    print('reconstructions', reconstructions)
+    print('GA starting', reconstructions, 'reconstructions')
     if 'ga_cullings' in pars:
         cull_sum = sum(pars['ga_cullings'])
         if reconstructions - cull_sum < 2:
@@ -422,7 +421,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     tracing = Tracing(reconstructions, pars, dir)
 
     if pars['ga_fast']:  # the number of processes is the same as available GPUs (can be same GPU if can fit more recs)
-        print('fast GA')
         set_lib(lib)
 
         workers = []
@@ -532,7 +530,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             worker_qin = processes[pid][0]
             worker_qin.put('done')
     else:   # not fast GA
-        print('not fast')
         q = Queue()
         prev_dirs = tracing.init_dirs
         tracing.set_map({i:i for i in range(len(prev_dirs))})
