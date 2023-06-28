@@ -207,7 +207,7 @@ class Rec:
                 worker_qout.put(ret)
 
 
-    def init(self, dir=None, gen=None):
+    def init(self, dir=None, alpha_dir=None, gen=None):
         def create_feat_objects(params, feats):
             if 'shrink_wrap_trigger' in params:
                 self.shrink_wrap_obj = ft.ShrinkWrap(params, feats)
@@ -243,6 +243,7 @@ class Rec:
         self.errs = []
         self.gen = gen
         self.prev_dir = dir
+        self.alpha_dir = alpha_dir
         self.support_obj = Support(self.params, self.dims, dir)
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
@@ -277,23 +278,26 @@ class Rec:
 
     def breed(self):
         breed_mode = self.params['ga_breed_modes'][self.gen]
-        if self.prev_dir.endswith('alpha'):
-            alpha_dir = self.prev_dir
-        else:
-            alpha_dir = os.path.dirname(os.path.dirname(self.prev_dir)).replace(os.sep, '/') + '/alpha'
-
         if breed_mode != 'none':
-            self.ds_image = dvut.breed(breed_mode, alpha_dir, self.ds_image)
-            self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_sw_thresholds'][self.gen],
-                                                       self.params['ga_sw_gauss_sigmas'][self.gen])
+            try:
+                self.ds_image = dvut.breed(breed_mode, self.alpha_dir, self.ds_image)
+                self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_sw_thresholds'][self.gen],
+                                                           self.params['ga_sw_gauss_sigmas'][self.gen])
+            except:
+                print('exception during breeding')
+                return -1
+
         return 0
 
 
     def iterate(self):
         self.iter = -1
         start_t = time.time()
-        for f in self.flow:
-            f()
+        try:
+            for f in self.flow:
+                f()
+        except:
+            return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
 
@@ -535,8 +539,8 @@ class CoupledRec(Rec):
 
         return 0
 
-    def init(self, img_dir=None, gen=None):
-        if super().init(img_dir, gen) == -1:
+    def init(self, img_dir=None, alpha_dir=None, gen=None):
+        if super().init(img_dir, alpha_dir, gen) == -1:
             return -1
 
         # Define the shared image
