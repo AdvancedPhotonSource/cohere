@@ -98,13 +98,31 @@ class cohlib(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'conj') and
                 callable(subclass.conj) and
                 hasattr(subclass, 'array_equal') and
-                callable(subclass.array_equal) or
+                callable(subclass.array_equal) and
                 hasattr(subclass, 'cos') and
-                callable(subclass.cos) or
+                callable(subclass.cos) and
                 hasattr(subclass, 'linspace') and
-                callable(subclass.linspace) or
+                callable(subclass.linspace) and
                 hasattr(subclass, 'clip') and
-                callable(subclass.clip) or
+                callable(subclass.clip) and
+                hasattr(subclass, 'gradient') and
+                callable(subclass.gradient) and
+                hasattr(subclass, 'argmin') and
+                callable(subclass.argmin) and
+                hasattr(subclass, 'take_along_axis') and
+                callable(subclass.take_along_axis) and
+                hasattr(subclass, 'moveaxis') and
+                callable(subclass.moveaxis) and
+                hasattr(subclass, 'lstsq') and
+                callable(subclass.lstsq) and
+                hasattr(subclass, 'zeros') and
+                callable(subclass.zeros) and
+                hasattr(subclass, 'indices') and
+                callable(subclass.indices) and
+                hasattr(subclass, 'diff') and
+                callable(subclass.diff) and
+                hasattr(subclass, 'concatenate') and
+                callable(subclass.concatenate) or
                 NotImplemented)
 
     @abc.abstractmethod
@@ -309,5 +327,41 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def diff(arr, axis=None, prepend=0):
+        pass
+
+    @abc.abstractmethod
     def clip(arr, min, max=None):
+        pass
+
+    @abc.abstractmethod
+    def gradient(arr, dx=1):
+        pass
+
+    @abc.abstractmethod
+    def argmin(arr, axis=None):
+        pass
+
+    @abc.abstractmethod
+    def take_along_axis(a, indices, axis):
+        pass
+
+    @abc.abstractmethod
+    def moveaxis(arr, source, dest):
+        pass
+
+    @abc.abstractmethod
+    def lstsq(A, B):
+        pass
+
+    @abc.abstractmethod
+    def zeros(shape):
+        pass
+
+    @abc.abstractmethod
+    def indices(dims):
+        pass
+
+    @abc.abstractmethod
+    def concatenate(tup, axis=0):
         pass

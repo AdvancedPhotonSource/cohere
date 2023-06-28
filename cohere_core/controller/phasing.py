@@ -19,6 +19,11 @@ import os
 from math import pi
 import random
 import importlib
+import tqdm
+
+import numpy as np
+from matplotlib import pyplot as plt
+
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.config_verifier as ver
@@ -445,6 +450,10 @@ class Peak:
 
     def __init__(self, dir_ornt):
         (self.dir, self.orientation) = dir_ornt
+        self.g_vec = None
+        self.gdotg = None
+        self.mask = None
+        self.data = None
 
     def set_data(self, G_0):
         import tifffile as tf
@@ -452,9 +461,17 @@ class Peak:
         self.g_vec = devlib.array([0, * self.orientation]) * G_0
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
 
-        fn = self.dir + '/phasing_data/data.tif'
-        data_np = tf.imread(fn.replace(os.sep, '/'))
+        datafile = self.dir + '/phasing_data/data.tif'
+        data_np = tf.imread(datafile.replace(os.sep, '/'))
         data = devlib.from_numpy(data_np)
+
+        try:
+            maskfile = self.dir + "/phasing_data/mask.tif"
+            mask_np = tf.imread(maskfile.replace(os.sep, '/')).astype("?")
+            mask = devlib.from_numpy(mask_np)
+            self.mask = devlib.fftshift(mask)
+        except FileNotFoundError:
+            pass
 
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
         self.data = devlib.fftshift(devlib.absolute(data))
@@ -495,7 +512,6 @@ class CoupledRec(Rec):
             params["mp_taper"] = 0.75
 
         self.peak_objs = [Peak(dir_ornt) for dir_ornt in peak_dir_orient]
-
 
     def init_dev(self, device_id):
         self.dev = device_id
@@ -540,10 +556,20 @@ class CoupledRec(Rec):
 
     def save_res(self, save_dir):
         from array import array
+        J = self.calc_jacobian()
+        s_xx = J[:,:,:,0,0][:,:,:,None]
+        s_yy = J[:,:,:,1,1][:,:,:,None]
+        s_zz = J[:,:,:,2,2][:,:,:,None]
+        s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)[:,:,:,None]
+        s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
+        s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
 
-        self.shared_image = self.shared_image * self.support_obj.get_support()[:, :, :, None]
+        sup = self.support_obj.get_support()[:, :, :, None]
+        self.shared_image = self.shared_image * sup
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
+        final_rec = devlib.concatenate((self.shared_image, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup), axis=-1)
+        devlib.save(save_dir + "/reconstruction", final_rec)
         devlib.save(save_dir + "/image", self.shared_image)
         devlib.save(save_dir + "/shared_density", self.shared_image[:, :, :, 0])
         devlib.save(save_dir + "/shared_u1", self.shared_image[:, :, :, 1])
@@ -564,6 +590,46 @@ class CoupledRec(Rec):
 
         return 0
 
+    def get_phase_gradient(self, peak):
+        """Calculate the phase gradient for a given peak"""
+        # Project onto the peak
+        self.iter_data = peak.data
+        self.to_working_image(peak)
+
+        # Iterate a few times to settle
+        for _ in range(25):
+            self.to_reciprocal_space()
+            self.modulus()
+            self.to_direct_space()
+            self.er()
+
+        # Calculate the continuous phase gradient using Hofmann's method
+        # (https://doi.org/10.1103/PhysRevMaterials.4.013801)
+        gradient = []
+        voxel_size = self.params["ds_voxel_size"]
+        dx0, dy0, dz0 = devlib.gradient(devlib.angle(self.ds_image), voxel_size)
+        dx1, dy1, dz1 = devlib.gradient(devlib.angle(self.ds_image * devlib.exp(1j*pi/2)), voxel_size)
+        dx2, dy2, dz2 = devlib.gradient(devlib.angle(self.ds_image * devlib.exp(-1j*pi/2)), voxel_size)
+        for stack in ([dx0, dx1, dx2], [dy0, dy1, dy2], [dz0, dz1, dz2]):
+            stack = devlib.array(stack)
+            index = devlib.argmin(stack**2, axis=0)
+            gradient.append(devlib.take_along_axis(stack, index[None, :, :, :], axis=0).squeeze(axis=0))
+
+        return gradient
+
+    def calc_jacobian(self):
+        grad_phi = devlib.array([self.get_phase_gradient(peak) for peak in self.peak_objs])
+        G = devlib.array([peak.g_vec[1:] for peak in self.peak_objs])
+        grad_phi = devlib.moveaxis(devlib.moveaxis(grad_phi, 0, -1), 0, -1)
+        cond = devlib.where(self.support_obj.get_support(), True, False)
+        final_shape = (grad_phi.shape[0], grad_phi.shape[1], grad_phi.shape[2], 3, 3)
+        ind = devlib.moveaxis(devlib.indices(cond.shape), 0, -1).reshape((-1, 3))[cond.ravel()].get()
+        print("Calculating strain...")
+        jacobian = devlib.zeros(final_shape)
+        for i, j, k in tqdm.tqdm(ind):
+            jacobian[i, j, k] = devlib.lstsq(G, grad_phi[i, j, k])[0]
+        return jacobian
+
     def switch_peaks(self):
         self.to_shared_image()
         self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
@@ -578,7 +644,6 @@ class CoupledRec(Rec):
         new_image = (devlib.angle(self.ds_image) / curr_peak.gdotg)[:, :, :, None] * curr_peak.g_vec + \
                     devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat
         self.shared_image = self.shared_image + beta * (new_image - old_image)
-
 
     def to_working_image(self, peak_obj):
         phi = devlib.dot(self.shared_image, peak_obj.g_vec)

@@ -186,6 +186,34 @@ class nplib(cohlib):
     def clip(arr, min, max=None):
         return np.clip(arr, min, max)
 
+    def diff(arr, axis=None, prepend=0):
+        return np.diff(arr, axis=axis, prepend=prepend)
+
+    def gradient(arr, dx=1):
+        return np.gradient(arr, dx)
+
+    def argmin(arr, axis=None):
+        return np.argmin(arr, axis)
+
+    def take_along_axis(a, indices, axis):
+        return np.take_along_axis(a, indices, axis)
+
+    def moveaxis(arr, source, dest):
+        return np.moveaxis(arr, source, dest)
+
+    def lstsq(A, B):
+        return np.linalg.lstsq(A, B, rcond=None)
+
+    def zeros(shape):
+        return np.zeros(shape)
+
+    def indices(dims):
+        return np.indices(dims)
+
+    def concatenate(tup, axis=0):
+        return np.concatenate(tup, axis)
+
+
 # a11 = np.array([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a12 = np.array([10.1, 10.2, 10.3, 11.0])
 # print(np.convolve(a11,a12, mode='same'))

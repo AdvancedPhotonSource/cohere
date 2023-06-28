@@ -23,7 +23,7 @@ __all__ = ['prep',
            ]
 
 
-def prep(datafile, **kwargs):
+def prep(prep_dir, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
         - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
@@ -75,14 +75,18 @@ def prep(datafile, **kwargs):
         # the error message is printed in verifier
         return
 
-    datafile = datafile.replace(os.sep, '/')
+    prep_dir = prep_dir.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
-    data = ut.read_tif(datafile)
+    data = ut.read_tif(f"{prep_dir}/prep_data.tif")
+    try:
+        mask = ut.read_tif(f"{prep_dir}/mask.tif")
+    except FileNotFoundError:
+        mask = None
 
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
-        data_dir, filename = os.path.split(datafile)
+        data_dir = prep_dir
 
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(data, kwargs, data_dir)
@@ -121,9 +125,13 @@ def prep(datafile, **kwargs):
 
     if 'center_shift' in kwargs:
         center_shift = kwargs['center_shift']
-        prep_data = ut.get_centered(prep_data, center_shift)
+        prep_data, shift = ut.get_centered(prep_data, center_shift)
     else:
-        prep_data = ut.get_centered(prep_data, [0, 0, 0])
+        prep_data, shift = ut.get_centered(prep_data, [0, 0, 0])
+    if mask is not None:
+        mask = np.roll(mask, shift, tuple(range(mask.ndim)))
+        ut.save_tif(mask, data_dir + '/mask.tif')
+
 
     if 'binning' in kwargs:
         binsizes = kwargs['binning']

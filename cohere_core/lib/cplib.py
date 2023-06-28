@@ -2,7 +2,6 @@ from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
 import cupyx.scipy.ndimage
-import cupyx.scipy.signal
 
 class cplib(cohlib):
     def array(obj):
@@ -166,15 +165,6 @@ class cplib(cohlib):
     def conj(arr):
         return cp.conj(arr)
 
-    def cos(arr):
-        return cp.cos(arr)
-
-    def linspace(start, stop, steps):
-        return cp.linspace(start, stop, steps)
-
-    def diff(arr, axis=None, prepend=0):
-        return cp.diff(arr, axis=axis, prepend=prepend)
-
     def array_equal(arr1, arr2):
         return cp.array_equal(arr1, arr2)
 
@@ -186,3 +176,30 @@ class cplib(cohlib):
 
     def clip(arr, min, max=None):
         return cp.clip(arr, min, max)
+
+    def diff(arr, axis=None, prepend=0):
+        return cp.diff(arr, axis=axis, prepend=prepend)
+
+    def gradient(arr, dx=1):
+        return cp.gradient(arr, dx)
+
+    def argmin(arr, axis=None):
+        return cp.argmin(arr, axis)
+
+    def take_along_axis(a, indices, axis):
+        return cp.take_along_axis(a, indices, axis)
+
+    def moveaxis(arr, source, dest):
+        return cp.moveaxis(arr, source, dest)
+
+    def lstsq(A, B):
+        return cp.linalg.lstsq(A, B, rcond=None)
+
+    def zeros(shape):
+        return cp.zeros(shape)
+
+    def indices(dims):
+        return cp.indices(dims)
+
+    def concatenate(tup, axis=0):
+        return cp.concatenate(tup, axis)
