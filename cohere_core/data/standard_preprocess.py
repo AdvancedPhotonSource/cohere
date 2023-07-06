@@ -23,7 +23,7 @@ __all__ = ['prep',
            ]
 
 
-def prep(prep_dir, **kwargs):
+def prep(beamline_full_datafile_name, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
         - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
@@ -35,11 +35,11 @@ def prep(prep_dir, **kwargs):
 
     Parameters
     ----------
-    datafile : str
-        name of tif file containing raw data
+    beamline_full_datafile_name : str
+        full name of tif file containing beamline preprocessed data
     kwargs : keyword arguments
-        save_dir : str
-            Directory where results of reconstruction are saved as npy files. If not present, the reconstruction outcome will be save in the same directory where datafile is.
+        data_dir : str
+            directory where prepared data will be saved, default <experiment_dir>/phasing_data
         alien_alg : str
             Name of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
         aliens : list
@@ -75,18 +75,16 @@ def prep(prep_dir, **kwargs):
         # the error message is printed in verifier
         return
 
-    prep_dir = prep_dir.replace(os.sep, '/')
+    beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
-    data = ut.read_tif(f"{prep_dir}/prep_data.tif")
-    try:
-        mask = ut.read_tif(f"{prep_dir}/mask.tif")
-    except FileNotFoundError:
-        mask = None
+    data = ut.read_tif(beamline_full_datafile_name)
 
+    prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
-        data_dir = prep_dir
+        # assuming the directory structure and naming follows cohere-ui mechanism
+        data_dir = prep_data_dir.replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(data, kwargs, data_dir)
@@ -98,10 +96,10 @@ def prep(prep_dir, **kwargs):
         return
 
     # zero out the noise
-    prep_data = np.where(data <= intensity_threshold, 0.0, data)
+    data = np.where(data <= intensity_threshold, 0.0, data)
 
     # square root data
-    prep_data = np.sqrt(prep_data)
+    data = np.sqrt(data)
 
     if 'adjust_dimensions' in kwargs:
         crops_pads = kwargs['adjust_dimensions']
@@ -118,20 +116,24 @@ def prep(prep_dir, **kwargs):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
 
-    prep_data = ut.adjust_dimensions(prep_data, pairs)
-    if prep_data is None:
+    data = ut.adjust_dimensions(data, pairs)
+    if data is None:
         print('check "adjust_dimensions" configuration')
         return
 
     if 'center_shift' in kwargs:
         center_shift = kwargs['center_shift']
-        prep_data, shift = ut.get_centered(prep_data, center_shift)
+        data, shift = ut.get_centered(data, center_shift)
     else:
-        prep_data, shift = ut.get_centered(prep_data, [0, 0, 0])
-    if mask is not None:
+        data, shift = ut.get_centered(data, [0, 0, 0])
+
+    try:
+        # assuming the mask file is in directory of preprocessed data
+        mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
         mask = np.roll(mask, shift, tuple(range(mask.ndim)))
         ut.save_tif(mask, data_dir + '/mask.tif')
-
+    except FileNotFoundError:
+        pass
 
     if 'binning' in kwargs:
         binsizes = kwargs['binning']
@@ -139,14 +141,14 @@ def prep(prep_dir, **kwargs):
             bins = []
             for binsize in binsizes:
                 bins.append(binsize)
-            filler = len(prep_data.shape) - len(bins)
+            filler = len(data.shape) - len(bins)
             for _ in range(filler):
                 bins.append(1)
-            prep_data = ut.binning(prep_data, bins)
+            data = ut.binning(data, bins)
         except:
             print('check "binning" configuration')
 
     # save data
     data_file = data_dir + '/data.tif'
-    ut.save_tif(prep_data, data_file)
-    print('data ready for reconstruction, data dims:', prep_data.shape)
+    ut.save_tif(data, data_file)
+    print('data ready for reconstruction, data dims:', data.shape)
