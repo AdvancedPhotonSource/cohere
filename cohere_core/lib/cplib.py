@@ -27,7 +27,7 @@ class cplib(cohlib):
         cp.save(filename, arr)
 
     def load(filename):
-        return cp.load(filename)
+        return cp.load(filename, allow_pickle=True)
 
     def dtype(arr):
         return arr.dtype

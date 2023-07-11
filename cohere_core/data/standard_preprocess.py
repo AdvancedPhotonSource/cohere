@@ -23,7 +23,7 @@ __all__ = ['prep',
            ]
 
 
-def prep(raw_datafile, **kwargs):
+def prep(beamline_full_datafile_name, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
         - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
@@ -35,8 +35,8 @@ def prep(raw_datafile, **kwargs):
 
     Parameters
     ----------
-    raw_datafile : str
-        full name of tif file containing raw data
+    beamline_full_datafile_name : str
+        full name of tif file containing beamline preprocessed data
     kwargs : keyword arguments
         data_dir : str
             directory where prepared data will be saved, default <experiment_dir>/phasing_data
@@ -75,11 +75,11 @@ def prep(raw_datafile, **kwargs):
         # the error message is printed in verifier
         return
 
-    raw_datafile = raw_datafile.replace(os.sep, '/')
+    beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
-    data = ut.read_tif(raw_datafile)
+    data = ut.read_tif(beamline_full_datafile_name)
 
-    prep_data_dir, raw_filename = os.path.split(raw_datafile)
+    prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
@@ -87,7 +87,7 @@ def prep(raw_datafile, **kwargs):
         data_dir = prep_data_dir.replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
-        data = at.remove_aliens(data, kwargs, prep_data_dir)
+        data = at.remove_aliens(data, kwargs, data_dir)
 
     if 'intensity_threshold' in kwargs:
         intensity_threshold = kwargs['intensity_threshold']
@@ -129,7 +129,7 @@ def prep(raw_datafile, **kwargs):
 
     try:
         # assuming the mask file is in directory of preprocessed data
-        mask = ut.read_tif(raw_datafile.replace(raw_filename, 'mask.tif'))
+        mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
         mask = np.roll(mask, shift, tuple(range(mask.ndim)))
         ut.save_tif(mask, data_dir + '/mask.tif')
     except FileNotFoundError:

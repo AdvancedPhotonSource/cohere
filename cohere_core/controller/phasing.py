@@ -19,11 +19,6 @@ import os
 from math import pi
 import random
 import importlib
-import tqdm
-
-import numpy as np
-from matplotlib import pyplot as plt
-
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.config_verifier as ver
@@ -73,6 +68,22 @@ class Support:
 
     def flip(self):
         self.support = devlib.flip(self.support)
+
+
+class Breeder:
+    def __init__(self, alpha_dir):
+        self.alpha_dir = alpha_dir
+
+    def breed(self, phaser, breed_mode, threshold, sigma):
+        if breed_mode != 'none':
+            try:
+                phaser.ds_image = dvut.breed(breed_mode, self.alpha_dir, phaser.ds_image)
+                phaser.support_obj.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
+            except:
+                print('exception during breeding')
+                return -1
+
+        return 0
 
 
 class Rec:
@@ -170,42 +181,6 @@ class Rec:
 
         return 0
 
-    def fast_ga(self, worker_qin, worker_qout):
-        if self.params['low_resolution_generations'] > 0:
-            self.need_save_data = True
-
-        functions_dict = {}
-        functions_dict[self.init_dev.__name__] = self.init_dev
-        functions_dict[self.init.__name__] = self.init
-        functions_dict[self.breed.__name__] = self.breed
-        functions_dict[self.iterate.__name__] = self.iterate
-        functions_dict[self.get_metric.__name__] = self.get_metric
-        functions_dict[self.save_res.__name__] = self.save_res
-
-        done = False
-        while not done:
-            # cmd is a tuple containing name of the function, followed by arguments
-            cmd = worker_qin.get()
-            if cmd == 'done':
-                done = True
-            else:
-                if type(cmd) == str:
-                    # the function does not have any arguments
-                    try:
-                        ret = functions_dict[cmd]()
-                    except:
-                        print('cought exception')
-                        ret = -3
-                else:
-                    try:
-                    # the function name is the first element in the cmd tuple, and the other elements are arguments
-                        ret = functions_dict[cmd[0]](*cmd[1:])
-                    except:
-                        print('cought exception')
-                        ret = -3
-
-                worker_qout.put(ret)
-
 
     def init(self, dir=None, alpha_dir=None, gen=None):
         def create_feat_objects(params, feats):
@@ -276,7 +251,8 @@ class Rec:
             self.ds_image *= self.support_obj.get_support()
         return 0
 
-    def breed(self):
+
+    def breed1(self):
         breed_mode = self.params['ga_breed_modes'][self.gen]
         if breed_mode != 'none':
             try:
@@ -288,6 +264,27 @@ class Rec:
                 return -1
 
         return 0
+
+
+    def clean_breeder(self):
+        import cupy as cp
+
+        self.breeder = None
+        cp._default_memory_pool.free_all_blocks()
+        cp._default_pinned_memory_pool.free_all_blocks()
+
+    def breed(self):
+        try:
+            breed_mode = self.params['ga_breed_modes'][self.gen]
+            threshold = self.params['ga_sw_thresholds'][self.gen]
+            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
+            return self.breeder.breed(self, breed_mode, threshold, sigma)
+        except Exception as e:
+            self.breeder = Breeder(self.alpha_dir)
+            breed_mode = self.params['ga_breed_modes'][self.gen]
+            threshold = self.params['ga_sw_thresholds'][self.gen]
+            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
+            return self.breeder.breed(self, breed_mode, threshold, sigma)
 
 
     def iterate(self):
@@ -618,6 +615,8 @@ class CoupledRec(Rec):
         return gradient
 
     def calc_jacobian(self):
+        import tqdm
+
         grad_phi = devlib.array([self.get_phase_gradient(peak) for peak in self.peak_objs])
         G = devlib.array([peak.g_vec[1:] for peak in self.peak_objs])
         grad_phi = devlib.moveaxis(devlib.moveaxis(grad_phi, 0, -1), 0, -1)
