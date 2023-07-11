@@ -120,9 +120,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         list of GPUs available for this reconstructions
 
     """
-    import time
-    import cupy as cp
-
     def save_metric(metric, file_name):
         with open(file_name.replace(os.sep, '/'), 'w+') as f:
             f.truncate(0)
@@ -305,13 +302,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
                 # read the previous alpha metric
                 alpha_metric = ut.read_config(alpha_dir + '/alpha_metric')
-                # if worker is None:
-                #     write_log(rank, 'worker is none, but is best')
-                # if metric is None:
-                #     write_log(rank, 'metric is none')
-                # if alpha_metric is None:
-                #     write_log(rank, 'alpha metric is none')
-                # write_log(rank, 'metric type ' + metric_type)
 
                 if is_best(metric, alpha_metric, metric_type):
                     worker.save_res(alpha_dir, True)
@@ -325,9 +315,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         if not active:
             worker = None
-            cp._default_memory_pool.free_all_blocks()
-            cp._default_pinned_memory_pool.free_all_blocks()
-
+            dvclib.clean_default_mem()
 
         comm.Barrier()
 

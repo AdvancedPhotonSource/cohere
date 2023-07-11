@@ -267,11 +267,9 @@ class Rec:
 
 
     def clean_breeder(self):
-        import cupy as cp
-
         self.breeder = None
-        cp._default_memory_pool.free_all_blocks()
-        cp._default_pinned_memory_pool.free_all_blocks()
+        devlib.clean_default_mem()
+
 
     def breed(self):
         try:

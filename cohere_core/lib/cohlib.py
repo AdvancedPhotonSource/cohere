@@ -122,7 +122,9 @@ class cohlib(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'diff') and
                 callable(subclass.diff) and
                 hasattr(subclass, 'concatenate') and
-                callable(subclass.concatenate) or
+                callable(subclass.concatenate) and
+                callable(subclass, 'clean_default_mem') and
+                callable(subclass.clean_default_mem) or
                 NotImplemented)
 
     @abc.abstractmethod
@@ -365,3 +367,8 @@ class cohlib(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def concatenate(tup, axis=0):
         pass
+
+    @abc.abstractmethod
+    def clean_default_mem(np):
+        pass
+

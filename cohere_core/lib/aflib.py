@@ -361,3 +361,6 @@ class aflib3(aflib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
+    def clean_default_mem(np):
+        pass
+

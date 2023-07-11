@@ -281,6 +281,9 @@ class torchlib(cohlib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
+    def clean_default_mem(np):
+        pass
+
 
 # a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])
