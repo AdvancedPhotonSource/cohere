@@ -281,7 +281,7 @@ class torchlib(cohlib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
-    def clean_default_mem(np):
+    def clean_default_mem():
         pass
 
 

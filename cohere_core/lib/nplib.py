@@ -213,7 +213,7 @@ class nplib(cohlib):
     def concatenate(tup, axis=0):
         return np.concatenate(tup, axis)
 
-    def clean_default_mem(np):
+    def clean_default_mem():
         pass
 
 

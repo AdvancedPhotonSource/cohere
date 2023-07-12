@@ -204,6 +204,6 @@ class cplib(cohlib):
     def concatenate(tup, axis=0):
         return cp.concatenate(tup, axis)
 
-    def clean_default_mem(np):
+    def clean_default_mem():
         cp._default_memory_pool.free_all_blocks()
         cp._default_pinned_memory_pool.free_all_blocks()

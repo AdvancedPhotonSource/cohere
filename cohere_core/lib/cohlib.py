@@ -369,6 +369,6 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def clean_default_mem(np):
+    def clean_default_mem():
         pass
 
