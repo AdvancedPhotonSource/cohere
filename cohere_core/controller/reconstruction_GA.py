@@ -30,7 +30,7 @@ __all__ = ['reconstruction']
 
 
 def set_lib(pkg):
-    global dvclib
+    global devlib
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
@@ -315,7 +315,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         if not active:
             worker = None
-            dvclib.clean_default_mem()
+            devlib.clean_default_mem()
 
         comm.Barrier()
 

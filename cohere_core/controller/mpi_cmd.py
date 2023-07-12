@@ -12,9 +12,7 @@ def run_with_mpi(lib, conf_file, datafile, dir, devices):
         return
     if 'ga_generations' in conf_map and conf_map['ga_generations'] > 1:
         script = '/reconstruction_GA.py'
-#        devices = devices[:len(devices)//2]
         devices.sort()
-        print('devices', devices)
     else:
         script = '/reconstruction_multi.py'
     script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
