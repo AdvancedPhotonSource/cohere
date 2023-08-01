@@ -324,14 +324,14 @@ def ver_config_rec(config_map):
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Device'
-    if 'device' in config_map:
-        device = config_map['device']
-        if not ver_list_int('device', device):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
+    # config_parameter = 'Device' 
+    # if 'device' in config_map:
+    #     device = config_map['device']
+    #     if not ver_list_int('device', device):
+    #         config_error = 0
+    #         error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+    #         print(error_message)
+    #         return (error_message)
 
     config_parameter = 'Algorithmsequence'
     if 'algorithm_sequence' in config_map:
