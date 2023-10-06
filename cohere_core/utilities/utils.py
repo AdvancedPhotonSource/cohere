@@ -13,9 +13,12 @@ This module is a suite of utility functions.
 
 import tifffile as tf
 import numpy as np
+import cupy as cp
+
 import os
 import logging
 import stat
+import scipy as sp
 
 
 __author__ = "Barbara Frosik"
@@ -25,7 +28,13 @@ __all__ = ['get_logger',
            'read_tif',
            'save_tif',
            'read_config',
+           'write_config',
            'get_good_dim',
+           'threshold_by_edge',
+           'select_central_object',
+           'get_central_object_extent',
+           'get_oversample_ratio',
+           'Resize',
            'binning',
            'get_centered',
            'get_zero_padded_centered',
@@ -37,6 +46,10 @@ __all__ = ['get_logger',
            'write_plot_errors',
            'save_results',
            'arr_property',
+           'pixel_shift',
+           'shift_to_ref_array_cp',
+           'fast_shift',
+           'pixel_shift_err'
            ]
 
 
@@ -139,6 +152,24 @@ def read_config(config):
     return param_dict
 
 
+def write_config(param_dict, config):
+    """
+    Writes configuration to a file.
+    Parameters
+    ----------
+    param_dict : dict
+        dictionary containing configuration parameters
+    config : str
+        configuration name theparameters will be written into
+    """
+    with open(config.replace(os.sep, '/'), 'w+') as f:
+        f.truncate(0)
+        for key, value in param_dict.items():
+            if type(value) == str:
+                value = '"' + value + '"'
+            f.write(key + ' = ' + str(value) + os.linesep)
+
+
 def get_good_dim(dim):
     """
     This function calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) and is closest to the given starting dimension.
@@ -172,6 +203,86 @@ def get_good_dim(dim):
     while not is_correct(new_dim):
         new_dim += 2
     return new_dim
+
+
+
+def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
+    # threshold by left edge value
+    mask = np.ones_like(fp, dtype=bool)
+    mask[tuple([slice(1, None)] * fp.ndim)] = 0
+    zero = 1e-6
+    cut = np.max(fp[mask])
+    binary = np.zeros_like(fp)
+    binary[(np.abs(fp) > zero) & (fp > cut)] = 1
+    return binary
+
+
+def select_central_object(fp: np.ndarray) -> np.ndarray:
+    import scipy.ndimage as ndimage
+    zero = 1e-6
+    binary = np.abs(fp)
+    binary[binary > zero] = 1
+    binary[binary <= zero] = 0
+
+    # cluster by connectivity
+    struct = ndimage.morphology.generate_binary_structure(fp.ndim,
+                                                          1).astype("uint8")
+    label, nlabel = ndimage.label(binary, structure=struct)
+
+    # select largest cluster
+    select = np.argmax(np.bincount(np.ravel(label))[1:]) + 1
+
+    binary[label != select] = 0
+
+    fp[binary == 0] = 0
+    return fp
+
+
+def get_central_object_extent(fp: np.ndarray) -> list:
+    fp_cut = threshold_by_edge(np.abs(fp))
+    need = select_central_object(fp_cut)
+
+    # get extend of cluster
+    extent = [np.max(s) + 1 - np.min(s) for s in np.nonzero(need)]
+    return extent
+
+
+def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
+    """ get oversample ratio
+		fp = diffraction pattern
+	"""
+    # autocorrelation
+    acp = np.fft.fftshift(np.fft.ifftn(np.abs(fp)**2.))
+    aacp = np.abs(acp)
+
+    # get extent
+    blob = get_central_object_extent(aacp)
+
+    # correct for underestimation due to thresholding
+    correction = [0.025, 0.025, 0.0729][:fp.ndim]
+
+    extent = [
+        min(m, s + int(round(f * aacp.shape[i], 1)))
+        for i, (s, f, m) in enumerate(zip(blob, correction, aacp.shape))
+    ]
+
+    # oversample ratio
+    oversample = [
+        2. * s / (e + (1 - s % 2)) for s, e in zip(aacp.shape, extent)
+    ]
+    return np.round(oversample, 3)
+
+
+def Resize(IN, dim):
+    ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
+
+    pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
+           [pad_value[2], pad_value[2]]]
+    ft_resize = adjust_dimensions(ft, pad)
+    output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
+    return output
+
 
 
 def binning(array, binsizes):
@@ -530,9 +641,13 @@ def arr_property(arr):
         array to find max
     """
     arr1 = abs(arr)
-    print('norm', np.sum(pow(abs(arr), 2)))
-    max_coordinates = list(np.unravel_index(np.argmax(arr1), arr.shape))
-    print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
+    #print('norm', np.sum(pow(abs(arr), 2)))
+    print('mean across all data', arr1.mean())
+    print('std all data', arr1.std())
+    print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
+    print('std non zeros only', arr1[np.nonzero(arr1)].std())
+    # max_coordinates = list(np.unravel_index(np.argmax(arr1), arr.shape))
+    # print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
 
 
 # https://stackoverflow.com/questions/51503672/decorator-for-timeit-timeit-method/51503837#51503837
@@ -551,3 +666,82 @@ def measure(func):
             print("Total execution time: {end_ if end_ > 0 else 0} ms")
 
     return _time_it
+#
+#
+# def pixel_shift1(refarr, arr):
+#     # get cross correlation and pixel shift
+#     # CC = np.fft.ifftn(np.fft.fft(refarr, norm = "ortho") * np.fft.fft(np.conj(arr), norm = "ortho"), norm = "ortho")
+#     CC = sp.signal.correlate(refarr, arr, mode='same')
+#     # c = np.array(CC.shape)
+#     amp = (np.abs(CC)) ** 2
+#     maxcc = amp.max()
+#     rfzero = np.sum(np.abs(refarr) ** 2) / refarr.size
+#     rgzero = np.sum(np.abs(arr) ** 2) / arr.size
+#     err1 = (abs(1. - maxcc ** 2 / (rgzero * rfzero))) ** 0.5
+#     # err2 = (abs(1. - maxcc ** 2 / (rgzero * rgzero))) ** 0.5
+#     # intshift = np.unravel_index(amp.argmax(), c)
+#     # s = np.array(intshift)
+#     # pixelshift = np.where(s >= c / 2, s - c, s)
+#     # print("   pixelshift: %s %s" % (err, pixelshift))
+#     # print("Error (1): ", err1)
+#     print("Error: ", err1)
+#     return err1
+
+def pixel_shift(refarr, arr):
+    # get cross correlation and pixel shift
+    CC = sp.signal.correlate(refarr, arr, mode='same')
+    CCmax = CC.max()
+    rfzero = np.sum(np.abs(refarr) ** 2)
+    rgzero = np.sum(np.abs(arr) ** 2)
+    e = abs(1 - CCmax * np.conj(CCmax) / (rfzero * rgzero)) ** 0.5
+
+#    print("Error: ", e)
+    return e
+
+def fast_shift(arr, shifty, fill_val=0):
+    dims = arr.shape
+    result = cp.ones_like(arr)
+    result *= fill_val
+    result_slices = []
+    arr_slices = []
+    for n in range(len(dims)):
+        if shifty[n] > 0:
+            result_slices.append(slice(shifty[n], dims[n]))
+            arr_slices.append(slice(0, -shifty[n]))
+        elif shifty[n] < 0:
+            result_slices.append(slice(0, shifty[n]))
+            arr_slices.append(slice(-shifty[n], dims[n]))
+        else:
+            result_slices.append(slice(0, dims[n]))
+            arr_slices.append(slice(0, dims[n]))
+    result_slices = tuple(result_slices)
+    arr_slices = tuple(arr_slices)
+    result[result_slices] = arr[arr_slices]
+    return result
+
+def shift_to_ref_array_cp(fft_ref, arr):
+    fft_arr = cp.fft.fftn(arr, norm='forward')
+    #    cross_correlation = cp.fft.ifftn(fft_ref * cp.conj(fft_arr), norm='forward')
+    cross_correlation = cp.fft.ifftn(fft_ref * cp.conj(fft_arr))
+    shape = cp.array(cross_correlation.shape)
+    amp = cp.abs(cross_correlation)
+    intshift = cp.unravel_index(amp.argmax(), shape)
+    # print('inshift, max', intshift, cp.max(amp))
+    shifted = cp.array(intshift)
+    pixelshift = cp.where(shifted >= shape / 2, shifted - shape, shifted)
+    shifted_arr = fast_shift(arr, pixelshift)
+    del cross_correlation
+    del fft_arr
+    return shifted_arr
+
+def pixel_shift_err(refarr, arr):
+    from cupyx.scipy.signal import correlate
+
+    # get cross correlation and pixel shift
+    CC = correlate(refarr, arr, mode='same', method='fft')
+    CCmax = CC.max()
+    rfzero = cp.sum(cp.abs(refarr) ** 2)
+    rgzero = cp.sum(cp.abs(arr) ** 2)
+    e = abs(1 - CCmax * cp.conj(CCmax) / (rfzero * rgzero)) ** 0.5
+
+    return  e

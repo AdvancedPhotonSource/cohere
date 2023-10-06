@@ -23,7 +23,7 @@ __all__ = ['prep',
            ]
 
 
-def prep(beamline_full_datafile_name, **kwargs):
+def prep(beamline_full_datafile_name, auto, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
         - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
@@ -89,7 +89,11 @@ def prep(beamline_full_datafile_name, **kwargs):
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(data, kwargs, data_dir)
 
-    if 'intensity_threshold' in kwargs:
+    if auto:
+        auto_threshold_value = 0.141 * data[np.nonzero(data)].mean() - 3.062
+        intensity_threshold = np.max([1, auto_threshold_value])
+        print('auto intensity threshold:', intensity_threshold)
+    elif 'intensity_threshold' in kwargs:
         intensity_threshold = kwargs['intensity_threshold']
     else:
         print('define amplitude threshold. Exiting')
@@ -135,7 +139,17 @@ def prep(beamline_full_datafile_name, **kwargs):
     except FileNotFoundError:
         pass
 
-    if 'binning' in kwargs:
+    if auto:
+        # prepare data to make the oversampling ratio ~3
+        wos = 3.0
+        orig_os = ut.get_oversample_ratio(data)
+        # match oversampling to wos
+        wanted_os = [wos, wos, wos]
+        change = [np.round(f / t).astype('int32') for f, t in zip(orig_os, wanted_os)]
+        bins = [np.max([1, c]) for c in change]
+        print("auto binning size: ", bins)
+        data = ut.binning(data, bins)
+    elif 'binning' in kwargs:
         binsizes = kwargs['binning']
         try:
             bins = []
@@ -152,3 +166,9 @@ def prep(beamline_full_datafile_name, **kwargs):
     data_file = data_dir + '/data.tif'
     ut.save_tif(data, data_file)
     print('data ready for reconstruction, data dims:', data.shape)
+
+    # if auto save new config
+    if auto:
+        kwargs['binning'] = bins
+        kwargs['intensity_threshold'] = intensity_threshold
+    return kwargs
