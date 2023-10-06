@@ -9,7 +9,7 @@ The best practice is to create conda environment allocated for the development.
 
   ::
 
-    conda create -n <dev_env> python=3.x -c conda-forge
+    conda create -n <dev_env> python=3.x
     conda activate <dev_env>
 
 | Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such running scripts and example.
@@ -27,7 +27,7 @@ The best practice is to create conda environment allocated for the development.
     git checkout -b <dev_branch>
     pip install -e .
 
-| Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.
+| Go to cohere-ui directory and repeat the environment steps, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.
 
   ::
 
@@ -35,8 +35,8 @@ The best practice is to create conda environment allocated for the development.
     git checkout Dev
     git checkout -b <dev_branch>
     python setup.py
-    sh install_pkgs.sh    # for Linux and OS_X
-    install_pkgs.bat      # for Windows
+    sh cohere-ui/install_pkgs.sh    # for Linux and OS_X
+    cohere-ui/install_pkgs.bat      # for Windows
 
 | If planning to use GPUs, install the packages/libraries that you wish to use.
 
