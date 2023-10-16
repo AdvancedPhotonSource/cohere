@@ -1,7 +1,8 @@
 from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
-import cupyx.scipy.ndimage
+import cupyx.scipy.ndimage as sc
+
 
 class cplib(cohlib):
     def array(obj):
@@ -49,15 +50,18 @@ class cplib(cohlib):
         rs = cp.random.RandomState(seed=seed)
         return cp.random.random(shape, dtype=cp.float32) + 1j * cp.random.random(shape, dtype=cp.float32)
 
+    def roll(arr, sft, axis=None):
+        sft = [int(s) for s in sft]
+        return cp.roll(arr, sft, axis=axis)
+
+    def shift(arr, sft):
+        return sc.fourier_shift(arr, sft)
+
     def fftshift(arr):
         return cp.fft.fftshift(arr)
 
     def ifftshift(arr):
         return cp.fft.ifftshift(arr)
-
-    def shift(arr, sft, axis=None):
-        sft = [int(s) for s in sft]
-        return cp.roll(arr, sft, axis=axis)
 
     def fft(arr):
         return cp.fft.fftn(arr, norm='forward')
@@ -66,8 +70,12 @@ class cplib(cohlib):
         return cp.fft.ifftn(arr, norm='forward')
 
     def fftconvolve(arr1, arr2):
-        return cupyx.scipy.ndimage.convolve(arr1, arr2)
-        # return cupyx.scipy.signal.aoconvolve(arr1, arr2, mode='same')
+        return sc.convolve(arr1, arr2)
+        # return cupyx.scipy.signal.convolve(arr1, arr2, mode='same')
+
+    def correlate(arr1, arr2, mode='same', method='fft'):
+        from cupyx.scipy.signal import correlate
+        return correlate(arr1, arr2, mode, method)
 
     def where(cond, x, y):
         return cp.where(cond, x, y)
@@ -147,14 +155,14 @@ class cplib(cohlib):
         inarr = cp.zeros((n_el))
         inarr[int(n_el / 2)] = 1.0
         inarr = cp.reshape(inarr, shape)
-        gaussian = cupyx.scipy.ndimage.gaussian_filter(inarr, sigma)
+        gaussian = sc.gaussian_filter(inarr, sigma)
         return gaussian / cp.sum(gaussian)
 
     def gaussian_filter(arr, sigma, **kwargs):
-        return cupyx.scipy.ndimage.gaussian_filter(arr, sigma)
+        return sc.gaussian_filter(arr, sigma)
 
     def center_of_mass(inarr):
-        return cupyx.scipy.ndimage.center_of_mass(cp.absolute(inarr))
+        return sc.center_of_mass(cp.absolute(inarr))
 
     def meshgrid(*xi):
         return cp.meshgrid(*xi)

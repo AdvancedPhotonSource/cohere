@@ -127,9 +127,9 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
 
     if 'center_shift' in kwargs:
         center_shift = kwargs['center_shift']
-        data, shift = ut.get_centered(data, center_shift)
+        data, shift = ut.center_max(data, center_shift)
     else:
-        data, shift = ut.get_centered(data, [0, 0, 0])
+        data, shift = ut.center_max(data, [0, 0, 0])
 
     try:
         # assuming the mask file is in directory of preprocessed data

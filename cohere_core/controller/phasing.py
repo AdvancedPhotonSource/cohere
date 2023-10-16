@@ -668,8 +668,8 @@ class CoupledRec(Rec):
 
     def shift_to_center(self, ind, cutoff=None):
         shift_dist = -devlib.array(ind) + (self.dims[0]//2)
-        self.shared_image = devlib.shift(self.shared_image, shift_dist, axis=(0, 1, 2))
-        self.support_obj.support = devlib.shift(self.support_obj.support, shift_dist)
+        self.shared_image = devlib.roll(self.shared_image, shift_dist, axis=(0, 1, 2))
+        self.support_obj.support = devlib.roll(self.support_obj.support, shift_dist)
 
 
 def reconstruction(datafile, **kwargs):

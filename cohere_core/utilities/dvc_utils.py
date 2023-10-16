@@ -1,27 +1,30 @@
 import math
 
+_docformat__ = 'restructuredtext en'
+__all__ = ['set_lib',
+           'pad_around',
+           'gauss_conv_fft',
+           'shrink_wrap',
+           'shift_phase',
+           'zero_phase',
+           'conj_reflect',
+           'cross_correlation',
+           'check_get_conj_reflect',
+           'get_metric',
+           'all_metrics',
+           'dftups',
+           'dftregistration',
+           'register_3d_reconstruction',
+           'sub_pixel_shift',
+           'align_arrays_subpixel',
+           'zero_phase_cc',
+           'breed'
+           ]
+
 
 def set_lib(dlib):
     global dvclib
     dvclib = dlib
-
-
-def crop_center(arr, shape):
-    dims = dvclib.dims(arr)
-    principio = []
-    finem = []
-    for i in range(3):
-        principio.append(int((dims[i] - shape[i]) / 2))
-        finem.append(principio[i] + shape[i])
-    if len(shape) == 1:
-        cropped = arr[principio[0]: finem[0]]
-    elif len(shape) == 2:
-        cropped = arr[principio[0]: finem[0], principio[1]: finem[1]]
-    elif len(shape) == 3:
-        cropped = arr[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]]
-    else:
-        raise NotImplementedError
-    return cropped
 
 
 def pad_around(arr, shape, val=0):
@@ -371,9 +374,9 @@ def register_3d_reconstruction(ref_arr, arr):
     shift_2, shift_1, shift_0 : float, float
         pixel shifts between images
     """
-    r_shift_2, c_shift_2 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 2)), dvclib.fft(dvclib.sum(arr, 2)), 100)
-    r_shift_1, c_shift_1 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 1)), dvclib.fft(dvclib.sum(arr, 1)), 100)
-    r_shift_0, c_shift_0 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 0)), dvclib.fft(dvclib.sum(arr, 0)), 100)
+    r_shift_2, c_shift_2 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 2)), dvclib.fft(dvclib.sum(arr, 2)), 4)
+    r_shift_1, c_shift_1 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 1)), dvclib.fft(dvclib.sum(arr, 1)), 4)
+    r_shift_0, c_shift_0 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 0)), dvclib.fft(dvclib.sum(arr, 0)), 4)
 
     shift_2 = sum([r_shift_2, r_shift_1]) * 0.5
     shift_1 = sum([c_shift_2, r_shift_0]) * 0.5
@@ -411,7 +414,7 @@ def sub_pixel_shift(arr, row_shift, col_shift, z_shift):
     return dvclib.ifft(Greg)
 
 
-def align_arrays(ref_arr, arr):
+def align_arrays_subpixel(ref_arr, arr):
     """
     Shifts array to align with reference array.
 
@@ -430,6 +433,52 @@ def align_arrays(ref_arr, arr):
     """
     (shift_2, shift_1, shift_0) = register_3d_reconstruction(abs(ref_arr), abs(arr))
     return sub_pixel_shift(arr, shift_2, shift_1, shift_0)
+
+
+# supposedly this is faster than np.roll or scipy interpolation shift.
+# https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
+def fast_shift(arr, shifty, fill_val=0):
+    dims = arr.shape
+    result = dvclib.full(dims, 1.0)
+    result *= fill_val
+    result_slices = []
+    arr_slices = []
+    for n in range(len(dims)):
+        if shifty[n] > 0:
+            result_slices.append(slice(shifty[n], dims[n]))
+            arr_slices.append(slice(0, -shifty[n]))
+        elif shifty[n] < 0:
+            result_slices.append(slice(0, shifty[n]))
+            arr_slices.append(slice(-shifty[n], dims[n]))
+        else:
+            result_slices.append(slice(0, dims[n]))
+            arr_slices.append(slice(0, dims[n]))
+    result_slices = tuple(result_slices)
+    arr_slices = tuple(arr_slices)
+    result[result_slices] = arr[arr_slices]
+    return result
+
+
+def align_arrays_pixel(ref, arr):
+    fft_ref = dvclib.fft(ref)
+    fft_arr = dvclib.fft(arr)
+    cross_correlation = dvclib.fft(fft_ref * dvclib.conj(fft_arr))
+    shape = dvclib.array(cross_correlation.shape)
+    amp = dvclib.absolute(cross_correlation)
+    intshift = dvclib.unravel_index(amp.argmax(), shape)
+    shifted = dvclib.array(intshift)
+    pixelshift = dvclib.where(shifted >= shape / 2, shifted - shape, shifted)
+    shifted_arr = fast_shift(arr, pixelshift)
+    return shifted_arr
+
+
+def correlation_err(refarr, arr):
+    CC = dvclib.correlate(refarr, arr, mode='same', method='fft')
+    CCmax = CC.max()
+    rfzero = dvclib.sum(dvclib.absolute(refarr) ** 2)
+    rgzero = dvclib.sum(dvclib.absolute(arr) ** 2)
+    e = abs(1 - CCmax * dvclib.conj(CCmax) / (rfzero * rgzero)) ** 0.5
+    return  e
 
 
 def zero_phase_cc(arr1, arr2):
@@ -482,7 +531,7 @@ def breed(breed_mode, alpha_dir, image):
     beta = image
     beta = zero_phase(beta)
     alpha = check_get_conj_reflect(beta, alpha)
-    alpha = align_arrays(beta, alpha)
+    alpha = align_arrays_subpixel(beta, alpha)
     alpha = zero_phase(alpha)
     ph_alpha = dvclib.angle(alpha)
     beta = zero_phase_cc(beta, alpha)

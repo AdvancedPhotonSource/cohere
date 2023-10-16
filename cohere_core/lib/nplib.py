@@ -1,6 +1,7 @@
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
-from scipy.ndimage import convolve, gaussian_filter, center_of_mass
+from scipy.ndimage import convolve, gaussian_filter, center_of_mass, shift
+from scipy.signal import correlate
 
 
 class nplib(cohlib):
@@ -51,15 +52,18 @@ class nplib(cohlib):
         return r
         #return rng.random(*shape).astype(float)
 
+    def roll(arr, sft, axis=None):
+        sft = [int(s) for s in sft]
+        return np.roll(arr, sft, axis)
+
+    def shift(arr, sft):
+        return shift(arr, sft)
+
     def fftshift(arr):
         return np.fft.fftshift(arr)
 
     def ifftshift(arr):
         return np.fft.ifftshift(arr)
-
-    def shift(arr, sft):
-        sft = [int(s) for s in sft]
-        return np.roll(arr, sft)
 
     def fft(arr):
         return np.fft.fftn(arr, norm='forward')
@@ -69,6 +73,9 @@ class nplib(cohlib):
 
     def fftconvolve(arr1, arr2):
         return convolve(arr1, arr2)
+
+    def correlate(arr1, arr2, mode='same', method='auto'):
+        return correlate(arr1, arr2, mode, method)
 
     def where(cond, x, y):
         return np.where(cond, x, y)

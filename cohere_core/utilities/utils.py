@@ -14,11 +14,11 @@ This module is a suite of utility functions.
 import tifffile as tf
 import numpy as np
 import cupy as cp
-
+import math as m
 import os
 import logging
 import stat
-import scipy as sp
+import scipy.ndimage as ndi
 
 
 __author__ = "Barbara Frosik"
@@ -29,6 +29,10 @@ __all__ = ['get_logger',
            'save_tif',
            'read_config',
            'write_config',
+           'read_results',
+           'save_results',
+           'save_metrics',
+           'write_plot_errors',
            'get_good_dim',
            'threshold_by_edge',
            'select_central_object',
@@ -36,20 +40,17 @@ __all__ = ['get_logger',
            'get_oversample_ratio',
            'Resize',
            'binning',
-           'get_centered',
-           'get_zero_padded_centered',
+           'center_com_sync',
+           'crop_center',
+           'pad_center',
+           'center_max',
            'adjust_dimensions',
-           'gaussian',
-           'gauss_conv_fft',
-           'read_results',
-           'save_metrics',
-           'write_plot_errors',
-           'save_results',
-           'arr_property',
-           'pixel_shift',
-           'shift_to_ref_array_cp',
-           'fast_shift',
-           'pixel_shift_err'
+           'remove_ramp',
+           'normalize',
+           'get_gpu_load',
+           'get_gpu_distribution',
+           'estimate_no_proc',
+           'arr_property'
            ]
 
 
@@ -170,329 +171,6 @@ def write_config(param_dict, config):
             f.write(key + ' = ' + str(value) + os.linesep)
 
 
-def get_good_dim(dim):
-    """
-    This function calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) and is closest to the given starting dimension.
-    If the dimension is not supported the function adds 1 and verifies the new dimension. It iterates until it finds supported value.
-
-    Parameters
-    ----------
-    dim : int
-        initial dimension
-    Returns
-    -------
-    int
-        a dimension that is supported by the opencl library, and closest to the original dimension
-    """
-
-    def is_correct(x):
-        sub = x
-        if sub % 3 == 0:
-            sub = sub / 3
-        if sub % 3 == 0:
-            sub = sub / 3
-        if sub % 5 == 0:
-            sub = sub / 5
-        while sub % 2 == 0:
-            sub = sub / 2
-        return sub == 1
-
-    new_dim = dim
-    if new_dim % 2 == 1:
-        new_dim += 1
-    while not is_correct(new_dim):
-        new_dim += 2
-    return new_dim
-
-
-
-def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
-    # threshold by left edge value
-    mask = np.ones_like(fp, dtype=bool)
-    mask[tuple([slice(1, None)] * fp.ndim)] = 0
-    zero = 1e-6
-    cut = np.max(fp[mask])
-    binary = np.zeros_like(fp)
-    binary[(np.abs(fp) > zero) & (fp > cut)] = 1
-    return binary
-
-
-def select_central_object(fp: np.ndarray) -> np.ndarray:
-    import scipy.ndimage as ndimage
-    zero = 1e-6
-    binary = np.abs(fp)
-    binary[binary > zero] = 1
-    binary[binary <= zero] = 0
-
-    # cluster by connectivity
-    struct = ndimage.morphology.generate_binary_structure(fp.ndim,
-                                                          1).astype("uint8")
-    label, nlabel = ndimage.label(binary, structure=struct)
-
-    # select largest cluster
-    select = np.argmax(np.bincount(np.ravel(label))[1:]) + 1
-
-    binary[label != select] = 0
-
-    fp[binary == 0] = 0
-    return fp
-
-
-def get_central_object_extent(fp: np.ndarray) -> list:
-    fp_cut = threshold_by_edge(np.abs(fp))
-    need = select_central_object(fp_cut)
-
-    # get extend of cluster
-    extent = [np.max(s) + 1 - np.min(s) for s in np.nonzero(need)]
-    return extent
-
-
-def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
-    """ get oversample ratio
-		fp = diffraction pattern
-	"""
-    # autocorrelation
-    acp = np.fft.fftshift(np.fft.ifftn(np.abs(fp)**2.))
-    aacp = np.abs(acp)
-
-    # get extent
-    blob = get_central_object_extent(aacp)
-
-    # correct for underestimation due to thresholding
-    correction = [0.025, 0.025, 0.0729][:fp.ndim]
-
-    extent = [
-        min(m, s + int(round(f * aacp.shape[i], 1)))
-        for i, (s, f, m) in enumerate(zip(blob, correction, aacp.shape))
-    ]
-
-    # oversample ratio
-    oversample = [
-        2. * s / (e + (1 - s % 2)) for s, e in zip(aacp.shape, extent)
-    ]
-    return np.round(oversample, 3)
-
-
-def Resize(IN, dim):
-    ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
-
-    pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
-           [pad_value[2], pad_value[2]]]
-    ft_resize = adjust_dimensions(ft, pad)
-    output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
-    return output
-
-
-
-def binning(array, binsizes):
-    """
-    This function does the binning of the array. The array is binned in each dimension by the corresponding binsizes elements.
-    If binsizes list is shorter than the array dimensions, the remaining dimensions are not binned.
-
-    Parameters
-    ----------
-    array : ndarray
-        the original array to be binned
-    binsizes : list
-        a list defining binning factors for corresponding dimensions
-
-    Returns
-    -------
-    ndarray
-        binned array
-    """
-
-    data_dims = array.shape
-    # trim array
-    for ax in range(len(binsizes)):
-        cut_slices = range(data_dims[ax] - data_dims[ax] % binsizes[ax], data_dims[ax])
-        array = np.delete(array, cut_slices, ax)
-
-    binned_array = array
-    new_shape = list(array.shape)
-
-    for ax in range(len(binsizes)):
-        if binsizes[ax] > 1:
-            new_shape[ax] = binsizes[ax]
-            new_shape.insert(ax, int(array.shape[ax] / binsizes[ax]))
-            binned_array = np.reshape(binned_array, tuple(new_shape))
-            binned_array = np.sum(binned_array, axis=ax + 1)
-            new_shape = list(binned_array.shape)
-    return binned_array
-
-
-def get_centered(arr, center_shift):
-    """
-    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros,
-     the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
-
-    Parameters
-    ----------
-    arr : ndarray
-        the original array to be centered
-
-    center_shift : list
-        a list defining shift of the center
-
-    Returns
-    -------
-    ndarray
-        centered array
-    """
-    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
-    return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
-
-
-def get_zero_padded_centered(arr, new_shape):
-    """
-    This function pads the array with zeros to the new shape with the array in the center.
-    Parameters
-    ----------
-    arr : ndarray
-        the original array to be padded
-    new_shape : tuple
-        new dimensions
-    Returns
-    -------
-    ndarray
-        the zero padded centered array
-    """
-    shape = arr.shape
-    pad = []
-    c_vals = []
-    for i in range(len(new_shape)):
-        pad.append((0, new_shape[i] - shape[i]))
-        c_vals.append((0.0, 0.0))
-    arr = np.lib.pad(arr, (pad), 'constant', constant_values=c_vals)
-
-    centered = arr
-    for i in range(len(new_shape)):
-        centered = np.roll(centered, int((new_shape[i] - shape[i] + 1) / 2), i)
-
-    return centered
-
-
-def adjust_dimensions(arr, pads):
-    """
-    This function adds to or subtracts from each dimension of the array elements defined by pad. If the pad is positive, the array is padded in this dimension. If the pad is negative, the array is cropped.
-    The dimensions of the new array is then adjusted to be supported by the opencl library.
-
-    Parameters
-    ----------
-    arr : ndarray
-        the array to pad/crop
-
-    pad : list
-        list of three pad values, for each dimension
-
-    Returns
-    -------
-    ndarray
-        the padded/cropped array
-    """
-   # up the dimensions to 3D
-    for _ in range(len(arr.shape), 3):
-        arr = np.expand_dims(arr,axis=0)
-        pads = [(0,0)] + pads
-
-    old_dims = arr.shape
-    start = [max(0, -pad[0]) for pad in pads]
-    stop = [arr.shape[i] - max(0, -pads[i][1]) for i in range(3)]
-    cropped = arr[start[0]:stop[0], start[1]:stop[1], start[2]:stop[2]]  #for 1D and 2D it was upped to 3D
-
-    dims = cropped.shape
-    c_vals = []
-    new_pad = []
-    for i in range(len(dims)):
-        pad = pads[i]
-        # find a good dimension and find padding
-        temp_dim = old_dims[i] + pad[0] + pad[1]
-        if temp_dim > 1:
-            new_dim = get_good_dim(temp_dim)
-        else:
-            new_dim = temp_dim
-        added = new_dim - temp_dim
-        # if the pad is positive
-        pad_front = max(0, pad[0]) + int(added / 2)
-        pad_end = new_dim - dims[i] - pad_front
-        new_pad.append((pad_front, pad_end))
-        c_vals.append((0.0, 0.0))
-    adjusted = np.pad(cropped, new_pad, 'constant', constant_values=c_vals)
-
-    return np.squeeze(adjusted)
-
-
-def gaussian(shape, sigmas, alpha=1):
-    """
-    Calculates Gaussian distribution grid in given dimensions.
-
-    Parameters
-    ----------
-    shape : tuple
-        shape of the grid
-    sigmas : list
-        sigmas in all dimensions
-    alpha : float
-        a multiplier
-    Returns
-    -------
-    ndarray
-        Gaussian distribution grid
-    """
-    grid = np.full(shape, 1.0)
-    for i in range(len(shape)):
-        # prepare indexes for tile and transpose
-        tile_shape = list(shape)
-        tile_shape.pop(i)
-        tile_shape.append(1)
-        trans_shape = list(range(len(shape) - 1))
-        trans_shape.insert(i, len(shape) - 1)
-
-        multiplier = - 0.5 * alpha / pow(sigmas[i], 2)
-        line = np.linspace(-(shape[i] - 1) / 2.0, (shape[i] - 1) / 2.0, shape[i])
-        gi = np.tile(line, tile_shape)
-        gi = np.transpose(gi, tuple(trans_shape))
-        exponent = np.power(gi, 2) * multiplier
-        gi = np.exp(exponent)
-        grid = grid * gi
-
-    grid_total = np.sum(grid)
-    return grid / grid_total
-
-
-def gauss_conv_fft(arr, sigmas):
-    """
-    Calculates convolution of array with the Gaussian.
-
-    A Guassian distribution grid is calculated with the array dimensions. Fourier transform of the array is
-    multiplied by the grid and inverse transformed. A correction is calculated and applied.
-
-    Parameters
-    ----------
-    arr : ndarray
-        subject array
-    sigmas : list
-        sigmas in all dimensions
-    Returns
-    -------
-    ndarray
-        convolution array
-    """
-    arr_sum = np.sum(abs(arr))
-    arr_f = np.fft.ifftshift(np.fft.fftn(np.fft.ifftshift(arr)))
-    shape = list(arr.shape)
-    for i in range(len(sigmas)):
-        sigmas[i] = shape[i] / 2.0 / np.pi / sigmas[i]
-    convag = arr_f * gaussian(shape, sigmas)
-    convag = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(convag)))
-    convag = convag.real
-    convag = np.clip(convag, 0, None)
-    correction = arr_sum / np.sum(convag)
-    convag *= correction
-    return convag
-
-
 def read_results(read_dir):
     """
     Reads results and returns array representation.
@@ -526,6 +204,51 @@ def read_results(read_dir):
         coh = None
 
     return image, support, coh
+
+
+def save_results(image, support, coh, errs, save_dir, metric=None):
+    """
+    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy,
+    optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
+
+
+    Parameters
+    ----------
+    image : ndarray
+        reconstructed image array
+
+    support : ndarray
+        support array related to the image
+
+    coh : ndarray
+        coherence array when pcdi feature is active, None otherwise
+
+    errs : ndarray
+        errors "chi" by iterations
+
+    save_dir : str
+        directory to write the files
+
+    metrics : dict
+        dictionary with metric type keys, and metric values
+    """
+    save_dir = save_dir.replace(os.sep, '/')
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    image_file = save_dir + '/image'
+    np.save(image_file, image)
+    support_file = save_dir + '/support'
+    np.save(support_file, support)
+
+    errs_file = save_dir + '/errors'
+    np.save(errs_file, errs)
+    if not coh is None:
+        coh_file = save_dir + '/coherence'
+        np.save(coh_file, coh)
+
+    write_plot_errors(save_dir)
+
+    save_metrics(errs, save_dir, metric)
 
 
 def save_metrics(errs, dir, metrics=None):
@@ -586,49 +309,547 @@ def write_plot_errors(save_dir):
     os.chmod(plot_file, st.st_mode | stat.S_IEXEC)
 
 
-def save_results(image, support, coh, errs, save_dir, metric=None):
+def get_good_dim(dim):
     """
-    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy,
-    optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
-
+    This function calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) and is closest to the given starting dimension.
+    If the dimension is not supported the function adds 1 and verifies the new dimension. It iterates until it finds supported value.
 
     Parameters
     ----------
-    image : ndarray
-        reconstructed image array
-
-    support : ndarray
-        support array related to the image
-
-    coh : ndarray
-        coherence array when pcdi feature is active, None otherwise
-
-    errs : ndarray
-        errors "chi" by iterations
-
-    save_dir : str
-        directory to write the files
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
+    dim : int
+        initial dimension
+    Returns
+    -------
+    int
+        a dimension that is supported by the opencl library, and closest to the original dimension
     """
-    save_dir = save_dir.replace(os.sep, '/')
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    image_file = save_dir + '/image'
-    np.save(image_file, image)
-    support_file = save_dir + '/support'
-    np.save(support_file, support)
 
-    errs_file = save_dir + '/errors'
-    np.save(errs_file, errs)
-    if not coh is None:
-        coh_file = save_dir + '/coherence'
-        np.save(coh_file, coh)
+    def is_correct(x):
+        sub = x
+        if sub % 3 == 0:
+            sub = sub / 3
+        if sub % 3 == 0:
+            sub = sub / 3
+        if sub % 5 == 0:
+            sub = sub / 5
+        while sub % 2 == 0:
+            sub = sub / 2
+        return sub == 1
 
-    write_plot_errors(save_dir)
+    new_dim = dim
+    if new_dim % 2 == 1:
+        new_dim += 1
+    while not is_correct(new_dim):
+        new_dim += 2
+    return new_dim
 
-    save_metrics(errs, save_dir, metric)
+
+def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
+    """
+    Author: Yudong Yao
+
+    :param fp:
+    :return:
+    """
+    # threshold by left edge value
+    mask = np.ones_like(fp, dtype=bool)
+    mask[tuple([slice(1, None)] * fp.ndim)] = 0
+    zero = 1e-6
+    cut = np.max(fp[mask])
+    binary = np.zeros_like(fp)
+    binary[(np.abs(fp) > zero) & (fp > cut)] = 1
+    return binary
+
+
+def select_central_object(fp: np.ndarray) -> np.ndarray:
+    """
+    Author: Yudong Yao
+
+    :param fp:
+    :return:
+    """
+    # import scipy.ndimage as ndimage
+    zero = 1e-6
+    binary = np.abs(fp)
+    binary[binary > zero] = 1
+    binary[binary <= zero] = 0
+
+    # cluster by connectivity
+    struct = ndi.morphology.generate_binary_structure(fp.ndim,
+                                                          1).astype("uint8")
+    label, nlabel = ndi.label(binary, structure=struct)
+
+    # select largest cluster
+    select = np.argmax(np.bincount(np.ravel(label))[1:]) + 1
+
+    binary[label != select] = 0
+
+    fp[binary == 0] = 0
+    return fp
+
+
+def get_central_object_extent(fp: np.ndarray) -> list:
+    """
+    Author: Yudong Yao
+
+    :param fp:
+    :return:
+    """
+    fp_cut = threshold_by_edge(np.abs(fp))
+    need = select_central_object(fp_cut)
+
+    # get extend of cluster
+    extent = [np.max(s) + 1 - np.min(s) for s in np.nonzero(need)]
+    return extent
+
+
+def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
+    """
+    Author: Yudong Yao
+
+    :param fp: diffraction pattern
+    :return: oversample ratio in each dimension
+    """
+     # autocorrelation
+    acp = np.fft.fftshift(np.fft.ifftn(np.abs(fp)**2.))
+    aacp = np.abs(acp)
+
+    # get extent
+    blob = get_central_object_extent(aacp)
+
+    # correct for underestimation due to thresholding
+    correction = [0.025, 0.025, 0.0729][:fp.ndim]
+
+    extent = [
+        min(m, s + int(round(f * aacp.shape[i], 1)))
+        for i, (s, f, m) in enumerate(zip(blob, correction, aacp.shape))
+    ]
+
+    # oversample ratio
+    oversample = [
+        2. * s / (e + (1 - s % 2)) for s, e in zip(aacp.shape, extent)
+    ]
+    return np.round(oversample, 3)
+
+
+def Resize(IN, dim):
+    """
+    Author: Yudong Yao
+
+    :param IN:
+    :param dim:
+    :return:
+    """
+    ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
+
+    pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
+           [pad_value[2], pad_value[2]]]
+    ft_resize = adjust_dimensions(ft, pad)
+    output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
+    return output
+
+
+def binning(array, binsizes):
+    """
+    This function does the binning of the array. The array is binned in each dimension by the corresponding binsizes elements.
+    If binsizes list is shorter than the array dimensions, the remaining dimensions are not binned.
+
+    Parameters
+    ----------
+    array : ndarray
+        the original array to be binned
+    binsizes : list
+        a list defining binning factors for corresponding dimensions
+
+    Returns
+    -------
+    ndarray
+        binned array
+    """
+
+    data_dims = array.shape
+    # trim array
+    for ax in range(len(binsizes)):
+        cut_slices = range(data_dims[ax] - data_dims[ax] % binsizes[ax], data_dims[ax])
+        array = np.delete(array, cut_slices, ax)
+
+    binned_array = array
+    new_shape = list(array.shape)
+
+    for ax in range(len(binsizes)):
+        if binsizes[ax] > 1:
+            new_shape[ax] = binsizes[ax]
+            new_shape.insert(ax, int(array.shape[ax] / binsizes[ax]))
+            binned_array = np.reshape(binned_array, tuple(new_shape))
+            binned_array = np.sum(binned_array, axis=ax + 1)
+            new_shape = list(binned_array.shape)
+    return binned_array
+
+
+def center_com_sync(image, support):
+    """
+    Shifts the image and support arrays so the center of mass is in the center of array.
+    Parameters
+    ----------
+    image, support : ndarray, ndarray
+        image and support arrays to evaluate and shift
+    Returns
+    -------
+    image, support : ndarray, ndarray
+        shifted arrays
+    """
+    shape = image.shape
+    max_coordinates = list(np.unravel_index(np.argmax(image), shape))
+    for i in range(len(max_coordinates)):
+        image = np.roll(image, int(shape[i] / 2) - max_coordinates[i], i)
+        support = np.roll(support, int(shape[i] / 2) - max_coordinates[i], i)
+
+    com = ndi.center_of_mass(np.absolute(image) * support)
+    # place center of mass in the center
+    for i in range(len(shape)):
+        image = np.roll(image, int(shape[i] / 2 - com[i]), axis=i)
+        support = np.roll(support, int(shape[i] / 2 - com[i]), axis=i)
+
+    # set center phase to zero, use as a reference
+    phi0 = m.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
+                   image.flatten().real[int(image.flatten().shape[0] / 2)])
+    image = image * np.exp(-1j * phi0)
+
+    return image, support
+
+
+def crop_center(arr, new_shape):
+    """
+    This function crops the array to the new size, leaving the array in the center.
+    The new_size must be smaller or equal to the original size in each dimension.
+    Parameters
+    ----------
+    arr : ndarray
+        the array to crop
+    new_shape : tuple
+        new size
+    Returns
+    -------
+    cropped : ndarray
+        the cropped array
+    """
+    shape = arr.shape
+    principio = []
+    finem = []
+    for i in range(3):
+        principio.append(int((shape[i] - new_shape[i]) / 2))
+        finem.append(principio[i] + new_shape[i])
+    if len(shape) == 1:
+        cropped = arr[principio[0]: finem[0]]
+    elif len(shape) == 2:
+        cropped = arr[principio[0]: finem[0], principio[1]: finem[1]]
+    elif len(shape) == 3:
+        cropped = arr[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]]
+    else:
+        raise NotImplementedError
+    return cropped
+
+
+def pad_center(arr, new_shape):
+    """
+    This function pads the array with zeros to the new shape with the array in the center.
+    Parameters
+    ----------
+    arr : ndarray
+        the original array to be padded
+    new_shape : tuple
+        new dimensions
+    Returns
+    -------
+    ndarray
+        the zero padded centered array
+    """
+    shape = arr.shape
+    pad = []
+    c_vals = []
+    for i in range(len(new_shape)):
+        pad.append((0, new_shape[i] - shape[i]))
+        c_vals.append((0.0, 0.0))
+    arr = np.lib.pad(arr, (pad), 'constant', constant_values=c_vals)
+
+    centered = arr
+    for i in range(len(new_shape)):
+        centered = np.roll(centered, int((new_shape[i] - shape[i] + 1) / 2), i)
+
+    return centered
+
+
+def center_max(arr, center_shift):
+    """
+    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros,
+     the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
+
+    Parameters
+    ----------
+    arr : ndarray
+        the original array to be centered
+
+    center_shift : list
+        a list defining shift of the center
+
+    Returns
+    -------
+    ndarray
+        centered array
+    """
+    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
+    return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
+
+
+def adjust_dimensions(arr, pads):
+    """
+    This function adds to or subtracts from each dimension of the array elements defined by pad. If the pad is positive, the array is padded in this dimension. If the pad is negative, the array is cropped.
+    The dimensions of the new array is then adjusted to be supported by the opencl library.
+
+    Parameters
+    ----------
+    arr : ndarray
+        the array to pad/crop
+
+    pad : list
+        list of three pad values, for each dimension
+
+    Returns
+    -------
+    ndarray
+        the padded/cropped array
+    """
+   # up the dimensions to 3D
+    for _ in range(len(arr.shape), 3):
+        arr = np.expand_dims(arr,axis=0)
+        pads = [(0,0)] + pads
+
+    old_dims = arr.shape
+    start = [max(0, -pad[0]) for pad in pads]
+    stop = [arr.shape[i] - max(0, -pads[i][1]) for i in range(3)]
+    cropped = arr[start[0]:stop[0], start[1]:stop[1], start[2]:stop[2]]  #for 1D and 2D it was upped to 3D
+
+    dims = cropped.shape
+    c_vals = []
+    new_pad = []
+    for i in range(len(dims)):
+        pad = pads[i]
+        # find a good dimension and find padding
+        temp_dim = old_dims[i] + pad[0] + pad[1]
+        if temp_dim > 1:
+            new_dim = get_good_dim(temp_dim)
+        else:
+            new_dim = temp_dim
+        added = new_dim - temp_dim
+        # if the pad is positive
+        pad_front = max(0, pad[0]) + int(added / 2)
+        pad_end = new_dim - dims[i] - pad_front
+        new_pad.append((pad_front, pad_end))
+        c_vals.append((0.0, 0.0))
+    adjusted = np.pad(cropped, new_pad, 'constant', constant_values=c_vals)
+
+    return np.squeeze(adjusted)
+
+
+# def gaussian(shape, sigmas, alpha=1):
+#     """
+#     Calculates Gaussian distribution grid in given dimensions.
+#
+#     Parameters
+#     ----------
+#     shape : tuple
+#         shape of the grid
+#     sigmas : list
+#         sigmas in all dimensions
+#     alpha : float
+#         a multiplier
+#     Returns
+#     -------
+#     ndarray
+#         Gaussian distribution grid
+#     """
+#     grid = np.full(shape, 1.0)
+#     for i in range(len(shape)):
+#         # prepare indexes for tile and transpose
+#         tile_shape = list(shape)
+#         tile_shape.pop(i)
+#         tile_shape.append(1)
+#         trans_shape = list(range(len(shape) - 1))
+#         trans_shape.insert(i, len(shape) - 1)
+#
+#         multiplier = - 0.5 * alpha / pow(sigmas[i], 2)
+#         line = np.linspace(-(shape[i] - 1) / 2.0, (shape[i] - 1) / 2.0, shape[i])
+#         gi = np.tile(line, tile_shape)
+#         gi = np.transpose(gi, tuple(trans_shape))
+#         exponent = np.power(gi, 2) * multiplier
+#         gi = np.exp(exponent)
+#         grid = grid * gi
+#
+#     grid_total = np.sum(grid)
+#     return grid / grid_total
+#
+#
+# def gauss_conv_fft(arr, sigmas):
+#     """
+#     Calculates convolution of array with the Gaussian.
+#
+#     A Guassian distribution grid is calculated with the array dimensions. Fourier transform of the array is
+#     multiplied by the grid and inverse transformed. A correction is calculated and applied.
+#
+#     Parameters
+#     ----------
+#     arr : ndarray
+#         subject array
+#     sigmas : list
+#         sigmas in all dimensions
+#     Returns
+#     -------
+#     ndarray
+#         convolution array
+#     """
+#     arr_sum = np.sum(abs(arr))
+#     arr_f = np.fft.ifftshift(np.fft.fftn(np.fft.ifftshift(arr)))
+#     shape = list(arr.shape)
+#     for i in range(len(sigmas)):
+#         sigmas[i] = shape[i] / 2.0 / np.pi / sigmas[i]
+#     convag = arr_f * gaussian(shape, sigmas)
+#     convag = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(convag)))
+#     convag = convag.real
+#     convag = np.clip(convag, 0, None)
+#     correction = arr_sum / np.sum(convag)
+#     convag *= correction
+#     return convag
+
+
+def remove_ramp(arr, ups=1):
+    """
+    Smooths image array (removes ramp) by applaying math formula.
+    Parameters
+    ----------
+    arr : ndarray
+        array to remove ramp
+    ups : int
+        upsample factor
+    Returns
+    -------
+    ramp_removed : ndarray
+        smoothed array
+    """
+    shape = arr.shape
+    new_shape = [dim * ups for dim in shape]
+    padded = pad_center(arr, new_shape)
+    padded_f = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(padded)))
+    com = ndi.center_of_mass(np.power(np.abs(padded_f), 2))
+    sft = [new_shape[i] / 2.0 - com[i] + .5 for i in range(len(shape))]
+    sub_pixel_shifted = sub_pixel_shift(padded_f, sft)
+    ramp_removed_padded = np.fft.fftshift(np.fft.ifftn(np.fft.fftshift(sub_pixel_shifted)))
+    ramp_removed = crop_center(ramp_removed_padded, arr.shape)
+
+    return ramp_removed
+
+
+def normalize(vec):
+    return vec / np.linalg.norm(vec)
+
+
+def get_gpu_load(mem_size, ids):
+    """
+    This function is only used when running on Linux OS. The GPUtil module is not supported on Mac.
+    This function finds available GPU memory in each GPU that id is included in ids list. It calculates
+    how many reconstruction can fit in each GPU available memory.
+    Parameters
+    ----------
+    mem_size : int
+        array size
+    ids : list
+        list of GPU ids user configured for use
+    Returns
+    -------
+    list
+        list of available runs aligned with the GPU id list
+    """
+    import GPUtil
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    gpus = GPUtil.getGPUs()
+    total_avail = 0
+    available_dir = {}
+    for gpu in gpus:
+        if gpu.id in ids:
+            free_mem = gpu.memoryFree
+            avail_runs = int(free_mem / mem_size)
+            if avail_runs > 0:
+                total_avail += avail_runs
+                available_dir[gpu.id] = avail_runs
+    available = []
+    for id in ids:
+        try:
+            avail_runs = available_dir[id]
+        except:
+            avail_runs = 0
+        available.append(avail_runs)
+    return available
+
+
+def get_gpu_distribution(runs, available):
+    """
+    Finds how to distribute the available runs to perform the given number of runs.
+    Parameters
+    ----------
+    runs : int
+        number of reconstruction requested
+    available : list
+        list of available runs aligned with the GPU id list
+    Returns
+    -------
+    list
+        list of runs aligned with the GPU id list, the runs are equally distributed across the GPUs
+    """
+    from functools import reduce
+
+    all_avail = reduce((lambda x, y: x + y), available)
+    distributed = [0] * len(available)
+    sum_distr = 0
+    while runs > sum_distr and all_avail > 0:
+        # balance distribution
+        for i in range(len(available)):
+            if available[i] > 0:
+                available[i] -= 1
+                all_avail -= 1
+                distributed[i] += 1
+                sum_distr += 1
+                if sum_distr == runs:
+                    break
+    return distributed
+
+
+def estimate_no_proc(arr_size, factor):
+    """
+    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
+    of array.
+    Parameters
+    ----------
+    arr_size : int
+        size of array
+    factor : int
+        an estimate of how much memory is required to process comparing to array size
+    Returns
+    -------
+    int
+        number of processes
+    """
+    from multiprocessing import cpu_count
+    import psutil
+
+    ncpu = cpu_count()
+    freemem = psutil.virtual_memory().available
+    nmem = freemem / (factor * arr_size)
+    # decide what limits, ncpu or nmem
+    if nmem > ncpu:
+        return ncpu
+    else:
+        return int(nmem)
 
 
 def arr_property(arr):
@@ -666,82 +887,4 @@ def measure(func):
             print("Total execution time: {end_ if end_ > 0 else 0} ms")
 
     return _time_it
-#
-#
-# def pixel_shift1(refarr, arr):
-#     # get cross correlation and pixel shift
-#     # CC = np.fft.ifftn(np.fft.fft(refarr, norm = "ortho") * np.fft.fft(np.conj(arr), norm = "ortho"), norm = "ortho")
-#     CC = sp.signal.correlate(refarr, arr, mode='same')
-#     # c = np.array(CC.shape)
-#     amp = (np.abs(CC)) ** 2
-#     maxcc = amp.max()
-#     rfzero = np.sum(np.abs(refarr) ** 2) / refarr.size
-#     rgzero = np.sum(np.abs(arr) ** 2) / arr.size
-#     err1 = (abs(1. - maxcc ** 2 / (rgzero * rfzero))) ** 0.5
-#     # err2 = (abs(1. - maxcc ** 2 / (rgzero * rgzero))) ** 0.5
-#     # intshift = np.unravel_index(amp.argmax(), c)
-#     # s = np.array(intshift)
-#     # pixelshift = np.where(s >= c / 2, s - c, s)
-#     # print("   pixelshift: %s %s" % (err, pixelshift))
-#     # print("Error (1): ", err1)
-#     print("Error: ", err1)
-#     return err1
 
-def pixel_shift(refarr, arr):
-    # get cross correlation and pixel shift
-    CC = sp.signal.correlate(refarr, arr, mode='same')
-    CCmax = CC.max()
-    rfzero = np.sum(np.abs(refarr) ** 2)
-    rgzero = np.sum(np.abs(arr) ** 2)
-    e = abs(1 - CCmax * np.conj(CCmax) / (rfzero * rgzero)) ** 0.5
-
-#    print("Error: ", e)
-    return e
-
-def fast_shift(arr, shifty, fill_val=0):
-    dims = arr.shape
-    result = cp.ones_like(arr)
-    result *= fill_val
-    result_slices = []
-    arr_slices = []
-    for n in range(len(dims)):
-        if shifty[n] > 0:
-            result_slices.append(slice(shifty[n], dims[n]))
-            arr_slices.append(slice(0, -shifty[n]))
-        elif shifty[n] < 0:
-            result_slices.append(slice(0, shifty[n]))
-            arr_slices.append(slice(-shifty[n], dims[n]))
-        else:
-            result_slices.append(slice(0, dims[n]))
-            arr_slices.append(slice(0, dims[n]))
-    result_slices = tuple(result_slices)
-    arr_slices = tuple(arr_slices)
-    result[result_slices] = arr[arr_slices]
-    return result
-
-def shift_to_ref_array_cp(fft_ref, arr):
-    fft_arr = cp.fft.fftn(arr, norm='forward')
-    #    cross_correlation = cp.fft.ifftn(fft_ref * cp.conj(fft_arr), norm='forward')
-    cross_correlation = cp.fft.ifftn(fft_ref * cp.conj(fft_arr))
-    shape = cp.array(cross_correlation.shape)
-    amp = cp.abs(cross_correlation)
-    intshift = cp.unravel_index(amp.argmax(), shape)
-    # print('inshift, max', intshift, cp.max(amp))
-    shifted = cp.array(intshift)
-    pixelshift = cp.where(shifted >= shape / 2, shifted - shape, shifted)
-    shifted_arr = fast_shift(arr, pixelshift)
-    del cross_correlation
-    del fft_arr
-    return shifted_arr
-
-def pixel_shift_err(refarr, arr):
-    from cupyx.scipy.signal import correlate
-
-    # get cross correlation and pixel shift
-    CC = correlate(refarr, arr, mode='same', method='fft')
-    CCmax = CC.max()
-    rfzero = cp.sum(cp.abs(refarr) ** 2)
-    rgzero = cp.sum(cp.abs(arr) ** 2)
-    e = abs(1 - CCmax * cp.conj(CCmax) / (rfzero * rgzero)) ** 0.5
-
-    return  e

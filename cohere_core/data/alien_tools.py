@@ -323,7 +323,7 @@ def auto_alien1(data, config, data_dir=None):
     if (expandcleanedsig > 0):
         cuboid = np.where(cuboid > 0, 1.0, 0.0)
         sig = [expandcleanedsig, expandcleanedsig, 1.0]
-        cuboid = ut.gauss_conv_fft(cuboid, sig)
+        cuboid = np.gaussian_filter(cuboid, sig)
         no_thresh_cuboid = crop_center(data)
         cuboid = np.where(cuboid > 0.1, no_thresh_cuboid, 0.0)
     return cuboid

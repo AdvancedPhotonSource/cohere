@@ -73,7 +73,26 @@ class torchlib(cohlib):
         return arr.clone()
 
     def random(shape, **kwargs):
-        return torch.rand(shape, device=torchlib.device)
+        arr = torch.rand(shape, device=torchlib.device)
+        print(arr.dtype)
+        # return torch.rand(shape, device=torchlib.device)
+        return arr
+
+    def roll(arr, sft):
+        sft = [int(s) for s in sft]
+        dims = tuple([i for i in range(len(sft))])
+        try:
+            return torch.roll(arr, sft, dims)
+        except Exception as e:
+            print('not supported error: ' + repr(e))
+
+    def shift(arr, sft):
+        sft = [int(s) for s in sft]
+        dims = tuple([i for i in range(len(sft))])
+        try:
+            return torch.roll(arr, sft, dims)
+        except Exception as e:
+            print('not supported error: ' + repr(e))
 
     def fftshift(arr):
         # if roll is implemented before fftshift
@@ -92,14 +111,6 @@ class torchlib(cohlib):
         # return torch.roll(arr, shifts, dims=dims)
         try:
             return torch.fft.ifftshift(arr)
-        except Exception as e:
-            print('not supported error: ' + repr(e))
-
-    def shift(arr, sft):
-        sft = [int(s) for s in sft]
-        dims = tuple([i for i in range(len(sft))])
-        try:
-            return torch.roll(arr, sft, dims)
         except Exception as e:
             print('not supported error: ' + repr(e))
 
