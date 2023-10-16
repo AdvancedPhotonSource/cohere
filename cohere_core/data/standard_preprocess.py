@@ -68,12 +68,16 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             Optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
-
+        debug : boolean
+            It's a command line argument passed as parameter. If True, ignores verifier error.
     """
+    debug = 'debug' in kwargs and kwargs['debug']
+    kwargs.pop("debug", None)
     er_msg = ver.verify('config_data', kwargs)
     if len(er_msg) > 0:
         # the error message is printed in verifier
-        return
+        if not debug:
+            return
 
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
