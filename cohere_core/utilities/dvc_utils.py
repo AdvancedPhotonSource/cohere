@@ -17,6 +17,10 @@ __all__ = ['set_lib',
            'register_3d_reconstruction',
            'sub_pixel_shift',
            'align_arrays_subpixel',
+           'align_arrays_pixel',
+           'fast_shift',
+           'correlation_err',
+           'remove_ramp',
            'zero_phase_cc',
            'breed'
            ]
@@ -44,6 +48,35 @@ def pad_around(arr, shape, val=0):
     else:
         raise NotImplementedError
     return padded
+
+
+def center_sync(image, support):
+    """
+    Shifts the image and support arrays so the center of mass is in the center of array.
+    Parameters
+    ----------
+    image, support : ndarray, ndarray
+        image and support arrays to evaluate and shift
+    Returns
+    -------
+    image, support : ndarray, ndarray
+        shifted arrays
+    """
+    shape = image.shape
+
+    # set center phase to zero, use as a reference
+    phi0 = math.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
+                   image.flatten().real[int(image.flatten().shape[0] / 2)])
+    image = image * dvclib.exp(-1j * phi0)
+
+    com = dvclib.center_of_mass(support)
+    # place center of mass in the center
+    sft = [shape[i] / 2.0 - com[i] + .5  for i in range(len(shape))]
+    image = dvclib.roll(image, sft)
+    support =dvclib.roll(support, sft)
+    print('after roll com', dvclib.center_of_mass(support))
+
+    return image, support
 
 
 def gauss_conv_fft(arr, distribution):
@@ -433,6 +466,36 @@ def align_arrays_subpixel(ref_arr, arr):
     """
     (shift_2, shift_1, shift_0) = register_3d_reconstruction(abs(ref_arr), abs(arr))
     return sub_pixel_shift(arr, shift_2, shift_1, shift_0)
+
+
+def remove_ramp(arr, ups=1):
+    """
+    Smooths image array (removes ramp) by applaying math formula.
+    Parameters
+    ----------
+    arr : ndarray
+        array to remove ramp
+    ups : int
+        upsample factor
+    Returns
+    -------
+    ramp_removed : ndarray
+        smoothed array
+    """
+    # the remove ramp is called (now) by visualization when arrays are on cpu
+    # thus using functions from utilities will be ok for now
+    import cohere_core.utilities.utils as ut
+    shape = arr.shape
+    new_shape = [dim * ups for dim in shape]
+    padded = ut.pad_center(arr, new_shape)
+    padded_f = dvclib.fftshift(dvclib.fft(dvclib.ifftshift(padded)))
+    com = dvclib.center_of_mass(dvclib.square(dvclib.absolute(padded_f)))
+    sft = [new_shape[i] / 2.0 - com[i] + .5 for i in range(len(shape))]
+    sub_pixel_shifted = sub_pixel_shift(padded_f, *sft)
+    ramp_removed_padded = dvclib.fftshift(dvclib.ifft(dvclib.fftshift(sub_pixel_shifted)))
+    ramp_removed = ut.crop_center(ramp_removed_padded, arr.shape)
+
+    return ramp_removed
 
 
 # supposedly this is faster than np.roll or scipy interpolation shift.

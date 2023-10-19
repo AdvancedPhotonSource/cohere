@@ -53,8 +53,12 @@ class nplib(cohlib):
         #return rng.random(*shape).astype(float)
 
     def roll(arr, sft, axis=None):
+        if type(sft) != list:
+            sft = [sft]
+        if axis is None:
+            axis = list(range(len(sft)))
         sft = [int(s) for s in sft]
-        return np.roll(arr, sft, axis)
+        return np.roll(arr, sft, axis=axis)
 
     def shift(arr, sft):
         return shift(arr, sft)

@@ -307,6 +307,9 @@ class Rec:
         mx = devlib.amax(devlib.absolute(self.ds_image))
         self.ds_image = self.ds_image / mx
 
+        # center image's center_of_mass and sync support
+        self.ds_image, self.support_obj.support = dvut.center_sync(self.ds_image, self.support_obj.support)
+
         return 0
 
 
@@ -316,6 +319,7 @@ class Rec:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         devlib.save(save_dir + '/image', self.ds_image)
+        ut.save_tif(devlib.to_numpy(self.ds_image), save_dir + '/image.tif')
 
         if only_image:
             return 0

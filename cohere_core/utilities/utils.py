@@ -13,8 +13,6 @@ This module is a suite of utility functions.
 
 import tifffile as tf
 import numpy as np
-import cupy as cp
-import math as m
 import os
 import logging
 import stat
@@ -40,12 +38,10 @@ __all__ = ['get_logger',
            'get_oversample_ratio',
            'Resize',
            'binning',
-           'center_com_sync',
            'crop_center',
            'pad_center',
            'center_max',
            'adjust_dimensions',
-           'remove_ramp',
            'normalize',
            'get_gpu_load',
            'get_gpu_distribution',
@@ -93,8 +89,7 @@ def read_tif(filename):
     ndarray
         an array containing the data parsed from the file
     """
-    ar = tf.imread(filename.replace(os.sep, '/')).transpose()
-    return ar
+    return tf.imread(filename.replace(os.sep, '/')).transpose()
 
 
 def save_tif(arr, filename):
@@ -108,7 +103,7 @@ def save_tif(arr, filename):
     filename : str
         tif format file name
     """
-    tf.imsave(filename.replace(os.sep, '/'), arr.transpose().astype(np.float32))
+    tf.imsave(filename.replace(os.sep, '/'), np.abs(arr).transpose().astype(np.float32))
 
 
 def read_config(config):
@@ -487,38 +482,6 @@ def binning(array, binsizes):
     return binned_array
 
 
-def center_com_sync(image, support):
-    """
-    Shifts the image and support arrays so the center of mass is in the center of array.
-    Parameters
-    ----------
-    image, support : ndarray, ndarray
-        image and support arrays to evaluate and shift
-    Returns
-    -------
-    image, support : ndarray, ndarray
-        shifted arrays
-    """
-    shape = image.shape
-    max_coordinates = list(np.unravel_index(np.argmax(image), shape))
-    for i in range(len(max_coordinates)):
-        image = np.roll(image, int(shape[i] / 2) - max_coordinates[i], i)
-        support = np.roll(support, int(shape[i] / 2) - max_coordinates[i], i)
-
-    com = ndi.center_of_mass(np.absolute(image) * support)
-    # place center of mass in the center
-    for i in range(len(shape)):
-        image = np.roll(image, int(shape[i] / 2 - com[i]), axis=i)
-        support = np.roll(support, int(shape[i] / 2 - com[i]), axis=i)
-
-    # set center phase to zero, use as a reference
-    phi0 = m.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
-                   image.flatten().real[int(image.flatten().shape[0] / 2)])
-    image = image * np.exp(-1j * phi0)
-
-    return image, support
-
-
 def crop_center(arr, new_shape):
     """
     This function crops the array to the new size, leaving the array in the center.
@@ -566,16 +529,16 @@ def pad_center(arr, new_shape):
         the zero padded centered array
     """
     shape = arr.shape
-    pad = []
-    c_vals = []
-    for i in range(len(new_shape)):
-        pad.append((0, new_shape[i] - shape[i]))
-        c_vals.append((0.0, 0.0))
-    arr = np.lib.pad(arr, (pad), 'constant', constant_values=c_vals)
+    centered = np.zeros(new_shape, arr.dtype)
+    if len(shape) == 1:
+        centered[: shape[0]] = arr
+    elif len(shape) == 2:
+        centered[: shape[0], : shape[1]] = arr
+    elif len(shape) == 3:
+        centered[: shape[0], : shape[1], : shape[2]] = arr
 
-    centered = arr
     for i in range(len(new_shape)):
-        centered = np.roll(centered, int((new_shape[i] - shape[i] + 1) / 2), i)
+        centered = np.roll(centered, (new_shape[i] - shape[i] + 1) // 2, i)
 
     return centered
 
@@ -650,103 +613,6 @@ def adjust_dimensions(arr, pads):
     adjusted = np.pad(cropped, new_pad, 'constant', constant_values=c_vals)
 
     return np.squeeze(adjusted)
-
-
-# def gaussian(shape, sigmas, alpha=1):
-#     """
-#     Calculates Gaussian distribution grid in given dimensions.
-#
-#     Parameters
-#     ----------
-#     shape : tuple
-#         shape of the grid
-#     sigmas : list
-#         sigmas in all dimensions
-#     alpha : float
-#         a multiplier
-#     Returns
-#     -------
-#     ndarray
-#         Gaussian distribution grid
-#     """
-#     grid = np.full(shape, 1.0)
-#     for i in range(len(shape)):
-#         # prepare indexes for tile and transpose
-#         tile_shape = list(shape)
-#         tile_shape.pop(i)
-#         tile_shape.append(1)
-#         trans_shape = list(range(len(shape) - 1))
-#         trans_shape.insert(i, len(shape) - 1)
-#
-#         multiplier = - 0.5 * alpha / pow(sigmas[i], 2)
-#         line = np.linspace(-(shape[i] - 1) / 2.0, (shape[i] - 1) / 2.0, shape[i])
-#         gi = np.tile(line, tile_shape)
-#         gi = np.transpose(gi, tuple(trans_shape))
-#         exponent = np.power(gi, 2) * multiplier
-#         gi = np.exp(exponent)
-#         grid = grid * gi
-#
-#     grid_total = np.sum(grid)
-#     return grid / grid_total
-#
-#
-# def gauss_conv_fft(arr, sigmas):
-#     """
-#     Calculates convolution of array with the Gaussian.
-#
-#     A Guassian distribution grid is calculated with the array dimensions. Fourier transform of the array is
-#     multiplied by the grid and inverse transformed. A correction is calculated and applied.
-#
-#     Parameters
-#     ----------
-#     arr : ndarray
-#         subject array
-#     sigmas : list
-#         sigmas in all dimensions
-#     Returns
-#     -------
-#     ndarray
-#         convolution array
-#     """
-#     arr_sum = np.sum(abs(arr))
-#     arr_f = np.fft.ifftshift(np.fft.fftn(np.fft.ifftshift(arr)))
-#     shape = list(arr.shape)
-#     for i in range(len(sigmas)):
-#         sigmas[i] = shape[i] / 2.0 / np.pi / sigmas[i]
-#     convag = arr_f * gaussian(shape, sigmas)
-#     convag = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(convag)))
-#     convag = convag.real
-#     convag = np.clip(convag, 0, None)
-#     correction = arr_sum / np.sum(convag)
-#     convag *= correction
-#     return convag
-
-
-def remove_ramp(arr, ups=1):
-    """
-    Smooths image array (removes ramp) by applaying math formula.
-    Parameters
-    ----------
-    arr : ndarray
-        array to remove ramp
-    ups : int
-        upsample factor
-    Returns
-    -------
-    ramp_removed : ndarray
-        smoothed array
-    """
-    shape = arr.shape
-    new_shape = [dim * ups for dim in shape]
-    padded = pad_center(arr, new_shape)
-    padded_f = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(padded)))
-    com = ndi.center_of_mass(np.power(np.abs(padded_f), 2))
-    sft = [new_shape[i] / 2.0 - com[i] + .5 for i in range(len(shape))]
-    sub_pixel_shifted = sub_pixel_shift(padded_f, sft)
-    ramp_removed_padded = np.fft.fftshift(np.fft.ifftn(np.fft.fftshift(sub_pixel_shifted)))
-    ramp_removed = crop_center(ramp_removed_padded, arr.shape)
-
-    return ramp_removed
 
 
 def normalize(vec):

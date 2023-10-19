@@ -51,6 +51,10 @@ class cplib(cohlib):
         return cp.random.random(shape, dtype=cp.float32) + 1j * cp.random.random(shape, dtype=cp.float32)
 
     def roll(arr, sft, axis=None):
+        if type(sft) != list:
+            sft = [sft]
+        if axis is None:
+            axis = list(range(len(sft)))
         sft = [int(s) for s in sft]
         return cp.roll(arr, sft, axis=axis)
 
