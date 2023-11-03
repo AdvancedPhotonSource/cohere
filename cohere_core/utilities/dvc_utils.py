@@ -375,7 +375,7 @@ def dftregistration(ref_arr, arr, usfac=2):
     c_c = pad_around(dvclib.fftshift(ref_arr) * dvclib.conj(dvclib.fftshift(arr)), large_shape, val=0j)
 
     # Compute crosscorrelation and locate the peak
-    c_c = dvclib.ifft(dvclib.ifftshift(c_c))    #TODO will not work for aflib
+    c_c = dvclib.ifft(dvclib.ifftshift(c_c))
     max_coord = dvclib.unravel_index(dvclib.argmax(c_c), dvclib.dims(c_c))
 
     if max_coord[0] > shape[0]:
