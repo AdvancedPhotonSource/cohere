@@ -196,11 +196,11 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def fft(arr):
+    def fft(arr, norm='forward'):
         pass
 
     @abc.abstractmethod
-    def ifft(arr):
+    def ifft(arr, norm='forward'):
         pass
 
     @abc.abstractmethod

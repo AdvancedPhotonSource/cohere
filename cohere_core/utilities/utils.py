@@ -43,6 +43,7 @@ __all__ = ['get_logger',
            'center_max',
            'adjust_dimensions',
            'normalize',
+           'get_avail_gpu_runs',
            'get_gpu_load',
            'get_gpu_distribution',
            'estimate_no_proc',
@@ -617,6 +618,39 @@ def adjust_dimensions(arr, pads):
 
 def normalize(vec):
     return vec / np.linalg.norm(vec)
+
+
+def get_avail_gpu_runs(mem_size, ids):
+    """
+    This function is only used when running on Linux OS. The GPUtil module is not supported on Mac.
+    This function finds available GPU memory in each GPU that id is included in ids list. It calculates
+    how many reconstruction can fit in each GPU available memory.
+    Parameters
+    ----------
+    mem_size : int
+        array size
+    ids : list
+        list of GPU ids user configured for use
+    Returns
+    -------
+    list
+        list of available runs aligned with the GPU id list
+    """
+    import GPUtil
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    gpus = GPUtil.getGPUs()
+    total_avail = 0
+    available_dir = {}
+    for gpu in gpus:
+        if ids == 'all' or gpu.id in ids:
+            free_mem = gpu.memoryFree
+            avail_runs = int(free_mem / mem_size)
+            if avail_runs > 0:
+                total_avail += avail_runs
+                available_dir[gpu.id] = avail_runs
+
+    return available_dir
 
 
 def get_gpu_load(mem_size, ids):

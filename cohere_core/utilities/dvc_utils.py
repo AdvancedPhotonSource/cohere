@@ -2,7 +2,9 @@ import math
 
 _docformat__ = 'restructuredtext en'
 __all__ = ['set_lib',
+           'arr_property',
            'pad_around',
+           'center_sync',
            'gauss_conv_fft',
            'shrink_wrap',
            'shift_phase',
@@ -29,6 +31,27 @@ __all__ = ['set_lib',
 def set_lib(dlib):
     global dvclib
     dvclib = dlib
+
+
+def arr_property(arr):
+    """
+    Used only in development. Prints max value of the array and max coordinates.
+
+    Parameters
+    ----------
+    arr : ndarray
+        array to find max
+    """
+    import numpy as np
+    arr1 = abs(arr)
+    print('norm', dvclib.sum(pow(abs(arr), 2)))
+    print('mean across all data', arr1.mean())
+    print('std all data', arr1.std())
+    print('sum',np.sum(arr))
+    # print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
+    # print('std non zeros only', arr1[np.nonzero(arr1)].std())
+    max_coordinates = list(dvclib.unravel_index(dvclib.argmax(arr1), arr.shape))
+    print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
 
 
 def pad_around(arr, shape, val=0):
@@ -74,7 +97,6 @@ def center_sync(image, support):
     sft = [shape[i] / 2.0 - com[i] + .5  for i in range(len(shape))]
     image = dvclib.roll(image, sft)
     support =dvclib.roll(support, sft)
-    print('after roll com', dvclib.center_of_mass(support))
 
     return image, support
 
@@ -523,14 +545,15 @@ def fast_shift(arr, shifty, fill_val=0):
 
 
 def align_arrays_pixel(ref, arr):
-    fft_ref = dvclib.fft(ref)
-    fft_arr = dvclib.fft(arr)
-    cross_correlation = dvclib.fft(fft_ref * dvclib.conj(fft_arr))
-    shape = dvclib.array(cross_correlation.shape)
-    amp = dvclib.absolute(cross_correlation)
-    intshift = dvclib.unravel_index(amp.argmax(), shape)
-    shifted = dvclib.array(intshift)
-    pixelshift = dvclib.where(shifted >= shape / 2, shifted - shape, shifted)
+    CC = dvclib.correlate(ref, arr, mode='same', method='fft')
+    CC_shifted = dvclib.ifftshift(CC)
+    shape = dvclib.array(CC_shifted.shape)
+    amp = dvclib.absolute(CC_shifted)
+    shift = dvclib.unravel_index(amp.argmax(), shape)
+    if dvclib.sum(shift) == 0:
+        return arr
+    intshift = dvclib.array(shift)
+    pixelshift = dvclib.where(intshift >= shape / 2, intshift - shape, intshift)
     shifted_arr = fast_shift(arr, pixelshift)
     return shifted_arr
 

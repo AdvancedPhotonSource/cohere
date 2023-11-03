@@ -67,11 +67,11 @@ class cplib(cohlib):
     def ifftshift(arr):
         return cp.fft.ifftshift(arr)
 
-    def fft(arr):
-        return cp.fft.fftn(arr, norm='forward')
+    def fft(arr, norm='forward'):
+        return cp.fft.fftn(arr, norm=norm)
 
-    def ifft(arr):
-        return cp.fft.ifftn(arr, norm='forward')
+    def ifft(arr, norm='forward'):
+        return cp.fft.ifftn(arr, norm=norm)
 
     def fftconvolve(arr1, arr2):
         return sc.convolve(arr1, arr2)
@@ -99,8 +99,8 @@ class cplib(cohlib):
 
     def sum(arr, axis=None):
         sm = cp.sum(arr, axis)
-        if axis is None:
-            return sm.tolist()
+        # if axis is None:
+        #     return sm.tolist()
         return sm
 
     def real(arr):
