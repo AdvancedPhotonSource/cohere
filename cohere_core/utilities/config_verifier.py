@@ -15,7 +15,7 @@ import os
 from cohere_core.utilities.config_errors_dict import *
 from cohere_core.controller.op_flow import algs
 
-__author__ = "Barbara Frosik, Dave Cyl"
+__author__ = "Dave Cyl"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['verify']
@@ -841,6 +841,7 @@ def ver_config_data(config_map):
             print(error_message)
             return (error_message)
 
+    auto_data = 'auto_data' in config_map and config_map['auto_data']
     config_parameter = 'Intensitythreshold'
     if 'intensity_threshold' in config_map:
         intensity_threshold = config_map['intensity_threshold']
@@ -849,7 +850,7 @@ def ver_config_data(config_map):
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
-    else:
+    elif not auto_data:
         config_error = 1
         error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
         print(error_message)
