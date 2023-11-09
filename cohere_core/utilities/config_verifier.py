@@ -841,7 +841,6 @@ def ver_config_data(config_map):
             print(error_message)
             return (error_message)
 
-    auto_data = 'auto_data' in config_map and config_map['auto_data']
     config_parameter = 'Intensitythreshold'
     if 'intensity_threshold' in config_map:
         intensity_threshold = config_map['intensity_threshold']
@@ -849,12 +848,7 @@ def ver_config_data(config_map):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
-            return (error_message)
-    elif not auto_data:
-        config_error = 1
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print(error_message)
-        return (error_message)
+            return ''
 
     config_parameter = 'Alienalg'
     if 'alien_alg' in config_map:
