@@ -61,7 +61,11 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     Controls single reconstruction.
 
-    This script is typically started with cohere-ui helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined, or starting from some saved state. It will set the initial guess accordingly and start phasing process. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere-ui helper functions. The 'init_guess' parameter in the
+    configuration file defines whether it is a random guess, AI algorithm determined, or starting from
+    some saved state. It will set the initial guess accordingly and start phasing process. The results
+    will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir'
+    is not defined.
 
     Parameters
     ----------

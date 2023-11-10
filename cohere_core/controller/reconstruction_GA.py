@@ -98,7 +98,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     Controls reconstruction that employs genetic algorith (GA).
 
-    This script is typically started with cohere_core-ui helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined (one reconstruction, the rest random), or starting from some saved state. It will set the initial guess accordingly and start GA algorithm. It will run multiple reconstructions for each generation in a loop. After each generation the best reconstruction, alpha is identified, and used for breeding. For each generation the results will be saved in g_x subdirectory, where x is the generation number, in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere_core-ui helper functions. The 'init_guess' parameter in
+    the configuration file defines whether it is a random guess, AI algorithm determined
+    (one reconstruction, the rest random), or starting from some saved state. It will set the initial guess
+    accordingly and start GA algorithm. It will run multiple reconstructions for each generation in a loop.
+    After each generation the best reconstruction, alpha is identified, and used for breeding.
+    For each generation the results will be saved in g_x subdirectory, where x is the generation number,
+    in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
 
     Parameters
     ----------
@@ -130,12 +136,16 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     size = comm.Get_size()
     rank = comm.Get_rank()
 
-    # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
-    filename = conf_file.split('/')[-1]
-    save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
-    alpha_dir = save_dir + '/alpha'
-    if rank == 0:
+    pars = ut.read_config(conf_file)
+    if 'save_dir' in pars:
+        save_dir = pars['save_dir']
+    else:
+        # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
+        filename = conf_file.split('/')[-1]
+        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
+        alpha_dir = save_dir + '/alpha'
 
+    if rank == 0:
         # create alpha dir and placeholder for the alpha's metrics
         if not os.path.isdir(save_dir):
             os.mkdir(save_dir)
@@ -144,7 +154,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     comm.Barrier()
 
-    pars = ut.read_config(conf_file)
     pars = gaut.set_ga_defaults(pars)
 
     if 'ga_generations' in pars and pars['ga_generations'] < 2:

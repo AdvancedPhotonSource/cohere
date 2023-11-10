@@ -42,7 +42,11 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     Controls multiple reconstructions, the reconstructions run concurrently.
 
-    This script is typically started with cohere_core-ui helper functions. The 'init_guess' parameter in the configuration file defines whether guesses are random, or start from some saved states. It will set the initial guesses accordingly and start phasing process, running each reconstruction in separate thread. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere_core-ui helper functions. The 'init_guess' parameter in the
+    configuration file defines whether guesses are random, or start from some saved states. It will set the
+    initial guesses accordingly and start phasing process, running each reconstruction in separate thread.
+    The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if
+    'save_dir' is not defined.
 
     Parameters
     ----------
@@ -67,16 +71,20 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
-    filename = conf_file.split('/')[-1]
-    save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
-    if rank == 0:
-        if not os.path.isdir(save_dir):
-            os.mkdir(save_dir)
+    pars = ut.read_config(conf_file)
+
+    if 'save_dir' in pars:
+        save_dir = pars['save_dir']
+    else:
+        # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
+        filename = conf_file.split('/')[-1]
+        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
+        if rank == 0:
+            if not os.path.isdir(save_dir):
+                os.mkdir(save_dir)
 
     comm.Barrier()
 
-    pars = ut.read_config(conf_file)
     if 'init_guess' in pars and pars['init_guess'] == 'AI_guess':
         print('multiple reconstruction do not support AI_guess initial guess')
         return
