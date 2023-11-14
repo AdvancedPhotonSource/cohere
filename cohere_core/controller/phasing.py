@@ -147,13 +147,16 @@ class Rec:
 
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        self.dev = device_id
-        try:
-            devlib.set_device(device_id)
-        except Exception as e:
-            print(e)
-            print('may need to restart GUI')
-            return -1
+        if device_id != -1:
+            self.dev = device_id
+            if device_id != -1:
+                try:
+                    devlib.set_device(device_id)
+                except Exception as e:
+                    print(e)
+                    print('may need to restart GUI')
+                    return -1
+
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
@@ -513,14 +516,16 @@ class CoupledRec(Rec):
         self.peak_objs = [Peak(dir_ornt) for dir_ornt in peak_dir_orient]
 
     def init_dev(self, device_id):
-        self.dev = device_id
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         if device_id != -1:
-            try:
-                devlib.set_device(device_id)
-            except Exception as e:
-                print(e)
-                print('may need to restart GUI')
-                return -1
+            self.dev = device_id
+            if device_id != -1:
+                try:
+                    devlib.set_device(device_id)
+                except Exception as e:
+                    print(e)
+                    print('may need to restart GUI')
+                    return -1
 
         G_0 = 2*pi/self.params["lattice_size"]
         for or_obj in self.peak_objs:
