@@ -63,6 +63,9 @@ class torchlib(cohlib):
     def dtype(arr):
         return arr.dtype
 
+    def astype(arr, dtype):
+        return arr.astype(dtype=dtype)
+
     def size(arr):
         return torch.numel(arr)
 

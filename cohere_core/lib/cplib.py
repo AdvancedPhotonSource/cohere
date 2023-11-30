@@ -33,6 +33,9 @@ class cplib(cohlib):
     def dtype(arr):
         return arr.dtype
 
+    def astype(arr, dtype):
+        return arr.astype(dtype=dtype)
+
     def size(arr):
         return arr.size
 
@@ -60,7 +63,6 @@ class cplib(cohlib):
 
     def shift(arr, sft):
         return sc.fourier_shift(arr, sft)
-
     def fftshift(arr):
         return cp.fft.fftshift(arr)
 
@@ -166,7 +168,8 @@ class cplib(cohlib):
         return sc.gaussian_filter(arr, sigma)
 
     def center_of_mass(inarr):
-        return sc.center_of_mass(cp.absolute(inarr))
+        t = sc.center_of_mass(cp.absolute(inarr))
+        return t
 
     def meshgrid(*xi):
         return cp.meshgrid(*xi)

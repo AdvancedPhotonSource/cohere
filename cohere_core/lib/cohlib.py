@@ -21,6 +21,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.from_numpy) and
                 hasattr(subclass, 'dtype') and
                 callable(subclass.dtype) and
+                hasattr(subclass, 'astype') and
+                callable(subclass.astype) and
                 hasattr(subclass, 'size') and
                 callable(subclass.size) and
                 hasattr(subclass, 'hasnan') and
@@ -165,6 +167,10 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def dtype(arr):
+        pass
+
+    @abc.abstractmethod
+    def astype(arr):
         pass
 
     @abc.abstractmethod
