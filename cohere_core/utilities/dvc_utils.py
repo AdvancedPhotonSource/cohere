@@ -266,14 +266,18 @@ def get_metric(image, errs, metric_type):
         calculated metric for a given type
     """
     if metric_type == 'chi':
-        return errs[-1]
+        eval = errs[-1]
     elif metric_type == 'sharpness':
-        return dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
+        eval = dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
     elif metric_type == 'summed_phase':
         ph = shift_phase(image, 0)
-        return dvclib.sum(abs(ph))
+        eval = dvclib.sum(abs(ph))
     elif metric_type == 'area':
-        return dvclib.sum(shrink_wrap(image, .2, .5))
+        eval = dvclib.sum(shrink_wrap(image, .2, .5))
+
+    if type(eval) != float:
+        eval = eval.item()
+    return eval
 
 
 def all_metrics(image, errs):
@@ -291,10 +295,23 @@ def all_metrics(image, errs):
         calculated metrics for all types
     """
     metrics = {}
-    metrics['chi'] = errs[-1]
-    metrics['sharpness'] = dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
-    metrics['summed_phase'] = dvclib.sum(abs(shift_phase(image, 0)))
-    metrics['area'] = dvclib.sum(shrink_wrap(image, .2, .5))
+    eval = errs[-1]
+    if type(eval) != float:
+        eval = eval.item()
+    metrics['chi'] = eval
+    eval = dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
+    if type(eval) != float:
+        eval = eval.item()
+    metrics['sharpness'] = eval
+    eval = dvclib.sum(abs(shift_phase(image, 0)))
+    if type(eval) != float:
+        eval = eval.item()
+    metrics['summed_phase'] = eval
+    eval = dvclib.sum(shrink_wrap(image, .2, .5))
+    if type(eval) != float:
+        eval = eval.item()
+    metrics['area'] = eval
+    
     return metrics
 
 

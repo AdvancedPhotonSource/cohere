@@ -17,6 +17,10 @@ import os
 import logging
 import stat
 import scipy.ndimage as ndi
+import GPUtil
+from functools import reduce
+import subprocess
+import ast
 
 
 __author__ = "Barbara Frosik"
@@ -44,9 +48,8 @@ __all__ = ['get_logger',
            'adjust_dimensions',
            'normalize',
            'get_avail_gpu_runs',
-           'get_gpu_load',
-           'get_gpu_distribution',
-           'estimate_no_proc',
+           'get_one_dev',
+           'get_gpu_use',
            'arr_property'
            ]
 
@@ -121,8 +124,6 @@ def read_config(config):
     dict
         dictionary containing parsed configuration, None if the given file does not exist
     """
-    import ast
-
     config = config.replace(os.sep, '/')
     if not os.path.isfile(config):
         print(config, 'is not a file')
@@ -620,136 +621,179 @@ def normalize(vec):
     return vec / np.linalg.norm(vec)
 
 
-def get_avail_gpu_runs(mem_size, ids):
-    """
-    This function is only used when running on Linux OS. The GPUtil module is not supported on Mac.
-    This function finds available GPU memory in each GPU that id is included in ids list. It calculates
-    how many reconstruction can fit in each GPU available memory.
-    Parameters
-    ----------
-    mem_size : int
-        array size
-    ids : list
-        list of GPU ids user configured for use
-    Returns
-    -------
-    list
-        list of available runs aligned with the GPU id list
-    """
-    import GPUtil
-
+def get_one_dev(ids):
+    if issubclass(type(ids), list):  # a list of GPU ids
+        pass
+    elif ids == 'all':  # all GPUs can be used
+        pass
+    elif issubclass(type(ids), dict):  # a dict with cluster configuration
+        ids = ids[socket.gethostname()]  # configured devices on local host
+    
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     gpus = GPUtil.getGPUs()
-    total_avail = 0
-    available_dir = {}
+    dev = -1
+    max_mem = 0
+    # select one with the highest availbale memory
     for gpu in gpus:
         if ids == 'all' or gpu.id in ids:
             free_mem = gpu.memoryFree
-            avail_runs = int(free_mem / mem_size)
-            if avail_runs > 0:
-                total_avail += avail_runs
-                available_dir[gpu.id] = avail_runs
-
-    return available_dir
+            if free_mem > max_mem:
+                dev = gpu.id
+                max_mem = free_mem
+    return dev
 
 
-def get_gpu_load(mem_size, ids):
-    """
-    This function is only used when running on Linux OS. The GPUtil module is not supported on Mac.
-    This function finds available GPU memory in each GPU that id is included in ids list. It calculates
-    how many reconstruction can fit in each GPU available memory.
-    Parameters
-    ----------
-    mem_size : int
-        array size
-    ids : list
-        list of GPU ids user configured for use
-    Returns
-    -------
-    list
-        list of available runs aligned with the GPU id list
-    """
+def get_avail_gpu_runs(devices, run_mem):
     import GPUtil
 
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     gpus = GPUtil.getGPUs()
-    total_avail = 0
-    available_dir = {}
+    available = {}
+
     for gpu in gpus:
-        if gpu.id in ids:
-            free_mem = gpu.memoryFree
-            avail_runs = int(free_mem / mem_size)
-            if avail_runs > 0:
-                total_avail += avail_runs
-                available_dir[gpu.id] = avail_runs
-    available = []
-    for id in ids:
-        try:
-            avail_runs = available_dir[id]
-        except:
-            avail_runs = 0
-        available.append(avail_runs)
+        if devices == 'all' or gpu.id in devices:
+            available[gpu.id] = gpu.memoryFree // run_mem
+
     return available
 
 
-def get_gpu_distribution(runs, available):
+def get_avail_hosts_gpu_runs(devices, run_mem):
+    hosts = ','.join(devices.keys())
+    script = '/host_utils.py'
+    script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
+    print('hosts', hosts)
+    command = ['mpiexec', '-n', str(len(devices)), '--host', hosts, 'python', script, str(devices), str(run_mem)]
+    result = subprocess.run(command, stdout=subprocess.PIPE)
+    mem = result.stdout.decode("utf-8").strip()
+    mem_map = {}
+    for line in mem.splitlines():
+        entry = line.split(" ", 1)
+        mem_map[entry[0]] = ast.literal_eval(entry[1])
+    return mem_map
+
+
+def get_balanced_load(avail_runs, runs):
+    print ('runs', runs)
+    if len(avail_runs) == 0:
+        return {}
+    total_available = reduce((lambda x, y: x + y), avail_runs.values())
+    if total_available <= runs:
+        return avail_runs, total_available
+
+    need_runs = runs
+    available = total_available
+    load = {}
+
+    # add one run from each available
+    for k,v in avail_runs.items():
+        if v > 0:
+            load[k] = 1
+            avail_runs[k] = v - 1
+            need_runs -= 1
+            if need_runs == 0:
+                return load, runs         
+            available -= 1
+
+    # use proportionally from available
+    distributed = 0
+    ratio = need_runs / available
+    for k,v in avail_runs.items():
+        if v > 0:
+            share = int(v * ratio)
+            load[k] = load[k] + share
+            avail_runs[k] = v - share
+            distributed += share
+    need_runs -= distributed
+    available -= distributed
+
+    # need to add the few remaining
+    for k,v in avail_runs.items():
+        if v > 0:
+            load[k] = load[k] + 1
+            need_runs -= 1
+            if need_runs == 0:
+                break
+
+    return load, runs    
+
+
+def get_gpu_use(devices, no_jobs, job_size):
     """
-    Finds how to distribute the available runs to perform the given number of runs.
+    Determines available GPUs that match configured devices, and selects the optimal distribution of jobs on available devices.
     Parameters
     ----------
-    runs : int
-        number of reconstruction requested
-    available : list
-        list of available runs aligned with the GPU id list
+    devices : list or dict or 'all'
+        Configured parameter. list of GPU ids to use for jobs or 'all' if all GPUs should be used. If cluster configuration, then
+        it is dict with keys being host names. 
+    no_jobs : int
+        wanted number of jobs
+    job_size : float
+        a memory requirement on GPU to run one job
     Returns
     -------
-    list
-        list of runs aligned with the GPU id list, the runs are equally distributed across the GPUs
+    picked_devs : list or list of lists(if cluster conf)
+        list og GPU ids that were selected for the jobs
+    available jobs : int
+        number of jobs allocated
+    cluster_conf : boolean
+        True is cluster configuration
     """
     from functools import reduce
 
-    all_avail = reduce((lambda x, y: x + y), available)
-    distributed = [0] * len(available)
-    sum_distr = 0
-    while runs > sum_distr and all_avail > 0:
-        # balance distribution
-        for i in range(len(available)):
-            if available[i] > 0:
-                available[i] -= 1
-                all_avail -= 1
-                distributed[i] += 1
-                sum_distr += 1
-                if sum_distr == runs:
-                    break
-    return distributed
+    def unpack_load(load):
+        picked_devs = []
+        for ds in [[k]*v for k,v in load.items()]:
+            picked_devs.extend(ds)
+        return picked_devs       
 
+    print('devs', devices, type(devices) != dict)
 
-def estimate_no_proc(arr_size, factor):
-    """
-    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
-    of array.
-    Parameters
-    ----------
-    arr_size : int
-        size of array
-    factor : int
-        an estimate of how much memory is required to process comparing to array size
-    Returns
-    -------
-    int
-        number of processes
-    """
-    from multiprocessing import cpu_count
-    import psutil
+    if type(devices) != dict: # a configuration for local host
+        hostfile_name = None
+        avail_jobs = get_avail_gpu_runs(devices, job_size)
+        print('avail_jobs', avail_jobs)
+        balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
+        print('balancedload', balanced_load)
+        picked_devs = unpack_load(balanced_load)
+        print('picked', picked_devs)
+    else:   #cluster configuration
+        cluster_conf = True
+        print('cluster')
+        hosts_avail_jobs = get_avail_hosts_gpu_runs(devices, job_size)
+        avail_jobs = {}
+        # collapse the host dict into one dict by adding hostname in front of key (gpu id)
+        for k,v in hosts_avail_jobs.items():
+            host_runs = {(k + '_' + str(kv)): vv for kv, vv in v.items()}
+            avail_jobs.update(host_runs)
+        print('avail runs', avail_jobs)
+        balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
+        print('balanced load', balanced_load, avail_jobs_no)
+ 
+        # uncollapse the balanced load by hosts
+        host_balanced_load = {}
+        for k,v in balanced_load.items():
+            idx = k.rfind('_')
+            host = k[:idx]
+            if host not in host_balanced_load:
+                host_balanced_load[host] = {}
+            host_balanced_load[host].update({int(k[idx+1:]) : v})
+        
+        # create hosts file and return corresponding picked devices
+        #hosts, picked_devs = zip(*[(k, unpack_load(v)) for k, v in host_balanced_load.items()])
+        hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
+        print('hostspickeddevs', hosts_picked_devs)
 
-    ncpu = cpu_count()
-    freemem = psutil.virtual_memory().available
-    nmem = freemem / (factor * arr_size)
-    # decide what limits, ncpu or nmem
-    if nmem > ncpu:
-        return ncpu
-    else:
-        return int(nmem)
+        hostfile_name = 'hosts.txt'
+        picked_devs = []
+        host_file = open(hostfile_name, mode='w+')
+        for h, ds in hosts_picked_devs:
+            host_file.write(host + ':' + str(len(ds)))
+            picked_devs.append(ds)
+        host_file.close()
+
+        print('hostspickeddevs, devs', hosts_picked_devs, picked_devs)
+ 
+    return picked_devs, min(avail_jobs_no, no_jobs), hostfile_name
 
 
 def arr_property(arr):

@@ -5,21 +5,21 @@ import subprocess
 import argparse
 import cohere_core.utilities.utils as ut
 
-def run_with_mpi(lib, conf_file, datafile, dir, devices):
+def run_with_mpi(ga_method, lib, conf_file, datafile, dir, devices, hostfile=None):
     start_time = time.time()
-    conf_map = ut.read_config(conf_file)
-    if conf_map is None:
-        return
-    if 'ga_generations' in conf_map and conf_map['ga_generations'] > 1:
-        script = '/reconstruction_GA.py'
-        devices.sort()
-    else:
+    if ga_method is None:
         script = '/reconstruction_multi.py'
+    else:
+        script = '/reconstruction_GA.py'
+
     script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
-    command = ['mpiexec', '-n', str(len(devices)), 'python', script, lib, conf_file, datafile, dir, str(devices)]
+    if hostfile is None:
+        command = ['mpiexec', '-n', str(len(devices)), 'python', script, lib, conf_file, datafile, dir, str(devices)]
+    else:
+        command = ['mpiexec', '-n', str(len(devices)), '--hostfile', hostfile, 'python', script, lib, conf_file, datafile, dir, str(devices)]
     result = subprocess.run(command, stdout=subprocess.PIPE)
     run_time = time.time() - start_time
-    print('GA reconstruction took', run_time, 'seconds')
+    print('reconstruction took', run_time, 'seconds')
 
 
 def main(arg):

@@ -327,7 +327,7 @@ def ver_config_rec(config_map):
     config_parameter = 'Device'
     if 'device' in config_map:
         device = config_map['device']
-        if not ver_list_int('device', device):
+        if not ver_list_int('device', device) and device != 'all' and not issubclass(type(device), dict):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
