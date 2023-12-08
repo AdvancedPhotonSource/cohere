@@ -661,7 +661,6 @@ def get_avail_hosts_gpu_runs(devices, run_mem):
     hosts = ','.join(devices.keys())
     script = '/host_utils.py'
     script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
-    print('hosts', hosts)
     command = ['mpiexec', '-n', str(len(devices)), '--host', hosts, 'python', script, str(devices), str(run_mem)]
     result = subprocess.run(command, stdout=subprocess.PIPE)
     mem = result.stdout.decode("utf-8").strip()
@@ -673,7 +672,6 @@ def get_avail_hosts_gpu_runs(devices, run_mem):
 
 
 def get_balanced_load(avail_runs, runs):
-    print ('runs', runs)
     if len(avail_runs) == 0:
         return {}
     total_available = reduce((lambda x, y: x + y), avail_runs.values())
@@ -746,28 +744,20 @@ def get_gpu_use(devices, no_jobs, job_size):
             picked_devs.extend(ds)
         return picked_devs       
 
-    print('devs', devices, type(devices) != dict)
-
     if type(devices) != dict: # a configuration for local host
         hostfile_name = None
         avail_jobs = get_avail_gpu_runs(devices, job_size)
-        print('avail_jobs', avail_jobs)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
-        print('balancedload', balanced_load)
         picked_devs = unpack_load(balanced_load)
-        print('picked', picked_devs)
     else:   #cluster configuration
         cluster_conf = True
-        print('cluster')
         hosts_avail_jobs = get_avail_hosts_gpu_runs(devices, job_size)
         avail_jobs = {}
         # collapse the host dict into one dict by adding hostname in front of key (gpu id)
         for k,v in hosts_avail_jobs.items():
             host_runs = {(k + '_' + str(kv)): vv for kv, vv in v.items()}
             avail_jobs.update(host_runs)
-        print('avail runs', avail_jobs)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
-        print('balanced load', balanced_load, avail_jobs_no)
  
         # uncollapse the balanced load by hosts
         host_balanced_load = {}
@@ -781,7 +771,6 @@ def get_gpu_use(devices, no_jobs, job_size):
         # create hosts file and return corresponding picked devices
         #hosts, picked_devs = zip(*[(k, unpack_load(v)) for k, v in host_balanced_load.items()])
         hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
-        print('hostspickeddevs', hosts_picked_devs)
 
         hostfile_name = 'hosts.txt'
         picked_devs = []
@@ -791,8 +780,6 @@ def get_gpu_use(devices, no_jobs, job_size):
             picked_devs.append(ds)
         host_file.close()
 
-        print('hostspickeddevs, devs', hosts_picked_devs, picked_devs)
- 
     return picked_devs, min(avail_jobs_no, no_jobs), hostfile_name
 
 
