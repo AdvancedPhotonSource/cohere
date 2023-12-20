@@ -740,7 +740,7 @@ def get_gpu_use(devices, no_jobs, job_size):
 
     def unpack_load(load):
         picked_devs = []
-        for ds in [[k]*v for k,v in load.items()]:
+        for ds in [[k] * int(v) for k,v in load.items()]:
             picked_devs.extend(ds)
         return picked_devs       
 
@@ -769,14 +769,13 @@ def get_gpu_use(devices, no_jobs, job_size):
             host_balanced_load[host].update({int(k[idx+1:]) : v})
         
         # create hosts file and return corresponding picked devices
-        #hosts, picked_devs = zip(*[(k, unpack_load(v)) for k, v in host_balanced_load.items()])
         hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
 
-        hostfile_name = 'hosts.txt'
+        hostfile_name = 'hosts'
         picked_devs = []
         host_file = open(hostfile_name, mode='w+')
         for h, ds in hosts_picked_devs:
-            host_file.write(host + ':' + str(len(ds)))
+            host_file.write(h + ':' + str(len(ds)) + '\n')
             picked_devs.append(ds)
         host_file.close()
 

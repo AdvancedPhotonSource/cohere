@@ -326,12 +326,27 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Device'
     if 'device' in config_map:
+        def ver_dev(d):
+            if d == 'all':
+                return ''
+            elif not ver_list_int('device', device):
+                config_error = 0
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print(error_message)
+                return (error_message)
+               
         device = config_map['device']
-        if not ver_list_int('device', device) and device != 'all' and not issubclass(type(device), dict):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
+        if issubclass(type(device), dict):
+            for d in device.values():
+                error_message =  ver_dev(d)
+                if len(error_message) > 0:
+                    print(error_message)
+                    return (error_message)
+        else:
+            error_message =  ver_dev(device)
+            if len(error_message) > 0:
+                print(error_message)
+                return (error_message)
 
     config_parameter = 'Algorithmsequence'
     if 'algorithm_sequence' in config_map:

@@ -156,17 +156,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     pars = gaut.set_ga_defaults(pars)
 
-    if 'ga_generations' in pars and pars['ga_generations'] < 2:
-        print("number of generations must be greater than 1")
-        return
-
     reconstructions = size
 
     if 'ga_cullings' in pars:
         cull_sum = sum(pars['ga_cullings'])
-        if reconstructions - cull_sum < 2:
-            print("At least two reconstructions should be left after culling. Number of starting reconstructions is", reconstructions, "but ga_cullings adds to", cull_sum)
-            return
 
     set_lib(lib)
 
@@ -180,7 +173,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     active = True
     for g in range(pars['ga_generations']):
         was_active = active
-        print ('starting generation, rank', g, rank)
         if g == 0:
             ret = worker.init_dev(devices[rank])
             if ret < 0:
@@ -204,46 +196,19 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 if ret < 0:
                     active = False
 
-            # write_log(rank, 'about breed, active ' + str(active))
-            # if active:
-            #     time1 = time.time()
-            #     ret = worker.breed()
-            #     worker.clean_breeder()
-            #     worker.breeder = None
-            #
-            #     time2 = time.time()
-            #     t = time2 - time1
-            #     write_log(rank, 'breed time ' + str(t))
-            #     if ret < 0:
-            #         active = False
-            # # cp._default_memory_pool.free_all_blocks()
-            # # cp._default_pinned_memory_pool.free_all_blocks()
-            # comm.Barrier()
-
-            f = 2
-            for i in range(f):
-                if active and rank % f == i:
-                #    time1 = time.time()
-                    ret = worker.breed()
-                    worker.clean_breeder()
-                    worker.breeder = None
-                #    time2 = time.time()
-                #    t = time2 - time1
-                #    write_log(rank, 'breed time ' + str(t))
-                    if ret < 0:
-                        active = False
-                comm.Barrier()
+            if active:
+                ret = worker.breed()
+                worker.clean_breeder()
+                worker.breeder = None
+                if ret < 0:
+                    active = False
+            comm.Barrier()
 
         if active:
-        #    time3 = time.time()
             ret = worker.iterate()
-        #    time4 = time.time()
-        #    t = time4 - time3
-        #    write_log(rank, 'itr time ' + str(t))
             if ret < 0:
                 active = False
 
-        # write_log(rank, 'iter done, active ' + str(active))
         if active:
             metric_type = pars['ga_metrics'][g]
             metric = worker.get_metric(metric_type)
@@ -276,7 +241,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         if rank == 0:
             # order processes by metric
-            # write_log(rank, 'generation ' + str(g))
             proc_ranks, best_metrics = order_ranks(tracing, metrics, metric_type)
             proc_ranks = [p[0] for p in proc_ranks]
             # cull
@@ -331,9 +295,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     if rank == 0:
         tracing.save(save_dir)
 
-    print('done gen')
+    print('finished GA')
 
-def main(arg):
+
+def main():
     import ast
 
     parser = argparse.ArgumentParser()
@@ -349,5 +314,4 @@ def main(arg):
 
 
 if __name__ == "__main__":
-    print('args', sys.argv)
-    exit(main(sys.argv[1:]))
+    exit(main())

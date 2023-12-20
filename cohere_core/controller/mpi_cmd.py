@@ -17,12 +17,17 @@ def run_with_mpi(ga_method, lib, conf_file, datafile, dir, devices, hostfile=Non
         command = ['mpiexec', '-n', str(len(devices)), 'python', script, lib, conf_file, datafile, dir, str(devices)]
     else:
         command = ['mpiexec', '-n', str(len(devices)), '--hostfile', hostfile, 'python', script, lib, conf_file, datafile, dir, str(devices)]
-    result = subprocess.run(command, stdout=subprocess.PIPE)
+
+    subprocess.run(command, capture_output=True)
+
     run_time = time.time() - start_time
-    print('reconstruction took', run_time, 'seconds')
+    if ga_method is None:
+        print('multiple reconstructions took', run_time, 'seconds')
+    else:   # fast GA
+        print('GA reconstructions for directory', dir, 'took', run_time, 'seconds')
 
 
-def main(arg):
+def main():
     import ast
 
     parser = argparse.ArgumentParser()
@@ -38,5 +43,4 @@ def main(arg):
 
 
 if __name__ == "__main__":
-    print('args', sys.argv)
-    exit(main(sys.argv[1:]))
+    exit(main())
