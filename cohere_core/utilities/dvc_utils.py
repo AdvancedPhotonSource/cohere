@@ -541,6 +541,20 @@ def remove_ramp(arr, ups=1):
 # supposedly this is faster than np.roll or scipy interpolation shift.
 # https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
 def fast_shift(arr, shifty, fill_val=0):
+    """
+    Shifts array by the shifty parameter.
+    Parameters
+    ----------
+    arr : ndarray
+        array to shift
+    shifty : ndarray
+        an array of integers/shifts in each dimension
+    fill_val : float
+
+    Returns
+    -------
+    ndarray, shifted array
+    """
     dims = arr.shape
     result = dvclib.full(dims, 1.0)
     result *= fill_val
@@ -563,6 +577,19 @@ def fast_shift(arr, shifty, fill_val=0):
 
 
 def align_arrays_pixel(ref, arr):
+    """
+    Aligns two arrays of the same dimensions with the pixel resolution. Used in reciprocal space.
+    Parameters
+    ----------
+    ref : ndarray
+        array to align with
+    arr : ndarray
+        array to align
+
+    Returns
+    -------
+    ndarray : aligned array
+    """
     CC = dvclib.correlate(ref, arr, mode='same', method='fft')
     CC_shifted = dvclib.ifftshift(CC)
     shape = dvclib.array(CC_shifted.shape)
@@ -577,6 +604,19 @@ def align_arrays_pixel(ref, arr):
 
 
 def correlation_err(refarr, arr):
+    """
+    Returns correlation error between two arrays.
+    Parameters
+    ----------
+    refarr : ndarray
+        reference array
+    arr : ndarray
+        array to measure likeness with reference array
+
+    Returns
+    -------
+    float, correlation error
+    """
     CC = dvclib.correlate(refarr, arr, mode='same', method='fft')
     CCmax = CC.max()
     rfzero = dvclib.sum(dvclib.absolute(refarr) ** 2)

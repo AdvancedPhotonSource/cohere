@@ -622,11 +622,18 @@ def normalize(vec):
 
 
 def get_one_dev(ids):
-    if issubclass(type(ids), list):  # a list of GPU ids
-        pass
-    elif ids == 'all':  # all GPUs can be used
-        pass
-    elif issubclass(type(ids), dict):  # a dict with cluster configuration
+    """
+    Returns GPU ID that is included in the configuration, is on a local node, and has the most available memory.
+
+    :param ids: list or string or dict
+        list of gpu ids, or string 'all' indicating all GPUs included, or dict by hostname
+    :return: int
+        selected GPU ID
+    """
+    import socket
+
+    # if cluster configuration, look only at devices on local machine
+    if issubclass(type(ids), dict):  # a dict with cluster configuration
         ids = ids[socket.gethostname()]  # configured devices on local host
     
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -644,6 +651,16 @@ def get_one_dev(ids):
 
 
 def get_avail_gpu_runs(devices, run_mem):
+    """
+    Finds how many jobs of run_mem size can run on configured GPUs on local host.
+
+    :param devices: list or string
+        list of GPU IDs or 'all' if configured to use all available GPUs
+    :param run_mem: int
+        size of GPU memory (in MB) needed for one job
+    :return: dict
+        pairs of GPU IDs, number of available jobs
+    """
     import GPUtil
 
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -658,6 +675,14 @@ def get_avail_gpu_runs(devices, run_mem):
 
 
 def get_avail_hosts_gpu_runs(devices, run_mem):
+    """
+    This function is called in a cluster configuration case, i.e. devices parameter is configured as dictionary of hostnames and GPU IDs (either list of the IDs or 'all' for all GPUs per host).
+    It starts mpi subprocess that targets each of the configured host. The subprocess returns tuples with hostname and available GPUs. The tuples are converted into dictionary and returned.
+
+    :param devices:
+    :param run_mem:
+    :return:
+    """
     hosts = ','.join(devices.keys())
     script = '/host_utils.py'
     script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
@@ -672,12 +697,29 @@ def get_avail_hosts_gpu_runs(devices, run_mem):
 
 
 def get_balanced_load(avail_runs, runs):
+    """
+    This function distributes the runs proportionally to the GPUs availability.
+    If number of available runs is less or equal to the requested runs, the input parameter avail_runs becomes load.
+    The function also returns number of available runs.
+
+    :param avail_runs: dict
+        keys are GPU IDs, and values are available runs
+        for cluster configuration the keys are prepended with the hostnames
+    :param runs: int
+        number of requested jobs
+    :return: dict, int
+        a dictionary with the same structure as avail_runs input parameter, but with values indicating runs modified to achieve balanced distribution.
+    """
     if len(avail_runs) == 0:
         return {}
+
+    # if total number of available runs is less or equal runs, return the avail_runs,
+    # and total number of available jobs
     total_available = reduce((lambda x, y: x + y), avail_runs.values())
     if total_available <= runs:
         return avail_runs, total_available
 
+    # initialize variables for calculations
     need_runs = runs
     available = total_available
     load = {}
@@ -717,7 +759,7 @@ def get_balanced_load(avail_runs, runs):
 
 def get_gpu_use(devices, no_jobs, job_size):
     """
-    Determines available GPUs that match configured devices, and selects the optimal distribution of jobs on available devices.
+    Determines available GPUs that match configured devices, and selects the optimal distribution of jobs on available devices. If devices is configured as dict (i.e. cluster configuration) then a file "hosts" is created in the running directory. This file contains hosts names and number of jobs to run on that host.
     Parameters
     ----------
     devices : list or dict or 'all'
@@ -726,18 +768,16 @@ def get_gpu_use(devices, no_jobs, job_size):
     no_jobs : int
         wanted number of jobs
     job_size : float
-        a memory requirement on GPU to run one job
+        a GPU memory requirement to run one job
     Returns
     -------
     picked_devs : list or list of lists(if cluster conf)
-        list og GPU ids that were selected for the jobs
+        list of GPU ids that were selected for the jobs
     available jobs : int
-        number of jobs allocated
+        number of jobs allocated on all GPUs
     cluster_conf : boolean
         True is cluster configuration
     """
-    from functools import reduce
-
     def unpack_load(load):
         picked_devs = []
         for ds in [[k] * int(v) for k,v in load.items()]:
@@ -759,7 +799,7 @@ def get_gpu_use(devices, no_jobs, job_size):
             avail_jobs.update(host_runs)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
  
-        # uncollapse the balanced load by hosts
+        # un-collapse the balanced load by hosts
         host_balanced_load = {}
         for k,v in balanced_load.items():
             idx = k.rfind('_')
