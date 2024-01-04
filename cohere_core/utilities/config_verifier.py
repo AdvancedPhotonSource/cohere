@@ -327,9 +327,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Device'
     if 'device' in config_map:
         def ver_dev(d):
-            if d == 'all':
+            if d == 'all' or ver_list_int('device', device):
                 return ''
-            elif not ver_list_int('device', device):
+            else:
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
@@ -343,7 +343,7 @@ def ver_config_rec(config_map):
                     print(error_message)
                     return (error_message)
         else:
-            error_message =  ver_dev(device)
+            error_message = ver_dev(device)
             if len(error_message) > 0:
                 print(error_message)
                 return (error_message)
