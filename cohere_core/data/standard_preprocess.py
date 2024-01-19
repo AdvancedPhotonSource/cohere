@@ -88,15 +88,17 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
         # assuming the directory structure and naming follows cohere-ui mechanism
-        data_dir = prep_data_dir.replace('preprocessed_data', 'phasing_data')
+        data_dir = prep_data_dir.replace(os.sep, '/').replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(data, kwargs, data_dir)
 
     if auto:
+        # the formula for auto threshold was found empirically, may be
+        # modified in the future if more tests are done
         auto_threshold_value = 0.141 * data[np.nonzero(data)].mean() - 3.062
-        intensity_threshold = np.max([1, auto_threshold_value])
-        print('auto intensity threshold:', intensity_threshold)
+        intensity_threshold = int(max([1, auto_threshold_value]))
+        print(f'auto intensity threshold: {intensity_threshold}')
     elif 'intensity_threshold' in kwargs:
         intensity_threshold = kwargs['intensity_threshold']
     else:
@@ -139,7 +141,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         # assuming the mask file is in directory of preprocessed data
         mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
         mask = np.roll(mask, shift, tuple(range(mask.ndim)))
-        ut.save_tif(mask, data_dir + '/mask.tif')
+        ut.save_tif(mask, ut.join(data_dir, 'mask.tif'))
     except FileNotFoundError:
         pass
 
@@ -150,8 +152,8 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         # match oversampling to wos
         wanted_os = [wos, wos, wos]
         change = [np.round(f / t).astype('int32') for f, t in zip(orig_os, wanted_os)]
-        bins = [np.max([1, c]) for c in change]
-        print("auto binning size: ", bins)
+        bins = [int(max([1, c])) for c in change]
+        print(f'auto binning size: {bins}')
         data = ut.binning(data, bins)
     elif 'binning' in kwargs:
         binsizes = kwargs['binning']
@@ -167,9 +169,9 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             print('check "binning" configuration')
 
     # save data
-    data_file = data_dir + '/data.tif'
+    data_file = ut.join(data_dir, 'data.tif')
     ut.save_tif(data, data_file)
-    print('data ready for reconstruction, data dims:', data.shape)
+    print(f'data ready for reconstruction, data dims: {data.shape}')
 
     # if auto save new config
     if auto:

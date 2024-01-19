@@ -1,9 +1,8 @@
 import time
 import os
-import sys
 import subprocess
 import argparse
-import cohere_core.utilities.utils as ut
+
 
 def run_with_mpi(ga_method, lib, conf_file, datafile, dir, devices, hostfile=None):
     start_time = time.time()
@@ -22,9 +21,9 @@ def run_with_mpi(ga_method, lib, conf_file, datafile, dir, devices, hostfile=Non
 
     run_time = time.time() - start_time
     if ga_method is None:
-        print('multiple reconstructions took', run_time, 'seconds')
+        print(f'multiple reconstructions took {run_time} seconds')
     else:   # fast GA
-        print('GA reconstructions for directory', dir, 'took', run_time, 'seconds')
+        print(f'GA reconstructions for directory {dir} took {run_time} seconds')
 
 
 def main():

@@ -28,7 +28,11 @@ import cohere_core.controller.features as ft
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['reconstruction',
+__all__ = ['set_lib',
+           'get_norm',
+           'reconstruction',
+           'Support',
+           'Breeder',
            'Rec']
 
 
@@ -50,7 +54,7 @@ class Support:
     """
     def __init__(self, params, dims, dir=None):
         # create or get initial support
-        if dir is None or not os.path.isfile(dir + '/support.npy'):
+        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
             initial_support_area = params['initial_support_area']
             init_support = []
             for i in range(len(initial_support_area)):
@@ -61,7 +65,7 @@ class Support:
             center = devlib.full(init_support, 1)
             self.support = dvut.pad_around(center, dims, 0)
         else:
-            self.support = devlib.load(dir + '/support.npy')
+            self.support = devlib.load(ut.join(dir, 'support.npy'))
 
     def get_support(self):
         return self.support
@@ -196,11 +200,11 @@ class Rec:
 
         if self.ds_image is not None:
             first_run = False
-        elif dir is None or not os.path.isfile(dir + '/image.npy'):
+        elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
             self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
             first_run = True
         else:
-            self.ds_image = devlib.load(dir + '/image.npy')
+            self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
             first_run = False
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
@@ -321,34 +325,31 @@ class Rec:
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        devlib.save(save_dir + '/image', self.ds_image)
-        ut.save_tif(devlib.to_numpy(self.ds_image), save_dir + '/image.tif')
+        devlib.save(ut.join(save_dir, 'image'), self.ds_image)
+        ut.save_tif(devlib.to_numpy(self.ds_image), ut.join(save_dir, 'image.tif'))
 
         if only_image:
             return 0
 
-        devlib.save(save_dir + '/support', self.support_obj.get_support())
+        devlib.save(ut.join(save_dir, 'support'), self.support_obj.get_support())
         if self.is_pc:
-            devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
+            devlib.save(ut.join(save_dir, 'coherence'), self.pc_obj.kernel)
         errs = array('f', self.errs)
 
-        with open(save_dir + "/errors.txt", "w+") as err_f:
+        with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
             err_f.write('\n'.join(map(str, errs)))
 
-        devlib.save(save_dir + '/errors', errs)
+        devlib.save(ut.join(save_dir, 'errors'), errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
-        with open(save_dir + "/metrics.txt", "w+") as f:
+        with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
-            # for key, value in metric.items():
-            #     f.write(key + ' : ' + str(value) + '\n')
 
         return 0
 
 
     def get_metric(self, metric_type):
         return dvut.all_metrics(self.ds_image, self.errs)
-        # return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
     def next(self):
         self.iter = self.iter + 1
@@ -373,7 +374,7 @@ class Rec:
 
     def new_func_trigger(self):
         self.params['new_param'] = 1
-        print('in new_func_trigger, new_param', self.params['new_param'])
+        print(f'in new_func_trigger, new_param {self.params["new_param"]}')
 
     def pc_trigger(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
@@ -437,7 +438,7 @@ class Rec:
             self.aver_iter += 1
 
     def progress_trigger(self):
-        print('------iter', self.iter, '   error ', self.errs[-1])
+        print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def get_ratio(self, divident, divisor):
         divisor = devlib.where((divisor != 0.0), divisor, 1.0)
@@ -463,13 +464,13 @@ class Peak:
         self.g_vec = devlib.array([0, * self.orientation]) * G_0
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
 
-        datafile = self.dir + '/phasing_data/data.tif'
-        data_np = tf.imread(datafile.replace(os.sep, '/'))
+        datafile = ut.join(self.dir, 'phasing_data', 'data.tif')
+        data_np = tf.imread(datafile)
         data = devlib.from_numpy(data_np)
 
         try:
-            maskfile = self.dir + "/phasing_data/mask.tif"
-            mask_np = tf.imread(maskfile.replace(os.sep, '/')).astype("?")
+            maskfile = ut.join(self.dir, 'phasing_data', 'mask.tif')
+            mask_np = tf.imread(maskfile).astype("?")
             mask = devlib.from_numpy(mask_np)
             self.mask = devlib.fftshift(mask)
         except FileNotFoundError:
@@ -573,23 +574,23 @@ class CoupledRec(Rec):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         final_rec = devlib.concatenate((self.shared_image, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup), axis=-1)
-        devlib.save(save_dir + "/reconstruction", final_rec)
-        devlib.save(save_dir + "/image", self.shared_image)
-        devlib.save(save_dir + "/shared_density", self.shared_image[:, :, :, 0])
-        devlib.save(save_dir + "/shared_u1", self.shared_image[:, :, :, 1])
-        devlib.save(save_dir + "/shared_u2", self.shared_image[:, :, :, 2])
-        devlib.save(save_dir + "/shared_u3", self.shared_image[:, :, :, 3])
-        devlib.save(save_dir + '/support', self.support_obj.get_support())
+        devlib.save(ut.join(save_dir, 'reconstruction'), final_rec)
+        devlib.save(ut.join(save_dir, 'image'), self.shared_image)
+        devlib.save(ut.join(save_dir, 'shared_density'), self.shared_image[:, :, :, 0])
+        devlib.save(ut.join(save_dir, 'shared_u1'), self.shared_image[:, :, :, 1])
+        devlib.save(ut.join(save_dir, 'shared_u2'), self.shared_image[:, :, :, 2])
+        devlib.save(ut.join(save_dir, 'shared_u3'), self.shared_image[:, :, :, 3])
+        devlib.save(ut.join(save_dir, 'support'), self.support_obj.get_support())
 
         errs = array('f', self.errs)
 
-        with open(save_dir + "/errors.txt", "w+") as err_f:
+        with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
             err_f.write('\n'.join(map(str, errs)))
 
-        devlib.save(save_dir + '/errors', errs)
+        devlib.save(ut.join(save_dir, 'errors'), errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
-        with open(save_dir + "/metrics.txt", "w+") as f:
+        with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
 
         return 0
@@ -757,11 +758,11 @@ def reconstruction(datafile, **kwargs):
             return
 
     if not os.path.isfile(datafile):
-        print('no file found', datafile)
+        print(f'no file found {datafile}')
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere_core-ui package to run multiple reconstructions and GA. Proceding with single reconstruction.')
+        print('Use cohere_core-ui package to run multiple reconstructions and GA. Processing single reconstruction.')
     if 'processing' in kwargs:
         pkg = kwargs['processing']
     else:

@@ -273,7 +273,7 @@ def start_AI(pars, datafile, dir):
         print ('no AI_trained_model in config')
         return None
     if not os.path.isfile(pars['AI_trained_model']):
-        print('there is no file', pars['AI_trained_model'])
+        print(f'there is no file {pars["AI_trained_model"]}')
         return None
 
     if datafile.endswith('tif') or datafile.endswith('tiff'):
@@ -293,7 +293,7 @@ def start_AI(pars, datafile, dir):
         return None
 
     # The results will be stored in the directory <experiment_dir>/AI_guess
-    ai_dir = dir + '/results_AI'
+    ai_dir = ut.join(dir, 'results_AI')
     if os.path.exists(ai_dir):
         pass
     else:

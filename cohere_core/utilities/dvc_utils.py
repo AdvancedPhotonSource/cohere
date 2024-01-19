@@ -1,4 +1,5 @@
 import math
+import cohere_core.utilities.utils as ut
 
 _docformat__ = 'restructuredtext en'
 __all__ = ['set_lib',
@@ -125,7 +126,8 @@ def shrink_wrap(arr, threshold, sigma):
         subject array
 
     threshold : float
-        support is formed by points above this valuue
+        support is formed by points above this value
+    sigma: float
 
     sigmas : list
         sigmas in all dimensions
@@ -605,7 +607,10 @@ def align_arrays_pixel(ref, arr):
 
 def correlation_err(refarr, arr):
     """
+    author: Paul Frosik
+    The method is based on "Invariant error metrics for image reconstruction" by J. R. Fienup.
     Returns correlation error between two arrays.
+
     Parameters
     ----------
     refarr : ndarray
@@ -665,7 +670,7 @@ def breed(breed_mode, alpha_dir, image):
 
     """
     # load alpha from alpha dir
-    alpha = dvclib.load(alpha_dir + '/image.npy')
+    alpha = dvclib.load(ut.join(alpha_dir, 'image.npy'))
     if dvclib.array_equal(image, alpha):
         # it is alpha, no breeding
         return zero_phase(image)

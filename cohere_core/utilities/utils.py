@@ -26,7 +26,8 @@ import ast
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c), UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['get_logger',
+__all__ = ['join',
+           'get_logger',
            'read_tif',
            'save_tif',
            'read_config',
@@ -54,6 +55,10 @@ __all__ = ['get_logger',
            ]
 
 
+def join(*args):
+    return os.path.join(*args).replace(os.sep, '/')
+
+
 def get_logger(name, ldir=''):
     """
     Creates looger instance that will write to default.log file in a given directory.
@@ -70,7 +75,7 @@ def get_logger(name, ldir=''):
     """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    log_file = ldir + '/default.log'
+    log_file = join(ldir, 'default.log')
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -135,7 +140,7 @@ def read_config(config):
     while line:
         # Ignore comment lines and move along
         line = line.strip()
-        if line.startswith('//') or line.startswith('#'):
+        if line.startswith('/') or line.startswith('#'):
             line = input.readline()
             continue
         elif "=" in line:
@@ -160,12 +165,13 @@ def write_config(param_dict, config):
     config : str
         configuration name theparameters will be written into
     """
-    with open(config.replace(os.sep, '/'), 'w+') as f:
-        f.truncate(0)
+    with open(config.replace(os.sep, '/'), 'w+') as cf:
+        cf.truncate(0)
+        linesep = os.linesep
         for key, value in param_dict.items():
             if type(value) == str:
-                value = '"' + value + '"'
-            f.write(key + ' = ' + str(value) + os.linesep)
+                value = f'"{value}"'
+            cf.write(f'{key} = {str(value)}{linesep}')
 
 
 def read_results(read_dir):
@@ -181,21 +187,20 @@ def read_results(read_dir):
     ndarray, ndarray, ndarray (or None)
         image, support, and coherence arrays
     """
-    read_dir = read_dir.replace(os.sep, '/')
     try:
-        imagefile = read_dir + '/image.npy'
+        imagefile = join(read_dir, 'image.npy')
         image = np.load(imagefile)
     except:
         image = None
 
     try:
-        supportfile = read_dir + '/support.npy'
+        supportfile = join(read_dir, 'support.npy')
         support = np.load(supportfile)
     except:
         support = None
 
     try:
-        cohfile = read_dir + '/coherence.npy'
+        cohfile = join(read_dir, 'coherence.npy')
         coh = np.load(cohfile)
     except:
         coh = None
@@ -229,18 +234,17 @@ def save_results(image, support, coh, errs, save_dir, metric=None):
     metrics : dict
         dictionary with metric type keys, and metric values
     """
-    save_dir = save_dir.replace(os.sep, '/')
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    image_file = save_dir + '/image'
+    image_file = join(save_dir, 'image')
     np.save(image_file, image)
-    support_file = save_dir + '/support'
+    support_file = join(save_dir, 'support')
     np.save(support_file, support)
 
-    errs_file = save_dir + '/errors'
+    errs_file = join(save_dir, 'errors')
     np.save(errs_file, errs)
     if not coh is None:
-        coh_file = save_dir + '/coherence'
+        coh_file = join(save_dir, 'coherence')
         np.save(coh_file, coh)
 
     write_plot_errors(save_dir)
@@ -263,18 +267,18 @@ def save_metrics(errs, dir, metrics=None):
     metrics : dict
         dictionary with metric type keys, and metric values
     """
-    dir = dir.replace(os.sep, '/')
-    metric_file = dir + '/summary'
-    with open(metric_file, 'w+') as f:
+    metric_file = join(dir, 'summary')
+    linesep = os.linesep
+    with open(metric_file, 'w+') as mf:
         if metrics is not None:
-            f.write('metric     result\n')
+            mf.write(f'metric     result{linesep}')
             for key in metrics:
                 value = metrics[key]
-                f.write(key + ' = ' + str(value) + '\n')
-        f.write('\nerrors by iteration\n')
+                mf.write(f'{key} = {str(value)}{linesep}')
+        mf.write(f'{linesep}errors by iteration{linesep}')
         for er in errs:
-            f.write(str(er) + ' ')
-    f.close()
+            mf.write(f'str({er}) ')
+    mf.close()
 
 
 def write_plot_errors(save_dir):
@@ -287,8 +291,7 @@ def write_plot_errors(save_dir):
     save_dir : str
         directory containing errors.npy file
     """
-    save_dir = save_dir.replace(os.sep, '/')
-    plot_file = save_dir + '/plot_errors.py'
+    plot_file = join(save_dir, 'plot_errors.py')
     f = open(plot_file, 'w+')
     f.write("#! /usr/bin/env python\n")
     f.write("import matplotlib.pyplot as plt\n")
@@ -372,8 +375,7 @@ def select_central_object(fp: np.ndarray) -> np.ndarray:
     binary[binary <= zero] = 0
 
     # cluster by connectivity
-    struct = ndi.morphology.generate_binary_structure(fp.ndim,
-                                                          1).astype("uint8")
+    struct = ndi.morphology.generate_binary_structure(fp.ndim, 1).astype("uint8")
     label, nlabel = ndi.label(binary, structure=struct)
 
     # select largest cluster
@@ -795,7 +797,7 @@ def get_gpu_use(devices, no_jobs, job_size):
         avail_jobs = {}
         # collapse the host dict into one dict by adding hostname in front of key (gpu id)
         for k,v in hosts_avail_jobs.items():
-            host_runs = {(k + '_' + str(kv)): vv for kv, vv in v.items()}
+            host_runs = {(f'{k}_{str(kv)}'): vv for kv, vv in v.items()}
             avail_jobs.update(host_runs)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
  
@@ -814,8 +816,9 @@ def get_gpu_use(devices, no_jobs, job_size):
         hostfile_name = 'hosts'
         picked_devs = []
         host_file = open(hostfile_name, mode='w+')
+        linesep = os.linesep
         for h, ds in hosts_picked_devs:
-            host_file.write(h + ':' + str(len(ds)) + '\n')
+            host_file.write(f'{h}: {str(len(ds))}{linesep}')
             picked_devs.append(ds)
         host_file.close()
 

@@ -78,7 +78,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     else:
         # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
         filename = conf_file.split('/')[-1]
-        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
+        save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
         if rank == 0:
             if not os.path.isdir(save_dir):
                 os.mkdir(save_dir)
@@ -99,8 +99,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         if os.path.isdir(continue_dir):
             prev_dirs = os.listdir(continue_dir)
             if len(prev_dirs) > rank:
-                prev_dir = continue_dir + '/' + prev_dirs[rank]
-                if not os.path.isfile(prev_dir + '/image.npy'):
+                prev_dir = ut.join(continue_dir, prev_dirs[rank])
+                if not os.path.isfile(ut.join(prev_dir, 'image.npy')):
                     prev_dir = None
 
     set_lib(lib)
@@ -119,7 +119,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     if ret < 0:
         return
 
-    save_sub = save_dir + '/' + str(rank)
+    save_sub = ut.join(save_dir, str(rank))
     if not os.path.isdir(save_sub):
         os.mkdir(save_sub)
     worker.save_res(save_sub)
@@ -127,7 +127,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     print('done multi-reconstruction')
 
 
-def main(arg):
+def main():
     import ast
 
     parser = argparse.ArgumentParser()
@@ -143,5 +143,4 @@ def main(arg):
 
 
 if __name__ == "__main__":
-    print('args', sys.argv)
-    exit(main(sys.argv[1:]))
+    exit(main())

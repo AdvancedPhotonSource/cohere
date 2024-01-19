@@ -1,10 +1,9 @@
-import sys
 import argparse
 import socket
 import cohere_core.utilities as ut
 
 
-def main(arg):
+def main():
     import ast
 
     parser = argparse.ArgumentParser()
@@ -34,4 +33,4 @@ def main(arg):
 
 
 if __name__ == "__main__":
-    exit(main(sys.argv[1:]))
+    exit(main())

@@ -11,7 +11,6 @@ cohere_core.reconstruction_GA
 This module controls a reconstructions using genetic algorithm (GA).
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI x or using command line scripts x.
 """
-import sys
 import argparse
 import numpy as np
 import os
@@ -129,8 +128,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     def save_metric(metric, file_name):
         with open(file_name.replace(os.sep, '/'), 'w+') as f:
             f.truncate(0)
+            linesep = os.linesep
             for key, value in metric.items():
-                f.write(key + ' = ' + str(value) + os.linesep)
+                f.write(f'{key} = {str(value)}{linesep}')
 
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
@@ -142,8 +142,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     else:
         # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
         filename = conf_file.split('/')[-1]
-        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
-        alpha_dir = save_dir + '/alpha'
+        save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
+        alpha_dir = ut.join(save_dir, 'alpha')
 
     if rank == 0:
         # create alpha dir and placeholder for the alpha's metrics
@@ -253,7 +253,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             to_remove = proc_ranks[len(culled_proc_ranks) : len(proc_ranks)]
             for r in to_remove:
                 if r in active_ranks:
-                    # write_log(rank, 'not in active ranks, active ' + str(active))
                     active_ranks.remove(r)
         elif active:
             culled_proc_ranks = comm.recv(source=0)
@@ -265,7 +264,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
             # compare current alpha and previous. If previous is better, set it as alpha.
             if g == 0:
                 worker.save_res(alpha_dir, True)
-                save_metric(metric, alpha_dir + '/alpha_metric')
+                save_metric(metric, ut.join(alpha_dir, 'alpha_metric'))
             else:
                 def is_best(this_metric, alpha_metric, type):
                     if type == 'chi' or type == 'sharpness':
@@ -274,17 +273,17 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                         return this_metric[type] > alpha_metric[type]
 
                 # read the previous alpha metric
-                alpha_metric = ut.read_config(alpha_dir + '/alpha_metric')
+                alpha_metric = ut.read_config(ut.join(alpha_dir, 'alpha_metric'))
 
                 if is_best(metric, alpha_metric, metric_type):
                     worker.save_res(alpha_dir, True)
-                    save_metric(metric, alpha_dir + '/alpha_metric')
+                    save_metric(metric, ut.join(alpha_dir, 'alpha_metric'))
 
         # save results, we may modify it later to save only some
-        gen_save_dir = save_dir + '/g_' + str(g)
+        gen_save_dir = ut.join(save_dir, f'g_{str(g)}')
         if g == pars['ga_generations'] -1:
             if active:
-                worker.save_res(gen_save_dir + '/' + str(culled_proc_ranks.index(rank)))
+                worker.save_res(ut.join(gen_save_dir, str(culled_proc_ranks.index(rank))))
 
         if not active:
             worker = None

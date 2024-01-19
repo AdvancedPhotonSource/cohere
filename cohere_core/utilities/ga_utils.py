@@ -1,3 +1,5 @@
+import os
+import cohere_core.utilities.utils as ut
 
 class Tracing:
     def __init__(self, reconstructions, pars, dir):
@@ -9,28 +11,23 @@ class Tracing:
         if pars['init_guess'] == 'continue':
             continue_dir = pars['continue_dir']
             for sub in os.listdir(continue_dir):
-                image, support, coh = ut.read_results(continue_dir + '/' + sub + '/')
+                image, support, coh = ut.read_results(ut.join(continue_dir, sub))
                 if image is not None:
-                    self.init_dirs.append(continue_dir + '/' + sub)
-                    self.report_tracing.append([continue_dir + '/' + sub])
+                    self.init_dirs.append(ut.join(continue_dir, sub))
+                    self.report_tracing.append([ut.join(continue_dir, sub)])
             if len(self.init_dirs) < reconstructions:
                 for i in range(reconstructions - len(self.init_dirs)):
-                    self.report_tracing.append(['random' + str(i)])
+                    self.report_tracing.append([f'random{str(i)}'])
                 self.init_dirs = self.init_dirs + (reconstructions - len(self.init_dirs)) * [None]
         elif pars['init_guess'] == 'AI_guess':
-            import cohere_core.controller.AI_guess as ai
-
             self.report_tracing.append(['AI_guess'])
             for i in range(reconstructions - 1):
-                self.report_tracing.append(['random' + str(i)])
-            # ai_dir = ai.start_AI(pars, datafile, dir)
-            # if ai_dir is None:
-            #     return
-            self.init_dirs = [dir + '/results_AI'] + (reconstructions - 1) * [None]
+                self.report_tracing.append([f'random{str(i)}'])
+            self.init_dirs = [ut.join(dir, 'results_AI')] + (reconstructions - 1) * [None]
         else:
             for i in range(reconstructions):
                 self.init_dirs.append(None)
-                self.report_tracing.append(['random' + str(i)])
+                self.report_tracing.append([f'random{str(i)}'])
 
 
     def set_map(self, map):
@@ -96,7 +93,7 @@ class Tracing:
             print(f'WARNING: Report formatting failed due to {type(e)}: {e}! Falling back to raw formatting.')
             report_str = '\n'.join([str(l) for l in self.report_tracing])
 
-        with open(save_dir + '/ranks.txt', 'w+') as rank_file:
+        with open(ut.join(save_dir, 'ranks.txt'), 'w+') as rank_file:
             rank_file.write(report_str)
             rank_file.flush()
 

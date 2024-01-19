@@ -54,7 +54,6 @@ def set_lib(pkg):
     calc.set_lib(devlib)
 
 
-
 def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
     """
     This function runs a single reconstruction process.
@@ -155,7 +154,7 @@ def multi_rec(save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type
     save_dirs = []
 
     for i in range(len(workers)):
-        save_sub = save_dir + '/' + str(i)
+        save_sub = ut.join(save_dir, str(i))
         save_dirs.append(save_sub)
         iterable.append((workers[i], prev_dirs[i], save_sub))
     func = partial(single_rec_process, metric_type, gen, alpha_dir)
@@ -220,7 +219,7 @@ def order_dirs(tracing, dirs, evals, metric_type):
     rank_dirs = []
     # append "_<rank>" to each result directory name
     for i in range(len(ranks)):
-        dest = dirs[ranks[i]] + '_' + str(i)
+        dest = f'{dirs[ranks[i]]}_{str(i)}'
         src = dirs[ranks[i]]
         shutil.move(src, dest)
         rank_dirs.append(dest)
@@ -230,8 +229,8 @@ def order_dirs(tracing, dirs, evals, metric_type):
     current_dirs = []
     for dir in rank_dirs:
         last_sub = os.path.basename(dir)
-        parent_dir = os.path.dirname(dir).replace(os.sep, '/')
-        dest = parent_dir + '/' + last_sub.split('_')[-1]
+        parent_dir = os.path.dirname(dir)
+        dest = ut.join(parent_dir, last_sub.split('_')[-1])
         shutil.move(dir, dest)
         current_dirs.append(dest)
     return current_dirs, best_metrics
@@ -312,10 +311,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     else:
         # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
         filename = conf_file.split('/')[-1]
-        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
+        save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
 
     # create alpha dir and placeholder for the alpha's metrics
-    alpha_dir = save_dir + '/alpha'
+    alpha_dir = ut.join(save_dir, 'alpha')
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
     if not os.path.isdir(alpha_dir):
@@ -329,9 +328,9 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     for g in range(pars['ga_generations']):
         # delete previous-previous generation
         if g > 1:
-            shutil.rmtree(save_dir + '/g_' + str(g-2))
+            shutil.rmtree(ut.join(save_dir, f'g_{str(g-2)}'))
         print ('starting generation', g)
-        gen_save_dir = save_dir + '/g_' + str(g)
+        gen_save_dir = ut.join(save_dir, f'g_{str(g)}')
         metric_type = pars['ga_metrics'][g]
         reconstructions = len(prev_dirs)
         p = Process(target=multi_rec, args=(gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, alpha_dir, q))
@@ -363,10 +362,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 or
                 best_metrics[metric_type] < alpha_metrics[metric_type] and
                 (metric_type == 'chi' or metric_type == 'sharpness')):
-            shutil.copyfile(current_dirs[0] + '/image.npy', alpha_dir + '/image.npy')
+            shutil.copyfile(ut.join(current_dirs[0], 'image.npy'), ut.join(alpha_dir, 'image.npy'))
             alpha_metrics = best_metrics
     # remove the previous gen
-    shutil.rmtree(save_dir + '/g_' + str(pars['ga_generations'] - 2))
+    shutil.rmtree(ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 2)))
 
     tracing.save(save_dir)
 

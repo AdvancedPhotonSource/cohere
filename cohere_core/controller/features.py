@@ -40,7 +40,7 @@ class Pcdi:
             self.kernel = None
         else:
             try:
-                self.kernel = devlib.load(dir + '/coherence.npy')
+                self.kernel = devlib.load(ut.join(dir, 'coherence.npy'))
             except:
                 self.kernel = None
 
