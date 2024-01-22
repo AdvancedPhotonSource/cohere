@@ -68,6 +68,8 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             Optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
+        do_auto_binning : boolean
+            Optional, mandatory if auto_data is True. is True the auto binning wil be done, and not otherwise.
         debug : boolean
             It's a command line argument passed as parameter. If True, ignores verifier error.
     """
@@ -145,7 +147,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     except FileNotFoundError:
         pass
 
-    if auto:
+    if auto and kwargs['do_auto_binning']:
         # prepare data to make the oversampling ratio ~3
         wos = 3.0
         orig_os = ut.get_oversample_ratio(data)
