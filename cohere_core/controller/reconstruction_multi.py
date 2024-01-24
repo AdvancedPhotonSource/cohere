@@ -52,7 +52,7 @@ def set_lib(pkg):
     calc.set_lib(devlib)
 
 
-def single_rec_process(metric_type, gen, rec_attrs):
+def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
     """
     This function runs a single reconstruction process.
 
@@ -83,7 +83,7 @@ def single_rec_process(metric_type, gen, rec_attrs):
     if worker.init_dev(thr.gpu) < 0:
         metric = None
     else:
-        ret_code = worker.init(prev_dir, gen)
+        ret_code = worker.init(prev_dir, alpha_dir, gen)
         if ret_code == 0:
             if gen is not None and gen > 0:
                 worker.breed()
@@ -98,7 +98,7 @@ def single_rec_process(metric_type, gen, rec_attrs):
     return [metric, save_dir]
 
 
-def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, q=None):
+def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, alpha_dir=None, q=None):
     """
     This function controls the multiple reconstructions.
 
@@ -156,7 +156,7 @@ def multi_rec(lib, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         save_sub = save_dir + '/' + str(i)
         save_dirs.append(save_sub)
         iterable.append((workers[i], prev_dirs[i], save_sub))
-    func = partial(single_rec_process, metric_type, gen)
+    func = partial(single_rec_process, metric_type, gen, alpha_dir)
     with Pool(processes=len(devices), initializer=dev_obj.assign_gpu, initargs=()) as pool:
         pool.map_async(func, iterable, callback=collect_result)
         pool.close()
