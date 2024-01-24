@@ -281,6 +281,23 @@ class torchlib(cohlib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
+    def amin(arr):
+        raise NotImplementedError
+
+    def affine_transform(arr, matrix, order=3, offset=0):
+        raise NotImplementedError
+
+    def pad(arr, padding):
+        raise NotImplementedError
+
+    def histogram2d(meas, rec, n_bins=100, log=False):
+        raise NotImplementedError
+
+    def calc_nmi(hgram):
+        raise NotImplementedError
+
+    def calc_ehd(hgram):
+        raise NotImplementedError
 
 # a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])

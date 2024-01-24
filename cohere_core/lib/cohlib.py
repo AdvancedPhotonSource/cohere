@@ -365,3 +365,27 @@ class cohlib(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def concatenate(tup, axis=0):
         pass
+
+    @abc.abstractmethod
+    def amin(arr):
+        pass
+
+    @abc.abstractmethod
+    def affine_transform(arr, matrix, order=3, offset=0):
+        pass
+
+    @abc.abstractmethod
+    def pad(arr, padding):
+        pass
+
+    @abc.abstractmethod
+    def histogram2d(meas, rec, n_bins=100, log=False):
+        pass
+
+    @abc.abstractmethod
+    def calc_nmi(hgram):
+        pass
+
+    @abc.abstractmethod
+    def calc_ehd(hgram):
+        pass
