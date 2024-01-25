@@ -593,19 +593,20 @@ def align_arrays_pixel(ref, arr):
     ndarray : aligned array
     """
     CC = dvclib.correlate(ref, arr, mode='same', method='fft')
+    err = correlation_err(ref, arr, CC)
     CC_shifted = dvclib.ifftshift(CC)
     shape = dvclib.array(CC_shifted.shape)
     amp = dvclib.absolute(CC_shifted)
     shift = dvclib.unravel_index(amp.argmax(), shape)
     if dvclib.sum(shift) == 0:
-        return arr
+        return [arr, err]
     intshift = dvclib.array(shift)
     pixelshift = dvclib.where(intshift >= shape / 2, intshift - shape, intshift)
     shifted_arr = fast_shift(arr, pixelshift)
-    return shifted_arr
+    return [shifted_arr, err]
 
 
-def correlation_err(refarr, arr):
+def correlation_err(refarr, arr, CC=None):
     """
     author: Paul Frosik
     The method is based on "Invariant error metrics for image reconstruction" by J. R. Fienup.
@@ -622,7 +623,8 @@ def correlation_err(refarr, arr):
     -------
     float, correlation error
     """
-    CC = dvclib.correlate(refarr, arr, mode='same', method='fft')
+    if CC is None:
+        CC = dvclib.correlate(refarr, arr, mode='same', method='fft')
     CCmax = CC.max()
     rfzero = dvclib.sum(dvclib.absolute(refarr) ** 2)
     rgzero = dvclib.sum(dvclib.absolute(arr) ** 2)

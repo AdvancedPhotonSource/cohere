@@ -79,9 +79,10 @@ class Tracing:
             report_table.append([''] * len(report_table[0]))
 
         report_str = ''
+        linesep = os.linesep
         for row in report_table:
             report_str += row[0].ljust(start_col_width + col_gap)
-            report_str += (' ' * col_gap).join([cell.ljust(data_col_width) for cell in row[1:]]) + '\n'
+            report_str += (' ' * col_gap).join([cell.ljust(data_col_width) for cell in row[1:]]) + linesep
 
         return report_str
 
