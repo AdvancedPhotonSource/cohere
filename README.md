@@ -1,6 +1,6 @@
-[![Documentation Status](https://readthedocs.org/projects/cohere/badge/?version=latest)](http://cohere.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/cohere-dev/badge/?version=latest)](http://cohere-dev.readthedocs.io/en/latest/?badge=latest)
 
-Project home page: https://cohere.readthedocs.io/
+Project home page: [https://cohere-dev.readthedocs.io/](https://cohere-dev.readthedocs.io/)
 
 The cohere package provides tools for reconstruction of image of a nanoscale structures from data obtained using Bragg Coherent Diffraction Imaging technique.
 

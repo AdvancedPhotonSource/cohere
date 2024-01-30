@@ -378,3 +378,7 @@ class aflib3(aflib):
 
     def calc_ehd(hgram):
         raise NotImplementedError
+
+    def clean_default_mem():
+        pass
+

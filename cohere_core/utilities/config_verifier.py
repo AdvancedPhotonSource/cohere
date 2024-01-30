@@ -13,9 +13,9 @@ Verification of configuration parameters.
 
 import os
 from cohere_core.utilities.config_errors_dict import *
-from cohere_core.controller.op_flow import algs
+import cohere_core.utilities.utils as ut
 
-__author__ = "Barbara Frosik, Dave Cyl"
+__author__ = "Dave Cyl"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['verify']
@@ -39,11 +39,11 @@ def ver_list_int(param_name, param_value):
         True if all elements are int, False otherwise
     """
     if not issubclass(type(param_value), list):
-        print (param_name + ' is not a list')
+        print (f'{param_name} is not a list')
         return False
     for e in param_value:
         if type(e) != int:
-            print (param_name + ' should be list of integer values')
+            print (f'{param_name} should be list of integer values')
             return False
     return True
 
@@ -66,11 +66,11 @@ def ver_list_float(param_name, param_value):
         True if all elements are float, False otherwise
     """
     if not issubclass(type(param_value), list):
-        print (param_name + ' is not a list')
+        print (f'{param_name} is not a list')
         return False
     for e in param_value:
         if type(e) != float:
-            print (param_name + ' should be list of float values')
+            print (f'{param_name} should be list of float values')
             return False
     return True
 
@@ -236,12 +236,12 @@ def ver_config_rec(config_map):
 
     def verify_trigger(trigger, no_iter):
         if len(trigger) == 0:
-            return ('empty trigger ' + str(trigger))
+            return (f'empty trigger {str(trigger)}')
         elif trigger[0] >= no_iter:
-            return ('trigger start ' + str(trigger[0]) + ' exceeds number of iterations ' + str(no_iter))
+            return (f'trigger start {str(trigger[0])} exceeds number of iterations {str(no_iter)}')
         if len(trigger) == 3:
             if trigger[2] >= no_iter:
-                return ('trigger end ' + str(trigger[2]) + ' exceeds number of iterations ' + str(no_iter))
+                return (f'trigger end {str(trigger[2])} exceeds number of iterations {str(no_iter)}')
         return ''
 
 
@@ -261,7 +261,7 @@ def ver_config_rec(config_map):
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
-        if not os.path.isfile(data_dir + '/data.tif') and not os.path.isfile(data_dir + '/data.npy'):
+        if not os.path.isfile(ut.join(data_dir, 'data.tif')) and not os.path.isfile(ut.join(data_dir, 'data.npy')):
             config_error = 2
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
@@ -326,12 +326,27 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Device'
     if 'device' in config_map:
+        def ver_dev(d):
+            if d == 'all' or ver_list_int('device', device):
+                return ''
+            else:
+                config_error = 0
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print(error_message)
+                return (error_message)
+               
         device = config_map['device']
-        if not ver_list_int('device', device):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
+        if issubclass(type(device), dict):
+            for d in device.values():
+                error_message =  ver_dev(d)
+                if len(error_message) > 0:
+                    print(error_message)
+                    return (error_message)
+        else:
+            error_message = ver_dev(device)
+            if len(error_message) > 0:
+                print(error_message)
+                return (error_message)
 
     config_parameter = 'Algorithmsequence'
     if 'algorithm_sequence' in config_map:
@@ -848,12 +863,7 @@ def ver_config_data(config_map):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
-            return (error_message)
-    else:
-        config_error = 1
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print(error_message)
-        return (error_message)
+            return ''
 
     config_parameter = 'Alienalg'
     if 'alien_alg' in config_map:
@@ -1329,5 +1339,7 @@ def verify(file_name, conf_map):
         return ver_config_disp(conf_map)
     elif file_name == 'config_instr':
         return ver_config_instr(conf_map)
+    elif file_name == 'config_mp':
+        return ''
     else:
         return ('verifier has no fumction to check config file named', file_name)

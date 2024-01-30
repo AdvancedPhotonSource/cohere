@@ -6,13 +6,12 @@
 
 """
 cohere_core.reconstruction_coupled
-=================================
+==================================
 
 This module controls a multipeak reconstruction process.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
 """
 
-import numpy as np
 import os
 import importlib
 import cohere_core.controller.phasing as calc
@@ -47,7 +46,7 @@ def rec_process(lib, pars, peak_dirs, dev, continue_dir):
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
     else:
-        save_dir = os.path.dirname(peak_dirs[0]) + '/results_phasing'
+        save_dir = ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing')
     worker.save_res(save_dir)
 
 

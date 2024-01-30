@@ -3,6 +3,8 @@ import cupy as cp
 import numpy as np
 import cupyx.scipy.ndimage
 import cupyx.scipy.stats as stats
+import cupyx.scipy.ndimage as sc
+
 
 class cplib(cohlib):
     def array(obj):
@@ -28,10 +30,13 @@ class cplib(cohlib):
         cp.save(filename, arr)
 
     def load(filename):
-        return cp.load(filename)
+        return cp.load(filename, allow_pickle=True)
 
     def dtype(arr):
         return arr.dtype
+
+    def astype(arr, dtype):
+        return arr.astype(dtype=dtype)
 
     def size(arr):
         return arr.size
@@ -50,25 +55,36 @@ class cplib(cohlib):
         rs = cp.random.RandomState(seed=seed)
         return cp.random.random(shape, dtype=cp.float32) + 1j * cp.random.random(shape, dtype=cp.float32)
 
+    def roll(arr, sft, axis=None):
+        if axis is None:
+            axis = list(range(len(sft)))
+        if type(sft) != list:
+            sft = [sft]
+        sft = [int(s) for s in sft]
+        return cp.roll(arr, sft, axis=axis)
+
+    def shift(arr, sft):
+        return sc.fourier_shift(arr, sft)
+
     def fftshift(arr):
         return cp.fft.fftshift(arr)
 
     def ifftshift(arr):
         return cp.fft.ifftshift(arr)
 
-    def shift(arr, sft, axis=None):
-        sft = [int(s) for s in sft]
-        return cp.roll(arr, sft, axis=axis)
+    def fft(arr, norm='forward'):
+        return cp.fft.fftn(arr, norm=norm)
 
-    def fft(arr):
-        return cp.fft.fftn(arr, norm='forward')
-
-    def ifft(arr):
-        return cp.fft.ifftn(arr, norm='forward')
+    def ifft(arr, norm='forward'):
+        return cp.fft.ifftn(arr, norm=norm)
 
     def fftconvolve(arr1, arr2):
-        return cupyx.scipy.ndimage.convolve(arr1, arr2)
-        # return cupyx.scipy.signal.aoconvolve(arr1, arr2, mode='same')
+        return sc.convolve(arr1, arr2)
+        # return cupyx.scipy.signal.convolve(arr1, arr2, mode='same')
+
+    def correlate(arr1, arr2, mode='same', method='fft'):
+        from cupyx.scipy.signal import correlate
+        return correlate(arr1, arr2, mode, method)
 
     def where(cond, x, y):
         return cp.where(cond, x, y)
@@ -88,8 +104,8 @@ class cplib(cohlib):
 
     def sum(arr, axis=None):
         sm = cp.sum(arr, axis)
-        if axis is None:
-            return sm.tolist()
+        # if axis is None:
+        #     return sm.tolist()
         return sm
 
     def real(arr):
@@ -148,14 +164,15 @@ class cplib(cohlib):
         inarr = cp.zeros((n_el))
         inarr[int(n_el / 2)] = 1.0
         inarr = cp.reshape(inarr, shape)
-        gaussian = cupyx.scipy.ndimage.gaussian_filter(inarr, sigma)
+        gaussian = sc.gaussian_filter(inarr, sigma)
         return gaussian / cp.sum(gaussian)
 
     def gaussian_filter(arr, sigma, **kwargs):
-        return cupyx.scipy.ndimage.gaussian_filter(arr, sigma)
+        return sc.gaussian_filter(arr, sigma)
 
     def center_of_mass(inarr):
-        return cupyx.scipy.ndimage.center_of_mass(cp.absolute(inarr))
+        t = sc.center_of_mass(cp.absolute(inarr))
+        return t
 
     def meshgrid(*xi):
         return cp.meshgrid(*xi)
@@ -232,3 +249,7 @@ class cplib(cohlib):
         n = hgram.shape[0] * 1j
         x, y = cp.mgrid[0:1:n, 0:1:n]
         return cp.sum(hgram * cp.abs(x - y)) / cp.sum(hgram)
+
+    def clean_default_mem():
+        cp._default_memory_pool.free_all_blocks()
+        cp._default_pinned_memory_pool.free_all_blocks()

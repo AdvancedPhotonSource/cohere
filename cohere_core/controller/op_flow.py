@@ -82,7 +82,7 @@ def get_alg_rows(s, pc_conf_start):
         repeat = entry[0]
         funs = entry[1].split('.')
         if funs[0] not in algs:
-            return 'undefined algorithm ' + funs[0]
+            return f'undefined algorithm {funs[0]}'
         row_keys = algs[funs[0]]
         for row_key in row_keys:
             rows[row_key][i:i+repeat] = 1

@@ -35,7 +35,11 @@ import cohere_core.controller.features as ft
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['reconstruction',
+__all__ = ['set_lib',
+           'get_norm',
+           'reconstruction',
+           'Support',
+           'Breeder',
            'Rec']
 
 
@@ -57,7 +61,7 @@ class Support:
     """
     def __init__(self, params, dims, dir=None):
         # create or get initial support
-        if dir is None or not os.path.isfile(dir + '/support.npy'):
+        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
             initial_support_area = params['initial_support_area']
             init_support = []
             for i in range(len(initial_support_area)):
@@ -68,7 +72,7 @@ class Support:
             center = devlib.full(init_support, 1)
             self.support = dvut.pad_around(center, dims, 0)
         else:
-            self.support = devlib.load(dir + '/support.npy')
+            self.support = devlib.load(ut.join(dir, 'support.npy'))
 
     def get_support(self):
         return self.support
@@ -79,6 +83,22 @@ class Support:
     def make_binary(self):
         self.support = devlib.absolute(self.support)
         self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
+
+
+class Breeder:
+    def __init__(self, alpha_dir):
+        self.alpha_dir = alpha_dir
+
+    def breed(self, phaser, breed_mode, threshold, sigma):
+        if breed_mode != 'none':
+            try:
+                phaser.ds_image = dvut.breed(breed_mode, self.alpha_dir, phaser.ds_image)
+                phaser.support_obj.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
+            except:
+                print('exception during breeding')
+                return -1
+
+        return 0
 
 
 class Rec:
@@ -143,13 +163,16 @@ class Rec:
 
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        self.dev = device_id
-        try:
-            devlib.set_device(device_id)
-        except Exception as e:
-            print(e)
-            print('may need to restart GUI')
-            return -1
+        if device_id != -1:
+            self.dev = device_id
+            if device_id != -1:
+                try:
+                    devlib.set_device(device_id)
+                except Exception as e:
+                    print(e)
+                    print('may need to restart GUI')
+                    return -1
+
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
@@ -177,41 +200,6 @@ class Rec:
 
         return 0
 
-    def fast_ga(self, worker_qin, worker_qout):
-        if self.params['low_resolution_generations'] > 0:
-            self.need_save_data = True
-
-        functions_dict = {}
-        functions_dict[self.init_dev.__name__] = self.init_dev
-        functions_dict[self.init.__name__] = self.init
-        functions_dict[self.breed.__name__] = self.breed
-        functions_dict[self.iterate.__name__] = self.iterate
-        functions_dict[self.get_metric.__name__] = self.get_metric
-        functions_dict[self.save_res.__name__] = self.save_res
-
-        done = False
-        while not done:
-            # cmd is a tuple containing name of the function, followed by arguments
-            cmd = worker_qin.get()
-            if cmd == 'done':
-                done = True
-            else:
-                if type(cmd) == str:
-                    # the function does not have any arguments
-                    try:
-                        ret = functions_dict[cmd]()
-                    except:
-                        print('cought exception')
-                        ret = -3
-                else:
-                    try:
-                    # the function name is the first element in the cmd tuple, and the other elements are arguments
-                        ret = functions_dict[cmd[0]](*cmd[1:])
-                    except:
-                        print('cought exception')
-                        ret = -3
-
-                worker_qout.put(ret)
 
     def init(self, dir=None, alpha_dir=None, gen=None):
         def create_feat_objects(params, feats):
@@ -224,11 +212,11 @@ class Rec:
 
         if self.ds_image is not None:
             first_run = False
-        elif dir is None or not os.path.isfile(dir + '/image.npy'):
+        elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
             self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
             first_run = True
         else:
-            self.ds_image = devlib.load(dir + '/image.npy')
+            self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
             first_run = False
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
@@ -282,7 +270,8 @@ class Rec:
             self.ds_image *= self.support_obj.get_support()
         return 0
 
-    def breed(self):
+
+    def breed1(self):
         breed_mode = self.params['ga_breed_modes'][self.gen]
         if breed_mode != 'none':
             try:
@@ -295,13 +284,34 @@ class Rec:
 
         return 0
 
+
+    def clean_breeder(self):
+        self.breeder = None
+        devlib.clean_default_mem()
+
+
+    def breed(self):
+        try:
+            breed_mode = self.params['ga_breed_modes'][self.gen]
+            threshold = self.params['ga_sw_thresholds'][self.gen]
+            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
+            return self.breeder.breed(self, breed_mode, threshold, sigma)
+        except Exception as e:
+            self.breeder = Breeder(self.alpha_dir)
+            breed_mode = self.params['ga_breed_modes'][self.gen]
+            threshold = self.params['ga_sw_thresholds'][self.gen]
+            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
+            return self.breeder.breed(self, breed_mode, threshold, sigma)
+
+
     def iterate(self):
         self.iter = -1
         start_t = time.time()
         try:
             for f in self.flow:
                 f()
-        except:
+        except Exception as error:
+            print(error)
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
@@ -320,36 +330,37 @@ class Rec:
         return 0
 
     def save_res(self, save_dir, only_image=False):
+        # center image's center_of_mass and sync support
+        self.ds_image, self.support_obj.support = dvut.center_sync(self.ds_image, self.support_obj.support)
+
         from array import array
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        devlib.save(save_dir + '/image', self.ds_image)
+        devlib.save(ut.join(save_dir, 'image'), self.ds_image)
+        ut.save_tif(devlib.to_numpy(self.ds_image), ut.join(save_dir, 'image.tif'))
 
         if only_image:
             return 0
 
-        devlib.save(save_dir + '/support', self.support_obj.get_support())
+        devlib.save(ut.join(save_dir, 'support'), self.support_obj.get_support())
         if self.is_pc:
-            devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
+            devlib.save(ut.join(save_dir, 'coherence'), self.pc_obj.kernel)
         errs = array('f', self.errs)
 
-        with open(save_dir + "/errors.txt", "w+") as err_f:
+        with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
             err_f.write('\n'.join(map(str, errs)))
 
-        devlib.save(save_dir + '/errors', errs)
+        devlib.save(ut.join(save_dir, 'errors'), errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
-        with open(save_dir + "/metrics.txt", "w+") as f:
+        with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
-            # for key, value in metric.items():
-            #     f.write(key + ' : ' + str(value) + '\n')
 
         return 0
 
     def get_metric(self, metric_type):
         return dvut.all_metrics(self.ds_image, self.errs)
-        # return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
     def next(self):
         self.iter = self.iter + 1
@@ -374,7 +385,7 @@ class Rec:
 
     def new_func_trigger(self):
         self.params['new_param'] = 1
-        print('in new_func_trigger, new_param', self.params['new_param'])
+        print(f'in new_func_trigger, new_param {self.params["new_param"]}')
 
     def pc_trigger(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
@@ -440,7 +451,7 @@ class Rec:
             self.aver_iter += 1
 
     def progress_trigger(self):
-        print('------iter', self.iter, '   error ', self.errs[-1])
+        print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def get_ratio(self, divident, divisor):
         divisor = devlib.where((divisor != 0.0), divisor, 1.0)
@@ -572,14 +583,16 @@ class CoupledRec(Rec):
         self.peak_dirs = peak_dirs
 
     def init_dev(self, device_id):
-        self.dev = device_id
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         if device_id != -1:
-            try:
-                devlib.set_device(device_id)
-            except Exception as e:
-                print(e)
-                print('may need to restart GUI')
-                return -1
+            self.dev = device_id
+            if device_id != -1:
+                try:
+                    devlib.set_device(device_id)
+                except Exception as e:
+                    print(e)
+                    print('may need to restart GUI')
+                    return -1
 
         # Allows for a control peak to be left out of the reconstruction for comparison
         all_peaks = [Peak(d) for d in self.peak_dirs]
@@ -631,7 +644,14 @@ class CoupledRec(Rec):
 
     def save_res(self, save_dir):
         from array import array
-
+        # J = self.calc_jacobian()
+        # s_xx = J[:,:,:,0,0][:,:,:,None]
+        # s_yy = J[:,:,:,1,1][:,:,:,None]
+        # s_zz = J[:,:,:,2,2][:,:,:,None]
+        # s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)[:,:,:,None]
+        # s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
+        # s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
+        #
         sup = self.support_obj.get_support()[:, :, :, None]
         self.shared_image = self.shared_image * sup
         if not os.path.exists(save_dir):
@@ -660,13 +680,13 @@ class CoupledRec(Rec):
 
         errs = array('f', self.errs)
 
-        with open(save_dir + "/errors.txt", "w+") as err_f:
+        with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
             err_f.write('\n'.join(map(str, errs)))
 
-        devlib.save(save_dir + '/errors', errs)
+        devlib.save(ut.join(save_dir, 'errors'), errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
-        with open(save_dir + "/metrics.txt", "w+") as f:
+        with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
 
         if self.ctrl_error is not None:
@@ -754,6 +774,7 @@ class CoupledRec(Rec):
         self.shared_image = self.shared_image + beta * (new_image - old_image)
         if self.er_iter:
             self.shared_image = self.shared_image * self.support_obj.support[:, :, :, None]
+            self.shift_to_center()
 
     def to_working_image(self):
         phi = devlib.dot(self.shared_image, self.peak_objs[self.pk].g_vec)
@@ -812,12 +833,12 @@ class CoupledRec(Rec):
         self.support_obj.flip()
 
     def shift_to_center(self):
-        arr = devlib.to_numpy(self.support_obj.get_support())
-        ind = [np.argmax(np.sum(arr, axis=axs)) for axs in ((1, 2), (0, 2), (0, 1))]
-        shift_dist = -devlib.array(ind) + (self.dims[0]//2)
-        self.shared_image = devlib.shift(self.shared_image, shift_dist, axis=(0, 1, 2))
-        self.ds_image = devlib.shift(self.ds_image, shift_dist, axis=(0, 1, 2))
-        self.support_obj.support = devlib.shift(self.support_obj.support, shift_dist, axis=(0, 1, 2))
+        ind = devlib.center_of_mass(self.shared_image[:, :, :, 0])
+        shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
+        shift_dist = devlib.to_numpy(shift_dist).tolist()
+        self.shared_image = devlib.roll(self.shared_image, shift_dist, axis=(0, 1, 2))
+        self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=(0, 1, 2))
+        self.support_obj.support = devlib.roll(self.support_obj.support, shift_dist, axis=(0, 1, 2))
 
 
 def reconstruction(datafile, **kwargs):
@@ -885,19 +906,22 @@ def reconstruction(datafile, **kwargs):
             defines when to apply averaging. Negative start means it is offset from the last iteration.
         progress_trigger : list of int
             defines when to print info on the console. The info includes current iteration and error.
-
+        debug : boolean
+            if in debug mode the verifier will not stop the progress, only print message
     """
+    debug = 'debug' in kwargs and kwargs['debug']
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
         print(error_msg)
-        return
+        if not debug:
+            return
 
     if not os.path.isfile(datafile):
-        print('no file found', datafile)
+        print(f'no file found {datafile}')
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere_core-ui package to run multiple reconstructions and GA. Proceding with single reconstruction.')
+        print('Use cohere_core-ui package to run multiple reconstructions and GA. Processing single reconstruction.')
     if 'processing' in kwargs:
         pkg = kwargs['processing']
     else:
