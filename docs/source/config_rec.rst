@@ -61,13 +61,11 @@ General
     processing = "auto"
 
 - device:
-| optional, GPU IDs of the target devices for reconstruction(s) or 'all' if all available GPUs should be used. If not defined, the reconstruction process will run on CPU. For cluster configuration it is defined as dict with hosts names as keys and values as described.
-| examples:
+| optional, IDs of the target devices (GPU) for each reconstruction thread. If not defined, the OS will select the GPU, but the processing will not be concurrent. Ignored when running cpu library.
+| example:
 ::
 
     device = [0,1,2,7]
-    device = 'all'
-    device = {'host1':'all', 'host2':[0,1,2,3,4]}
 
 - algorithm_sequence:
 | mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" charcter means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. In second example the sequence contains subtriggers, explained in  :ref:`formula` page.

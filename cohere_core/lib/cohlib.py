@@ -21,30 +21,24 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.from_numpy) and
                 hasattr(subclass, 'dtype') and
                 callable(subclass.dtype) and
-                hasattr(subclass, 'astype') and
-                callable(subclass.astype) and
                 hasattr(subclass, 'size') and
                 callable(subclass.size) and
                 hasattr(subclass, 'hasnan') and
                 callable(subclass.hasnan) and
                 hasattr(subclass, 'copy') and
                 callable(subclass.copy) and
-                hasattr(subclass, 'roll') and
-                callable(subclass.shift) and
-                hasattr(subclass, 'roll') and
-                callable(subclass.shift) and
                 hasattr(subclass, 'fftshift') and
                 callable(subclass.fftshift) and
                 hasattr(subclass, 'ifftshift') and
                 callable(subclass.ifftshift) and
+                hasattr(subclass, 'shift') and
+                callable(subclass.shift) and
                 hasattr(subclass, 'fft') and
                 callable(subclass.fft) and
                 hasattr(subclass, 'ifft') and
                 callable(subclass.ifft) and
                 hasattr(subclass, 'fftconvolve') and
                 callable(subclass.fftconvolve) and
-                hasattr(subclass, 'correlate') and
-                callable(subclass.correlate) and
                 hasattr(subclass, 'where') and
                 callable(subclass.where) and
                 hasattr(subclass, 'dims') and
@@ -104,33 +98,13 @@ class cohlib(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'conj') and
                 callable(subclass.conj) and
                 hasattr(subclass, 'array_equal') and
-                callable(subclass.array_equal) and
+                callable(subclass.array_equal) or
                 hasattr(subclass, 'cos') and
-                callable(subclass.cos) and
+                callable(subclass.cos) or
                 hasattr(subclass, 'linspace') and
-                callable(subclass.linspace) and
+                callable(subclass.linspace) or
                 hasattr(subclass, 'clip') and
-                callable(subclass.clip) and
-                hasattr(subclass, 'gradient') and
-                callable(subclass.gradient) and
-                hasattr(subclass, 'argmin') and
-                callable(subclass.argmin) and
-                hasattr(subclass, 'take_along_axis') and
-                callable(subclass.take_along_axis) and
-                hasattr(subclass, 'moveaxis') and
-                callable(subclass.moveaxis) and
-                hasattr(subclass, 'lstsq') and
-                callable(subclass.lstsq) and
-                hasattr(subclass, 'zeros') and
-                callable(subclass.zeros) and
-                hasattr(subclass, 'indices') and
-                callable(subclass.indices) and
-                hasattr(subclass, 'diff') and
-                callable(subclass.diff) and
-                hasattr(subclass, 'concatenate') and
-                callable(subclass.concatenate) and
-                callable(subclass, 'clean_default_mem') and
-                callable(subclass.clean_default_mem) or
+                callable(subclass.clip) or
                 NotImplemented)
 
     @abc.abstractmethod
@@ -170,10 +144,6 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def astype(arr):
-        pass
-
-    @abc.abstractmethod
     def size(arr):
         pass
 
@@ -186,14 +156,6 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def roll(arr, sft, axis):
-        pass
-
-    @abc.abstractmethod
-    def shift(arr, sft):
-        pass
-
-    @abc.abstractmethod
     def fftshift(arr):
         pass
 
@@ -202,19 +164,19 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def fft(arr, norm='forward'):
+    def shift(arr, sft):
         pass
 
     @abc.abstractmethod
-    def ifft(arr, norm='forward'):
+    def fft(arr):
+        pass
+
+    @abc.abstractmethod
+    def ifft(arr):
         pass
 
     @abc.abstractmethod
     def fftconvolve(arr1, arr2):
-        pass
-
-    @abc.abstractmethod
-    def correlate(arr1, arr2, mode='same', method='fft'):
         pass
 
     @abc.abstractmethod
@@ -347,69 +309,5 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def diff(arr, axis=None, prepend=0):
-        pass
-
-    @abc.abstractmethod
     def clip(arr, min, max=None):
-        pass
-
-    @abc.abstractmethod
-    def gradient(arr, dx=1):
-        pass
-
-    @abc.abstractmethod
-    def argmin(arr, axis=None):
-        pass
-
-    @abc.abstractmethod
-    def take_along_axis(a, indices, axis):
-        pass
-
-    @abc.abstractmethod
-    def moveaxis(arr, source, dest):
-        pass
-
-    @abc.abstractmethod
-    def lstsq(A, B):
-        pass
-
-    @abc.abstractmethod
-    def zeros(shape):
-        pass
-
-    @abc.abstractmethod
-    def indices(dims):
-        pass
-
-    @abc.abstractmethod
-    def concatenate(tup, axis=0):
-        pass
-
-    @abc.abstractmethod
-    def amin(arr):
-        pass
-
-    @abc.abstractmethod
-    def affine_transform(arr, matrix, order=3, offset=0):
-        pass
-
-    @abc.abstractmethod
-    def pad(arr, padding):
-        pass
-
-    @abc.abstractmethod
-    def histogram2d(meas, rec, n_bins=100, log=False):
-        pass
-
-    @abc.abstractmethod
-    def calc_nmi(hgram):
-        pass
-
-    @abc.abstractmethod
-    def calc_ehd(hgram):
-        pass
-
-    @abc.abstractmethod
-    def clean_default_mem():
         pass
