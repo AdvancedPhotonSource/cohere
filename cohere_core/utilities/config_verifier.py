@@ -234,14 +234,16 @@ def ver_config_rec(config_map):
         return '', sum([e[0] for e in seq])
 
 
-    def verify_trigger(trigger, no_iter):
+    def verify_trigger(trigger, no_iter, trigger_name):
+        if type(trigger) != list:
+            return(f'{trigger_name} trigger type should be list')
         if len(trigger) == 0:
-            return (f'empty trigger {str(trigger)}')
+            return (f'empty {trigger_name} trigger {str(trigger)}')
         elif trigger[0] >= no_iter:
-            return (f'trigger start {str(trigger[0])} exceeds number of iterations {str(no_iter)}')
+            return (f'{trigger_name} trigger start {str(trigger[0])} exceeds number of iterations {str(no_iter)}')
         if len(trigger) == 3:
             if trigger[2] >= no_iter:
-                return (f'trigger end {str(trigger[2])} exceeds number of iterations {str(no_iter)}')
+                return (f'{trigger_name} trigger end {str(trigger[2])} exceeds number of iterations {str(no_iter)}')
         return ''
 
 
@@ -521,8 +523,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Twintrigger'
     if 'twin_trigger' in config_map:
         twin_trigger = config_map['twin_trigger']
-        m = verify_trigger(twin_trigger, iter_no)
+        m = verify_trigger(twin_trigger, iter_no, 'twin')
         if len(m) > 0:
+            print(m)
             return(m)
         if not ver_list_int('twin_trigger', twin_trigger):
             config_error = 0
@@ -542,8 +545,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Shrinkwraptrigger'
     if 'shrink_wrap_trigger' in config_map:
         if '.SW' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no)
+            m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no, 'shrink wrap')
             if len(m) > 0:
+                print(m)
                 return(m)
             if not ver_list_int('shrink_wrap_trigger', config_map['shrink_wrap_trigger']):
                 config_error = 0
@@ -608,9 +612,10 @@ def ver_config_rec(config_map):
     config_parameter = 'Phasesupporttrigger'
     if 'phm_trigger' in config_map:
         if '.PHM' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['phm_trigger'], iter_no)
+            m = verify_trigger(config_map['phm_trigger'], iter_no, 'phase modulus')
             print(m)
             if len(m) > 0:
+                print(m)
                 return(m)
             if not ver_list_int('phm_trigger', config_map['phm_trigger']):
                 config_error = 0
@@ -718,8 +723,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Resolutiontrigger'
     if 'lowpass_filter_trigger' in config_map:
         if '.LPF' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no)
+            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
             if len(m) > 0:
+                print(m)
                 return(m)
             if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
                 config_error = 0
@@ -782,8 +788,9 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Averagetrigger'
     if 'average_trigger' in config_map:
-        m = verify_trigger(config_map['average_trigger'], iter_no)
+        m = verify_trigger(config_map['average_trigger'], iter_no, 'average')
         if len(m) > 0:
+            print(m)
             return(m)
         if not ver_list_int('average_trigger', config_map['average_trigger']):
             config_error = 0
@@ -793,7 +800,7 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Progresstrigger'
     if 'progress_trigger' in config_map:
-        m = verify_trigger(config_map['progress_trigger'], iter_no)
+        m = verify_trigger(config_map['progress_trigger'], iter_no, 'progress')
         if len(m) > 0:
             return(m)
         if not ver_list_int('progress_trigger', config_map['progress_trigger']):
