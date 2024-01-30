@@ -14,18 +14,11 @@ The software can run code utilizing different library, such as numpy and cupy. U
 
 """
 
-from pathlib import Path
 import time
 import os
 from math import pi
 import random
 import importlib
-import tqdm
-
-import numpy as np
-from matplotlib import pyplot as plt
-import tifffile as tf
-
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.config_verifier as ver
@@ -35,11 +28,7 @@ import cohere_core.controller.features as ft
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['set_lib',
-           'get_norm',
-           'reconstruction',
-           'Support',
-           'Breeder',
+__all__ = ['reconstruction',
            'Rec']
 
 
@@ -61,7 +50,7 @@ class Support:
     """
     def __init__(self, params, dims, dir=None):
         # create or get initial support
-        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
+        if dir is None or not os.path.isfile(dir + '/support.npy'):
             initial_support_area = params['initial_support_area']
             init_support = []
             for i in range(len(initial_support_area)):
@@ -72,33 +61,13 @@ class Support:
             center = devlib.full(init_support, 1)
             self.support = dvut.pad_around(center, dims, 0)
         else:
-            self.support = devlib.load(ut.join(dir, 'support.npy'))
+            self.support = devlib.load(dir + '/support.npy')
 
     def get_support(self):
         return self.support
 
     def flip(self):
         self.support = devlib.flip(self.support)
-
-    def make_binary(self):
-        self.support = devlib.absolute(self.support)
-        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
-
-
-class Breeder:
-    def __init__(self, alpha_dir):
-        self.alpha_dir = alpha_dir
-
-    def breed(self, phaser, breed_mode, threshold, sigma):
-        if breed_mode != 'none':
-            try:
-                phaser.ds_image = dvut.breed(breed_mode, self.alpha_dir, phaser.ds_image)
-                phaser.support_obj.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
-            except:
-                print('exception during breeding')
-                return -1
-
-        return 0
 
 
 class Rec:
@@ -159,20 +128,16 @@ class Rec:
         self.ds_image = None
         self.need_save_data = False
         self.saved_data = None
-        self.er_iter = False  # Indicates whether the last iteration done was ER, used in CoupledRec
 
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        if device_id != -1:
-            self.dev = device_id
-            if device_id != -1:
-                try:
-                    devlib.set_device(device_id)
-                except Exception as e:
-                    print(e)
-                    print('may need to restart GUI')
-                    return -1
-
+        self.dev = device_id
+        try:
+            devlib.set_device(device_id)
+        except Exception as e:
+            print(e)
+            print('may need to restart GUI')
+            return -1
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
@@ -200,6 +165,42 @@ class Rec:
 
         return 0
 
+    def fast_ga(self, worker_qin, worker_qout):
+        if self.params['low_resolution_generations'] > 0:
+            self.need_save_data = True
+
+        functions_dict = {}
+        functions_dict[self.init_dev.__name__] = self.init_dev
+        functions_dict[self.init.__name__] = self.init
+        functions_dict[self.breed.__name__] = self.breed
+        functions_dict[self.iterate.__name__] = self.iterate
+        functions_dict[self.get_metric.__name__] = self.get_metric
+        functions_dict[self.save_res.__name__] = self.save_res
+
+        done = False
+        while not done:
+            # cmd is a tuple containing name of the function, followed by arguments
+            cmd = worker_qin.get()
+            if cmd == 'done':
+                done = True
+            else:
+                if type(cmd) == str:
+                    # the function does not have any arguments
+                    try:
+                        ret = functions_dict[cmd]()
+                    except:
+                        print('cought exception')
+                        ret = -3
+                else:
+                    try:
+                    # the function name is the first element in the cmd tuple, and the other elements are arguments
+                        ret = functions_dict[cmd[0]](*cmd[1:])
+                    except:
+                        print('cought exception')
+                        ret = -3
+
+                worker_qout.put(ret)
+
 
     def init(self, dir=None, alpha_dir=None, gen=None):
         def create_feat_objects(params, feats):
@@ -212,11 +213,11 @@ class Rec:
 
         if self.ds_image is not None:
             first_run = False
-        elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
+        elif dir is None or not os.path.isfile(dir + '/image.npy'):
             self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
             first_run = True
         else:
-            self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
+            self.ds_image = devlib.load(dir + '/image.npy')
             first_run = False
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
@@ -270,8 +271,7 @@ class Rec:
             self.ds_image *= self.support_obj.get_support()
         return 0
 
-
-    def breed1(self):
+    def breed(self):
         breed_mode = self.params['ga_breed_modes'][self.gen]
         if breed_mode != 'none':
             try:
@@ -285,33 +285,13 @@ class Rec:
         return 0
 
 
-    def clean_breeder(self):
-        self.breeder = None
-        devlib.clean_default_mem()
-
-
-    def breed(self):
-        try:
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
-        except Exception as e:
-            self.breeder = Breeder(self.alpha_dir)
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
-
-
     def iterate(self):
         self.iter = -1
         start_t = time.time()
         try:
             for f in self.flow:
                 f()
-        except Exception as error:
-            print(error)
+        except:
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
@@ -329,38 +309,39 @@ class Rec:
 
         return 0
 
-    def save_res(self, save_dir, only_image=False):
-        # center image's center_of_mass and sync support
-        self.ds_image, self.support_obj.support = dvut.center_sync(self.ds_image, self.support_obj.support)
 
+    def save_res(self, save_dir, only_image=False):
         from array import array
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        devlib.save(ut.join(save_dir, 'image'), self.ds_image)
-        ut.save_tif(devlib.to_numpy(self.ds_image), ut.join(save_dir, 'image.tif'))
+        devlib.save(save_dir + '/image', self.ds_image)
 
         if only_image:
             return 0
 
-        devlib.save(ut.join(save_dir, 'support'), self.support_obj.get_support())
+        devlib.save(save_dir + '/support', self.support_obj.get_support())
         if self.is_pc:
-            devlib.save(ut.join(save_dir, 'coherence'), self.pc_obj.kernel)
+            devlib.save(save_dir + '/coherence', self.pc_obj.kernel)
         errs = array('f', self.errs)
 
-        with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
+        with open(save_dir + "/errors.txt", "w+") as err_f:
             err_f.write('\n'.join(map(str, errs)))
 
-        devlib.save(ut.join(save_dir, 'errors'), errs)
+        devlib.save(save_dir + '/errors', errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
-        with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
+        with open(save_dir + "/metrics.txt", "w+") as f:
             f.write(str(metric))
+            # for key, value in metric.items():
+            #     f.write(key + ' : ' + str(value) + '\n')
 
         return 0
 
+
     def get_metric(self, metric_type):
         return dvut.all_metrics(self.ds_image, self.errs)
+        # return dvut.get_metric(self.ds_image, self.errs, metric_type)
 
     def next(self):
         self.iter = self.iter + 1
@@ -385,7 +366,7 @@ class Rec:
 
     def new_func_trigger(self):
         self.params['new_param'] = 1
-        print(f'in new_func_trigger, new_param {self.params["new_param"]}')
+        print('in new_func_trigger, new_param', self.params['new_param'])
 
     def pc_trigger(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
@@ -413,11 +394,9 @@ class Rec:
         self.ds_image_raw = devlib.fft(self.rs_amplitudes)
 
     def er(self):
-        self.er_iter = True
         self.ds_image = self.ds_image_raw * self.support_obj.get_support()
 
     def hio(self):
-        self.er_iter = False
         combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
         support = self.support_obj.get_support()
         self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
@@ -451,7 +430,7 @@ class Rec:
             self.aver_iter += 1
 
     def progress_trigger(self):
-        print(f'------iter {self.iter}   error {self.errs[-1]}')
+        print('------iter', self.iter, '   error ', self.errs[-1])
 
     def get_ratio(self, divident, divisor):
         divisor = devlib.where((divisor != 0.0), divisor, 1.0)
@@ -459,89 +438,26 @@ class Rec:
         return ratio
 
 
-def resample(data, matrix, size=None, plot=False):
-    s = data.shape
-    corners = [
-        [0, 0, 0],
-        [s[0], 0, 0], [0, s[1], 0], [0, 0, s[2]],
-        [0, s[1], s[2]], [s[0], 0, s[2]], [s[0], s[1], 0],
-        [s[0], s[1], s[2]]
-    ]
-    new_corners = [np.linalg.inv(matrix)@c for c in corners]
-    new_shape = np.ceil(np.max(new_corners, axis=0) - np.min(new_corners, axis=0)).astype(int)
-    pad = np.max((new_shape - s) // 2)
-    data = devlib.pad(data, np.max([pad, 0]))
-    mid_shape = np.array(data.shape)
-
-    offset = (mid_shape / 2) - matrix @ (mid_shape / 2)
-
-    # The phasing data as saved is a magnitude, which is not smooth everywhere (there are non-differentiable points
-    # where the complex amplitude crosses zero). However, the intensity (magnitude squared) is a smooth function.
-    # Thus, in order to allow a high-order spline, we take the square root of the interpolated square of the image.
-    data = devlib.affine_transform(devlib.square(data), devlib.array(matrix), order=1, offset=offset)
-    data = devlib.sqrt(devlib.clip(data, 0))
-    if plot:
-        arr = devlib.to_numpy(data)
-        plt.imshow(arr[np.argmax(np.sum(arr, axis=(1, 2)))])
-        plt.title(np.linalg.det(matrix))
-        plt.show()
-
-    if size is not None:
-        data = pad_to_cube(data, size)
-    return data
-
-
-def pad_to_cube(data, size):
-    shp = np.array([size, size, size]) // 2
-    # Pad the array to the largest dimensions
-    shp1 = np.array(data.shape) // 2
-    pad = shp - shp1
-    pad[pad < 0] = 0
-    data = devlib.pad(data, [(pad[0], pad[0]), (pad[1], pad[1]), (pad[2], pad[2])])
-    # Crop the array to the final dimensions
-    shp1 = np.array(data.shape) // 2
-    start, end = shp1 - shp, shp1 + shp
-    data = data[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
-    return data
-
-
 class Peak:
     """
     Holds parameters related to a peak.
     """
 
-    def __init__(self, peak_dir):
-        geometry = ut.read_config(f"{peak_dir}/geometry")
-        self.hkl = geometry["peak_hkl"]
-        self.norm = np.linalg.norm(self.hkl)
-        print(f"Loading peak {self.hkl}")
+    def __init__(self, dir_ornt):
+        (self.dir, self.orientation) = dir_ornt
 
-        # Geometry parameters
-        self.g_vec = devlib.array([0, * self.hkl]) * 2*pi/geometry["lattice"]
+    def set_data(self, G_0):
+        import tifffile as tf
+
+        self.g_vec = devlib.array([0, * self.orientation]) * G_0
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
-        self.size = geometry["final_size"]
-        self.rs_lab_to_det = np.array(geometry["rmatrix"]) / geometry["rs_voxel_size"]
-        self.rs_det_to_lab = np.linalg.inv(self.rs_lab_to_det)
-        self.ds_lab_to_det = self.rs_det_to_lab.T
-        self.ds_det_to_lab = self.rs_lab_to_det.T
 
-        datafile = (Path(peak_dir) / "phasing_data/data.tif").as_posix()
-        self.full_data = devlib.absolute(devlib.from_numpy(tf.imread(datafile)))
-        self.full_data = devlib.moveaxis(self.full_data, 0, 2)
-        self.full_data = devlib.moveaxis(self.full_data, 0, 1)
-        self.full_size = np.max(self.full_data.shape)
-        self.full_data = pad_to_cube(self.full_data, self.full_size)
-        self.data = pad_to_cube(self.full_data, self.size)
+        fn = self.dir + '/phasing_data/data.tif'
+        data_np = tf.imread(fn.replace(os.sep, '/'))
+        data = devlib.from_numpy(data_np)
 
-        # Resample the diffraction patterns into the lab reference frame.
-        self.res_data = resample(self.full_data, self.rs_det_to_lab, self.size)
-        tf.imwrite((Path(peak_dir) / "phasing_data/data_resampled.tif").as_posix(), devlib.to_numpy(self.res_data))
-        # self.res_mask = resample(devlib.array(np.ones(self.full_data.shape)), self.det_to_lab, self.size)
-
-        # Do the fftshift on all the arrays
-        self.full_data = devlib.fftshift(self.full_data)
-        self.data = devlib.fftshift(self.data)
-        self.res_data = devlib.fftshift(self.res_data)
+        # in the formatted data the max is in the center, we want it in the corner, so do fft shift
+        self.data = devlib.fftshift(devlib.absolute(data))
 
 
 class CoupledRec(Rec):
@@ -566,58 +482,38 @@ class CoupledRec(Rec):
     __author__ = "Nick Porter"
     __all__ = []
 
-    def __init__(self, params, peak_dirs):
+    def __init__(self, params, peak_dir_orient):
         super().__init__(params, None)
 
-        self.iter_functions = self.iter_functions + [self.switch_resampling, self.switch_peaks]
+        self.iter_functions = self.iter_functions + [self.switch_peaks]
 
-        if "switch_peak_trigger" not in self.params:
-            self.params["switch_peak_trigger"] = [0, 5]
-        if "mp_max_weight" not in self.params:
-            self.params["mp_max_weight"] = 0.9
-        if "mp_taper" not in self.params:
-            self.params["mp_taper"] = 0.75
-        if "calc_strain" not in self.params:
-            self.params["calc_strain"] = True
+        if "switch_peak_trigger" not in params:
+            params["switch_peak_trigger"] = [0, 10]
+        if "mp_max_weight" not in params:
+            params["mp_max_weight"] = 0.9
+        if "mp_taper" not in params:
+            params["mp_taper"] = 0.75
 
-        self.peak_dirs = peak_dirs
+        self.peak_objs = [Peak(dir_ornt) for dir_ornt in peak_dir_orient]
+
 
     def init_dev(self, device_id):
-        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        self.dev = device_id
         if device_id != -1:
-            self.dev = device_id
-            if device_id != -1:
-                try:
-                    devlib.set_device(device_id)
-                except Exception as e:
-                    print(e)
-                    print('may need to restart GUI')
-                    return -1
-
-        # Allows for a control peak to be left out of the reconstruction for comparison
-        all_peaks = [Peak(d) for d in self.peak_dirs]
-        if "control_peak" in self.params:
-            control_peak = self.params["control_peak"]
-            self.peak_objs = [p for p in all_peaks if p.hkl != control_peak]
             try:
-                self.ctrl_peak = next(p for p in all_peaks if p.hkl == control_peak)
-                self.ctrl_error = []
-            except StopIteration:
-                self.ctrl_peak = None
-                self.ctrl_error = None
-        else:
-            self.peak_objs = all_peaks
-            self.ctrl_peak = None
-            self.ctrl_error = None
+                devlib.set_device(device_id)
+            except Exception as e:
+                print(e)
+                print('may need to restart GUI')
+                return -1
 
-        # Fast resampling means using the resampled data to reconstruct the object in a single common basis
-        # When this is set to False, the reconstruction will need to be resampled each time the peak is switched
-        self.fast_resample = True
-        self.lab_frame = True
+        G_0 = 2*pi/self.params["lattice_size"]
+        for or_obj in self.peak_objs:
+            or_obj.set_data(G_0)
 
         self.num_peaks = len(self.peak_objs)
         self.pk = 0  # index in list of current peak being reconstructed
-        self.data = self.peak_objs[self.pk].res_data
+        self.data = self.peak_objs[self.pk].data
         self.iter_data = self.data
         self.dims = self.data.shape
 
@@ -644,33 +540,10 @@ class CoupledRec(Rec):
 
     def save_res(self, save_dir):
         from array import array
-        # J = self.calc_jacobian()
-        # s_xx = J[:,:,:,0,0][:,:,:,None]
-        # s_yy = J[:,:,:,1,1][:,:,:,None]
-        # s_zz = J[:,:,:,2,2][:,:,:,None]
-        # s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)[:,:,:,None]
-        # s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
-        # s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
-        #
-        sup = self.support_obj.get_support()[:, :, :, None]
-        self.shared_image = self.shared_image * sup
+
+        self.shared_image = self.shared_image * self.support_obj.get_support()[:, :, :, None]
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
-        if self.params["calc_strain"]:
-            J = self.calc_jacobian()
-            s_xx = J[:,:,:,0,0][:,:,:,None]
-            s_yy = J[:,:,:,1,1][:,:,:,None]
-            s_zz = J[:,:,:,2,2][:,:,:,None]
-            s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)[:,:,:,None]
-            s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
-            s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
-            final_rec = devlib.concatenate((self.shared_image, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup), axis=-1)
-        else:
-            s_00 = devlib.zeros(sup.shape)
-            final_rec = devlib.concatenate((self.shared_image, s_00, s_00, s_00, s_00, s_00, s_00, sup), axis=-1)
-
-        devlib.save(save_dir + "/reconstruction", final_rec)
         devlib.save(save_dir + "/image", self.shared_image)
         devlib.save(save_dir + "/shared_density", self.shared_image[:, :, :, 0])
         devlib.save(save_dir + "/shared_u1", self.shared_image[:, :, :, 1])
@@ -680,146 +553,45 @@ class CoupledRec(Rec):
 
         errs = array('f', self.errs)
 
-        with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
+        with open(save_dir + "/errors.txt", "w+") as err_f:
             err_f.write('\n'.join(map(str, errs)))
 
-        devlib.save(ut.join(save_dir, 'errors'), errs)
+        devlib.save(save_dir + '/errors', errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
-        with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
+        with open(save_dir + "/metrics.txt", "w+") as f:
             f.write(str(metric))
 
-        if self.ctrl_error is not None:
-            ctrl_error = np.array(self.ctrl_error)
-            np.save(save_dir + '/ctrl_error', ctrl_error)
-            np.savetxt(save_dir + '/ctrl_error.txt', ctrl_error)
         return 0
-
-    def get_phase_gradient(self):
-        """Calculate the phase gradient for a given peak"""
-        # Project onto the peak
-        if self.fast_resample:
-            self.iter_data = self.peak_objs[self.pk].res_data
-        else:
-            self.iter_data = self.peak_objs[self.pk].data
-
-        self.to_working_image()
-
-        # Iterate a few times to settle
-        for _ in range(25):
-            self.to_reciprocal_space()
-            self.modulus()
-            self.to_direct_space()
-            self.er()
-
-        # Calculate the continuous phase gradient using Hofmann's method
-        # (https://doi.org/10.1103/PhysRevMaterials.4.013801)
-        gradient = []
-        voxel_size = self.params["ds_voxel_size"]
-        dx0, dy0, dz0 = devlib.gradient(devlib.angle(self.ds_image), voxel_size)
-        dx1, dy1, dz1 = devlib.gradient(devlib.angle(self.ds_image * devlib.exp(1j*pi/2)), voxel_size)
-        dx2, dy2, dz2 = devlib.gradient(devlib.angle(self.ds_image * devlib.exp(-1j*pi/2)), voxel_size)
-        for stack in ([dx0, dx1, dx2], [dy0, dy1, dy2], [dz0, dz1, dz2]):
-            stack = devlib.array(stack)
-            index = devlib.argmin(stack**2, axis=0)
-            gradient.append(devlib.take_along_axis(stack, index[None, :, :, :], axis=0).squeeze(axis=0))
-
-        return gradient
-
-    def calc_jacobian(self):
-        grad_phi = []
-        for i, peak in enumerate(self.peak_objs):
-            self.prev_pk = self.pk
-            self.pk = i
-            grad_phi.append(self.get_phase_gradient())
-        grad_phi = devlib.array(grad_phi)
-        G = devlib.array([peak.g_vec[1:] for peak in self.peak_objs])
-        grad_phi = devlib.moveaxis(devlib.moveaxis(grad_phi, 0, -1), 0, -1)
-        cond = devlib.where(self.support_obj.get_support(), True, False)
-        final_shape = (grad_phi.shape[0], grad_phi.shape[1], grad_phi.shape[2], 3, 3)
-        ind = devlib.moveaxis(devlib.indices(cond.shape), 0, -1).reshape((-1, 3))[cond.ravel()].get()
-        jacobian = devlib.zeros(final_shape)
-        print("Calculating strain...")
-        for i, j, k in tqdm.tqdm(ind):
-            jacobian[i, j, k] = devlib.lstsq(G, grad_phi[i, j, k])[0]
-        return jacobian
 
     def switch_peaks(self):
         self.to_shared_image()
-        self.get_control_error()
         self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
-        if self.fast_resample:
-            self.iter_data = self.peak_objs[self.pk].res_data
-        else:
-            self.iter_data = self.peak_objs[self.pk].data
-        self.to_working_image()
+        self.iter_data = self.peak_objs[self.pk].data
+        self.to_working_image(self.peak_objs[self.pk])
 
     def to_shared_image(self):
-        if not self.fast_resample:
-            if self.lab_frame:
-                self.lab_frame = False
-            else:
-                self.shift_to_center()
-                self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_det_to_lab, self.dims[0])
-                self.support_obj.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_det_to_lab,
-                                                    self.dims[0], plot=True)
-                self.support_obj.make_binary()
-
         beta = self.proj_weight[self.iter]
-        pk = self.peak_objs[self.pk]
-        old_image = (devlib.dot(self.shared_image, pk.g_vec) / pk.gdotg)[:, :, :, None] * pk.g_vec + \
-                    devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
-        new_image = (devlib.angle(self.ds_image) / pk.gdotg)[:, :, :, None] * pk.g_vec + \
-                    devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat * pk.norm
+        curr_peak = self.peak_objs[self.pk]
+        old_image = (devlib.dot(self.shared_image, curr_peak.g_vec) / curr_peak.gdotg)[:, :, :, None] * \
+                    curr_peak.g_vec + devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
+        new_image = (devlib.angle(self.ds_image) / curr_peak.gdotg)[:, :, :, None] * curr_peak.g_vec + \
+                    devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat
         self.shared_image = self.shared_image + beta * (new_image - old_image)
-        if self.er_iter:
-            self.shared_image = self.shared_image * self.support_obj.support[:, :, :, None]
-            self.shift_to_center()
 
-    def to_working_image(self):
-        phi = devlib.dot(self.shared_image, self.peak_objs[self.pk].g_vec)
-        rho = self.shared_image[:, :, :, 0] / self.peak_objs[self.pk].norm
-        self.ds_image = rho * devlib.exp(1j * phi)
-        if not self.fast_resample:
-            self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_lab_to_det, self.dims[0])
-            self.support_obj.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_lab_to_det,
-                                                self.dims[0])
-            self.support_obj.make_binary()
 
-    def get_control_error(self):
-        if self.ctrl_peak is None:
-            return
-        phi = devlib.dot(self.shared_image, self.peak_objs[self.pk].g_vec)
-        rho = self.shared_image[:, :, :, 0] / self.peak_objs[self.pk].norm
-        img = devlib.absolute(devlib.ifft(rho * devlib.exp(1j * phi)))
-        lin_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=False)
-        nmi = devlib.calc_nmi(lin_hist).get()
-        ehd = devlib.calc_ehd(lin_hist).get()
-        log_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=True)
-        lnmi = devlib.calc_nmi(log_hist).get()
-        lehd = devlib.calc_ehd(log_hist).get()
-        self.ctrl_error.append([nmi, lnmi, ehd, lehd])
+    def to_working_image(self, peak_obj):
+        phi = devlib.dot(self.shared_image, peak_obj.g_vec)
+        rho = self.shared_image[:, :, :, 0]
+        self.ds_image = rho * devlib.exp(1j*phi)
 
     def progress_trigger(self):
-        ornt = self.peak_objs[self.pk].hkl
-        prg = f'|  iter {self.iter:>4}  ' \
-              f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
-              f'|  err {self.errs[-1]:0.6f}  ' \
-              f'|  max {self.shared_image[:, :, :, 0].max():0.5f}  '
-        if self.ctrl_error is not None:
-            prg += f"|  NMI {self.ctrl_error[-1][0]:0.6f}  "
-            prg += f"|  LNMI {self.ctrl_error[-1][1]:0.6f}  "
-            prg += f"|  EHD {self.ctrl_error[-1][2]:0.6f}  "
-            prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
-        print(prg)
-
-    # def shrink_wrap_trigger(self):
-    #     if self.proj_weight[self.iter] > 0.9:
-    #         args = (self.ds_image,)
-    #         self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
-    #
-    def switch_resampling(self):
-        self.fast_resample = False
+        ornt = self.peak_objs[self.pk].orientation
+        print(f'|  iter {self.iter:>4}  '
+              f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  '
+              f'|  err {self.errs[-1]:0.6f}  '
+              f'|  max {self.shared_image[:, :, :, 0].max():0.5g}'
+              )
 
     def get_density(self):
         return self.shared_image[:, :, :, 0]
@@ -832,13 +604,10 @@ class CoupledRec(Rec):
         self.shared_image[:, :, :, 1:] *= -1
         self.support_obj.flip()
 
-    def shift_to_center(self):
-        ind = devlib.center_of_mass(self.shared_image[:, :, :, 0])
-        shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
-        shift_dist = devlib.to_numpy(shift_dist).tolist()
-        self.shared_image = devlib.roll(self.shared_image, shift_dist, axis=(0, 1, 2))
-        self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=(0, 1, 2))
-        self.support_obj.support = devlib.roll(self.support_obj.support, shift_dist, axis=(0, 1, 2))
+    def shift_to_center(self, ind, cutoff=None):
+        shift_dist = -devlib.array(ind) + (self.dims[0]//2)
+        self.shared_image = devlib.shift(self.shared_image, shift_dist, axis=(0, 1, 2))
+        self.support_obj.support = devlib.shift(self.support_obj.support, shift_dist)
 
 
 def reconstruction(datafile, **kwargs):
@@ -906,22 +675,19 @@ def reconstruction(datafile, **kwargs):
             defines when to apply averaging. Negative start means it is offset from the last iteration.
         progress_trigger : list of int
             defines when to print info on the console. The info includes current iteration and error.
-        debug : boolean
-            if in debug mode the verifier will not stop the progress, only print message
+
     """
-    debug = 'debug' in kwargs and kwargs['debug']
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
         print(error_msg)
-        if not debug:
-            return
+        return
 
     if not os.path.isfile(datafile):
-        print(f'no file found {datafile}')
+        print('no file found', datafile)
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere_core-ui package to run multiple reconstructions and GA. Processing single reconstruction.')
+        print('Use cohere_core-ui package to run multiple reconstructions and GA. Proceding with single reconstruction.')
     if 'processing' in kwargs:
         pkg = kwargs['processing']
     else:

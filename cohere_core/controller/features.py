@@ -1,4 +1,3 @@
-import cohere_core.utilities.utils as ut
 import cohere_core.utilities.dvc_utils as dvut
 from abc import ABC, abstractmethod
 
@@ -40,19 +39,19 @@ class Pcdi:
             self.kernel = None
         else:
             try:
-                self.kernel = devlib.load(ut.join(dir, 'coherence.npy'))
+                self.kernel = devlib.load(dir + '/coherence.npy')
             except:
                 self.kernel = None
 
         self.dims = devlib.dims(data)
-        self.roi_data = ut.crop_center(devlib.fftshift(data), self.kernel_area)
+        self.roi_data = dvut.crop_center(devlib.fftshift(data), self.kernel_area)
         if self.normalize:
             self.sum_roi_data = devlib.sum(devlib.square(self.roi_data))
         if self.kernel is None:
             self.kernel = devlib.full(self.kernel_area, 0.5, dtype=devlib.dtype(data))
 
     def set_previous(self, abs_amplitudes):
-        self.roi_amplitudes_prev = ut.crop_center(devlib.fftshift(abs_amplitudes), self.kernel_area)
+        self.roi_amplitudes_prev = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.kernel_area)
 
     def apply_partial_coherence(self, abs_amplitudes):
         abs_amplitudes_2 = devlib.square(abs_amplitudes)
@@ -61,7 +60,7 @@ class Pcdi:
         return converged
 
     def update_partial_coherence(self, abs_amplitudes):
-        roi_amplitudes = ut.crop_center(devlib.fftshift(abs_amplitudes), self.kernel_area)
+        roi_amplitudes = dvut.crop_center(devlib.fftshift(abs_amplitudes), self.kernel_area)
         roi_combined_amp = 2 * roi_amplitudes - self.roi_amplitudes_prev
         if self.normalize:
             amplitudes_2 = devlib.square(roi_combined_amp)
