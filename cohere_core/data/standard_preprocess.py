@@ -84,6 +84,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     data = ut.read_tif(beamline_full_datafile_name)
+    print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
 
     prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:

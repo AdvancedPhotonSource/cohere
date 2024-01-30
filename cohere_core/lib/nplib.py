@@ -227,9 +227,26 @@ class nplib(cohlib):
     def concatenate(tup, axis=0):
         return np.concatenate(tup, axis)
 
+    def amin(arr):
+        return np.amin(arr)
+
+    def affine_transform(arr, matrix, order=3, offset=0):
+        raise NotImplementedError
+
+    def pad(arr, padding):
+        raise NotImplementedError
+
+    def histogram2d(meas, rec, n_bins=100, log=False):
+        raise NotImplementedError
+
+    def calc_nmi(hgram):
+        raise NotImplementedError
+
+    def calc_ehd(hgram):
+        raise NotImplementedError
+
     def clean_default_mem():
         pass
-
 
 # a11 = np.array([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a12 = np.array([10.1, 10.2, 10.3, 11.0])

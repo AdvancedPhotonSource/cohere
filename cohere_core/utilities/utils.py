@@ -51,7 +51,8 @@ __all__ = ['join',
            'get_avail_gpu_runs',
            'get_one_dev',
            'get_gpu_use',
-           'arr_property'
+           'arr_property',
+           'estimate_no_proc'
            ]
 
 
@@ -486,6 +487,28 @@ def binning(array, binsizes):
     return binned_array
 
 
+def get_centered(arr, center_shift):
+    """
+    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros,
+     the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
+
+    Parameters
+    ----------
+    arr : ndarray
+        the original array to be centered
+
+    center_shift : list
+        a list defining shift of the center
+
+    Returns
+    -------
+    ndarray
+        centered array
+    """
+    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
+    return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
+
+
 def crop_center(arr, new_shape):
     """
     This function crops the array to the new size, leaving the array in the center.
@@ -619,6 +642,76 @@ def adjust_dimensions(arr, pads):
     return np.squeeze(adjusted)
 
 
+def gaussian(shape, sigmas, alpha=1):
+    """
+    Calculates Gaussian distribution grid in given dimensions.
+
+    Parameters
+    ----------
+    shape : tuple
+        shape of the grid
+    sigmas : list
+        sigmas in all dimensions
+    alpha : float
+        a multiplier
+    Returns
+    -------
+    ndarray
+        Gaussian distribution grid
+    """
+    grid = np.full(shape, 1.0)
+    for i in range(len(shape)):
+        # prepare indexes for tile and transpose
+        tile_shape = list(shape)
+        tile_shape.pop(i)
+        tile_shape.append(1)
+        trans_shape = list(range(len(shape) - 1))
+        trans_shape.insert(i, len(shape) - 1)
+
+        multiplier = - 0.5 * alpha / pow(sigmas[i], 2)
+        line = np.linspace(-(shape[i] - 1) / 2.0, (shape[i] - 1) / 2.0, shape[i])
+        gi = np.tile(line, tile_shape)
+        gi = np.transpose(gi, tuple(trans_shape))
+        exponent = np.power(gi, 2) * multiplier
+        gi = np.exp(exponent)
+        grid = grid * gi
+
+    grid_total = np.sum(grid)
+    return grid / grid_total
+
+
+def gauss_conv_fft(arr, sigmas):
+    """
+    Calculates convolution of array with the Gaussian.
+
+    A Guassian distribution grid is calculated with the array dimensions. Fourier transform of the array is
+    multiplied by the grid and inverse transformed. A correction is calculated and applied.
+
+    Parameters
+    ----------
+    arr : ndarray
+        subject array
+    sigmas : list
+        sigmas in all dimensions
+    Returns
+    -------
+    ndarray
+        convolution array
+    """
+    arr_sum = np.sum(abs(arr))
+    arr_f = np.fft.ifftshift(np.fft.fftn(np.fft.ifftshift(arr)))
+    shape = list(arr.shape)
+    for i in range(len(sigmas)):
+        sigmas[i] = shape[i] / 2.0 / np.pi / sigmas[i]
+    convag = arr_f * gaussian(shape, sigmas)
+    convag = np.fft.ifftshift(np.fft.ifftn(np.fft.ifftshift(convag)))
+    convag = convag.real
+    convag = np.clip(convag, 0, None)
+    correction = arr_sum / np.sum(convag)
+    convag *= correction
+    return convag
+
+
 def normalize(vec):
     return vec / np.linalg.norm(vec)
 
@@ -637,7 +730,7 @@ def get_one_dev(ids):
     # if cluster configuration, look only at devices on local machine
     if issubclass(type(ids), dict):  # a dict with cluster configuration
         ids = ids[socket.gethostname()]  # configured devices on local host
-    
+
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     gpus = GPUtil.getGPUs()
     dev = -1
@@ -727,19 +820,19 @@ def get_balanced_load(avail_runs, runs):
     load = {}
 
     # add one run from each available
-    for k,v in avail_runs.items():
+    for k, v in avail_runs.items():
         if v > 0:
             load[k] = 1
             avail_runs[k] = v - 1
             need_runs -= 1
             if need_runs == 0:
-                return load, runs         
+                return load, runs
             available -= 1
 
     # use proportionally from available
     distributed = 0
     ratio = need_runs / available
-    for k,v in avail_runs.items():
+    for k, v in avail_runs.items():
         if v > 0:
             share = int(v * ratio)
             load[k] = load[k] + share
@@ -749,14 +842,14 @@ def get_balanced_load(avail_runs, runs):
     available -= distributed
 
     # need to add the few remaining
-    for k,v in avail_runs.items():
+    for k, v in avail_runs.items():
         if v > 0:
             load[k] = load[k] + 1
             need_runs -= 1
             if need_runs == 0:
                 break
 
-    return load, runs    
+    return load, runs
 
 
 def get_gpu_use(devices, no_jobs, job_size):
@@ -766,7 +859,7 @@ def get_gpu_use(devices, no_jobs, job_size):
     ----------
     devices : list or dict or 'all'
         Configured parameter. list of GPU ids to use for jobs or 'all' if all GPUs should be used. If cluster configuration, then
-        it is dict with keys being host names. 
+        it is dict with keys being host names.
     no_jobs : int
         wanted number of jobs
     job_size : float
@@ -780,36 +873,37 @@ def get_gpu_use(devices, no_jobs, job_size):
     cluster_conf : boolean
         True is cluster configuration
     """
+
     def unpack_load(load):
         picked_devs = []
-        for ds in [[k] * int(v) for k,v in load.items()]:
+        for ds in [[k] * int(v) for k, v in load.items()]:
             picked_devs.extend(ds)
-        return picked_devs       
+        return picked_devs
 
-    if type(devices) != dict: # a configuration for local host
+    if type(devices) != dict:  # a configuration for local host
         hostfile_name = None
         avail_jobs = get_avail_gpu_runs(devices, job_size)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
         picked_devs = unpack_load(balanced_load)
-    else:   #cluster configuration
+    else:  # cluster configuration
         cluster_conf = True
         hosts_avail_jobs = get_avail_hosts_gpu_runs(devices, job_size)
         avail_jobs = {}
         # collapse the host dict into one dict by adding hostname in front of key (gpu id)
-        for k,v in hosts_avail_jobs.items():
+        for k, v in hosts_avail_jobs.items():
             host_runs = {(f'{k}_{str(kv)}'): vv for kv, vv in v.items()}
             avail_jobs.update(host_runs)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
- 
+
         # un-collapse the balanced load by hosts
         host_balanced_load = {}
-        for k,v in balanced_load.items():
+        for k, v in balanced_load.items():
             idx = k.rfind('_')
             host = k[:idx]
             if host not in host_balanced_load:
                 host_balanced_load[host] = {}
-            host_balanced_load[host].update({int(k[idx+1:]) : v})
-        
+            host_balanced_load[host].update({int(k[idx + 1:]): v})
+
         # create hosts file and return corresponding picked devices
         hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
 
@@ -849,6 +943,34 @@ from functools import wraps
 from time import time
 
 
+def estimate_no_proc(arr_size, factor):
+    """
+    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
+    of array.
+    Parameters
+    ----------
+    arr_size : int
+        size of array
+    factor : int
+        an estimate of how much memory is required to process comparing to array size
+    Returns
+    -------
+    int
+        number of processes
+    """
+    from multiprocessing import cpu_count
+    import psutil
+
+    ncpu = cpu_count()
+    freemem = psutil.virtual_memory().available
+    nmem = freemem / (factor * arr_size)
+    # decide what limits, ncpu or nmem
+    if nmem > ncpu:
+        return ncpu
+    else:
+        return int(nmem)
+
+
 def measure(func):
     @wraps(func)
     def _time_it(*args, **kwargs):
@@ -860,4 +982,3 @@ def measure(func):
             print("Total execution time: {end_ if end_ > 0 else 0} ms")
 
     return _time_it
-

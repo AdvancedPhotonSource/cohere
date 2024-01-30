@@ -1,6 +1,8 @@
 from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
+import cupyx.scipy.ndimage
+import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
 
 
@@ -54,15 +56,16 @@ class cplib(cohlib):
         return cp.random.random(shape, dtype=cp.float32) + 1j * cp.random.random(shape, dtype=cp.float32)
 
     def roll(arr, sft, axis=None):
-        if type(sft) != list:
-            sft = [sft]
         if axis is None:
             axis = list(range(len(sft)))
+        if type(sft) != list:
+            sft = [sft]
         sft = [int(s) for s in sft]
         return cp.roll(arr, sft, axis=axis)
 
     def shift(arr, sft):
         return sc.fourier_shift(arr, sft)
+
     def fftshift(arr):
         return cp.fft.fftshift(arr)
 
@@ -218,6 +221,34 @@ class cplib(cohlib):
 
     def concatenate(tup, axis=0):
         return cp.concatenate(tup, axis)
+
+    def amin(arr):
+        return cp.amin(arr)
+
+    def affine_transform(arr, matrix, order=3, offset=0):
+        return cupyx.scipy.ndimage.affine_transform(arr, matrix, order=order, offset=offset, prefilter=True)
+
+    def pad(arr, padding):
+        return cp.pad(arr, padding)
+
+    def histogram2d(meas, rec, n_bins=100, log=False):
+        norm = cp.max(meas) / cp.max(rec)
+        if log:
+            bins = cp.logspace(cp.log10(1), cp.log10(cp.max(meas)), n_bins+1)
+        else:
+            bins = n_bins
+        return cp.histogram2d(cp.ravel(meas), cp.ravel(norm*rec), bins)[0]
+
+    def calc_nmi(hgram):
+        h0 = stats.entropy(np.sum(hgram, axis=0))
+        h1 = stats.entropy(np.sum(hgram, axis=1))
+        h01 = stats.entropy(np.reshape(hgram, -1))
+        return (h0 + h1) / h01
+
+    def calc_ehd(hgram):
+        n = hgram.shape[0] * 1j
+        x, y = cp.mgrid[0:1:n, 0:1:n]
+        return cp.sum(hgram * cp.abs(x - y)) / cp.sum(hgram)
 
     def clean_default_mem():
         cp._default_memory_pool.free_all_blocks()
