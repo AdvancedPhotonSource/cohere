@@ -1,1 +1,1 @@
-python setup.py install
+conda install mpi4py -c conda-forge

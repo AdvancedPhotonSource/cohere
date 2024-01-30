@@ -1,6 +1,7 @@
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
-from scipy.ndimage import convolve, gaussian_filter, center_of_mass
+from scipy.ndimage import convolve, gaussian_filter, center_of_mass, shift
+from scipy.signal import correlate
 
 
 class nplib(cohlib):
@@ -31,6 +32,9 @@ class nplib(cohlib):
     def dtype(arr):
         return arr.dtype
 
+    def astype(arr, dtype):
+        return arr.astype(dtype=dtype)
+
     def size(arr):
         return arr.size
 
@@ -51,15 +55,22 @@ class nplib(cohlib):
         return r
         #return rng.random(*shape).astype(float)
 
+    def roll(arr, sft, axis=None):
+        if type(sft) != list:
+            sft = [sft]
+        if axis is None:
+            axis = list(range(len(sft)))
+        sft = [int(s) for s in sft]
+        return np.roll(arr, sft, axis=axis)
+
+    def shift(arr, sft):
+        return shift(arr, sft)
+
     def fftshift(arr):
         return np.fft.fftshift(arr)
 
     def ifftshift(arr):
         return np.fft.ifftshift(arr)
-
-    def shift(arr, sft):
-        sft = [int(s) for s in sft]
-        return np.roll(arr, sft)
 
     def fft(arr):
         return np.fft.fftn(arr, norm='forward')
@@ -69,6 +80,9 @@ class nplib(cohlib):
 
     def fftconvolve(arr1, arr2):
         return convolve(arr1, arr2)
+
+    def correlate(arr1, arr2, mode='same', method='auto'):
+        return correlate(arr1, arr2, mode, method)
 
     def where(cond, x, y):
         return np.where(cond, x, y)
@@ -185,6 +199,54 @@ class nplib(cohlib):
 
     def clip(arr, min, max=None):
         return np.clip(arr, min, max)
+
+    def diff(arr, axis=None, prepend=0):
+        return np.diff(arr, axis=axis, prepend=prepend)
+
+    def gradient(arr, dx=1):
+        return np.gradient(arr, dx)
+
+    def argmin(arr, axis=None):
+        return np.argmin(arr, axis)
+
+    def take_along_axis(a, indices, axis):
+        return np.take_along_axis(a, indices, axis)
+
+    def moveaxis(arr, source, dest):
+        return np.moveaxis(arr, source, dest)
+
+    def lstsq(A, B):
+        return np.linalg.lstsq(A, B, rcond=None)
+
+    def zeros(shape):
+        return np.zeros(shape)
+
+    def indices(dims):
+        return np.indices(dims)
+
+    def concatenate(tup, axis=0):
+        return np.concatenate(tup, axis)
+
+    def amin(arr):
+        return np.amin(arr)
+
+    def affine_transform(arr, matrix, order=3, offset=0):
+        raise NotImplementedError
+
+    def pad(arr, padding):
+        raise NotImplementedError
+
+    def histogram2d(meas, rec, n_bins=100, log=False):
+        raise NotImplementedError
+
+    def calc_nmi(hgram):
+        raise NotImplementedError
+
+    def calc_ehd(hgram):
+        raise NotImplementedError
+
+    def clean_default_mem():
+        pass
 
 # a11 = np.array([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a12 = np.array([10.1, 10.2, 10.3, 11.0])

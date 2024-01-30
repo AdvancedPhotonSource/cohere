@@ -6,13 +6,12 @@
 
 """
 cohere_core.reconstruction_coupled
-=================================
+==================================
 
 This module controls a multipeak reconstruction process.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
 """
 
-import numpy as np
 import os
 import importlib
 import cohere_core.controller.phasing as calc
@@ -37,23 +36,8 @@ def set_lib(pkg, ndim=None):
 
 def rec_process(lib, pars, peak_dirs, dev, continue_dir):
     set_lib(lib)
-    # It is assumed that the calling script uses peak_dirs containing
-    # peak orientation. It is parsed here, and passed to the CoupledRec constractor as list of
-    # touples (<data directory>, <peak orientation>)
-    peak_dir_orient = []
-    packed_orientations = [(str(o[0]) + str(o[1]) + str(o[2])) for o in pars['orientations']]
-    # find the directory that matches the packed orientation
-    for dir in peak_dirs:
-        found = False
-        i = 0
-        while i < len(packed_orientations) and not found:
-            if dir.endswith(packed_orientations[i]):
-                found = True
-                peak_dir_orient.append((dir, pars['orientations'][i]))
-            i += 1
-    print(peak_dir_orient)
 
-    worker = calc.CoupledRec(pars, peak_dir_orient)
+    worker = calc.CoupledRec(pars, peak_dirs)
     if worker.init_dev(dev[0]) < 0:
         return
     worker.init(continue_dir)
@@ -62,7 +46,7 @@ def rec_process(lib, pars, peak_dirs, dev, continue_dir):
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
     else:
-        save_dir = os.path.dirname(peak_dirs[0]) + '/results_phasing'
+        save_dir = ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing')
     worker.save_res(save_dir)
 
 

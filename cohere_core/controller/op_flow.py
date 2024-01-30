@@ -82,7 +82,7 @@ def get_alg_rows(s, pc_conf_start):
         repeat = entry[0]
         funs = entry[1].split('.')
         if funs[0] not in algs:
-            return 'undefined algorithm ' + funs[0]
+            return f'undefined algorithm {funs[0]}'
         row_keys = algs[funs[0]]
         for row_key in row_keys:
             rows[row_key][i:i+repeat] = 1
@@ -196,6 +196,10 @@ def get_flow_arr(params, flow_items_list, curr_gen=None, first_run=False):
         elif flow_item == 'progress_trigger':
             if 'progress_trigger' in params:
                 flow_arr[i] = trigger_row(params['progress_trigger'], iter_no)
+                flow_arr[i][-1] = 1
+        elif flow_item == "switch_resampling":
+            if 'switch_resamp_trigger' in params:
+                flow_arr[i] = trigger_row(params['switch_resamp_trigger'], iter_no)
                 flow_arr[i][-1] = 1
         elif flow_item == 'switch_peaks':
             if 'switch_peak_trigger' in params:

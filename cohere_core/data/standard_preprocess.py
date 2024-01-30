@@ -23,7 +23,7 @@ __all__ = ['prep',
            ]
 
 
-def prep(datafile, **kwargs):
+def prep(beamline_full_datafile_name, auto, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
         - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
@@ -35,11 +35,11 @@ def prep(datafile, **kwargs):
 
     Parameters
     ----------
-    datafile : str
-        name of tif file containing raw data
+    beamline_full_datafile_name : str
+        full name of tif file containing beamline preprocessed data
     kwargs : keyword arguments
-        save_dir : str
-            Directory where results of reconstruction are saved as npy files. If not present, the reconstruction outcome will be save in the same directory where datafile is.
+        data_dir : str
+            directory where prepared data will be saved, default <experiment_dir>/phasing_data
         alien_alg : str
             Name of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
         aliens : list
@@ -68,36 +68,51 @@ def prep(datafile, **kwargs):
             Optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
-
+        do_auto_binning : boolean
+            Optional, mandatory if auto_data is True. is True the auto binning wil be done, and not otherwise.
+        debug : boolean
+            It's a command line argument passed as parameter. If True, ignores verifier error.
     """
+    debug = 'debug' in kwargs and kwargs['debug']
+    kwargs.pop("debug", None)
     er_msg = ver.verify('config_data', kwargs)
     if len(er_msg) > 0:
         # the error message is printed in verifier
-        return
+        if not debug:
+            return
 
-    datafile = datafile.replace(os.sep, '/')
+    beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
-    data = ut.read_tif(datafile)
+    data = ut.read_tif(beamline_full_datafile_name)
+    print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
 
+    prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
-        data_dir, filename = os.path.split(datafile)
+        # assuming the directory structure and naming follows cohere-ui mechanism
+        data_dir = prep_data_dir.replace(os.sep, '/').replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(data, kwargs, data_dir)
 
-    if 'intensity_threshold' in kwargs:
+    if auto:
+        # the formula for auto threshold was found empirically, may be
+        # modified in the future if more tests are done
+        auto_threshold_value = 0.141 * data[np.nonzero(data)].mean() - 3.062
+        intensity_threshold = int(max([1, auto_threshold_value]))
+        print(f'auto intensity threshold: {intensity_threshold}')
+    elif 'intensity_threshold' in kwargs:
         intensity_threshold = kwargs['intensity_threshold']
     else:
         print('define amplitude threshold. Exiting')
         return
 
     # zero out the noise
-    prep_data = np.where(data <= intensity_threshold, 0.0, data)
+    data = np.where(data <= intensity_threshold, 0.0, data)
 
     # square root data
-    prep_data = np.sqrt(prep_data)
+    data = np.sqrt(data)
 
     if 'adjust_dimensions' in kwargs:
         crops_pads = kwargs['adjust_dimensions']
@@ -114,31 +129,55 @@ def prep(datafile, **kwargs):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
 
-    prep_data = ut.adjust_dimensions(prep_data, pairs)
-    if prep_data is None:
+    data = ut.adjust_dimensions(data, pairs)
+    if data is None:
         print('check "adjust_dimensions" configuration')
         return
 
     if 'center_shift' in kwargs:
         center_shift = kwargs['center_shift']
-        prep_data = ut.get_centered(prep_data, center_shift)
+        data, shift = ut.center_max(data, center_shift)
     else:
-        prep_data = ut.get_centered(prep_data, [0, 0, 0])
+        data, shift = ut.center_max(data, [0, 0, 0])
 
-    if 'binning' in kwargs:
+    try:
+        # assuming the mask file is in directory of preprocessed data
+        mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
+        mask = np.roll(mask, shift, tuple(range(mask.ndim)))
+        ut.save_tif(mask, ut.join(data_dir, 'mask.tif'))
+    except FileNotFoundError:
+        pass
+
+    if auto and kwargs['do_auto_binning']:
+        # prepare data to make the oversampling ratio ~3
+        wos = 3.0
+        orig_os = ut.get_oversample_ratio(data)
+        # match oversampling to wos
+        wanted_os = [wos, wos, wos]
+        change = [np.round(f / t).astype('int32') for f, t in zip(orig_os, wanted_os)]
+        bins = [int(max([1, c])) for c in change]
+        print(f'auto binning size: {bins}')
+        data = ut.binning(data, bins)
+    elif 'binning' in kwargs:
         binsizes = kwargs['binning']
         try:
             bins = []
             for binsize in binsizes:
                 bins.append(binsize)
-            filler = len(prep_data.shape) - len(bins)
+            filler = len(data.shape) - len(bins)
             for _ in range(filler):
                 bins.append(1)
-            prep_data = ut.binning(prep_data, bins)
+            data = ut.binning(data, bins)
         except:
             print('check "binning" configuration')
 
     # save data
-    data_file = data_dir + '/data.tif'
-    ut.save_tif(prep_data, data_file)
-    print('data ready for reconstruction, data dims:', prep_data.shape)
+    data_file = ut.join(data_dir, 'data.tif')
+    ut.save_tif(data, data_file)
+    print(f'data ready for reconstruction, data dims: {data.shape}')
+
+    # if auto save new config
+    if auto:
+        kwargs['binning'] = bins
+        kwargs['intensity_threshold'] = intensity_threshold
+    return kwargs
