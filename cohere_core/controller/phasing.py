@@ -620,6 +620,7 @@ class CoupledRec(Rec):
         self.data = self.peak_objs[self.pk].res_data
         self.iter_data = self.data
         self.dims = self.data.shape
+        self.n_voxels = self.dims[0]*self.dims[1]*self.dims[2]
 
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
@@ -805,7 +806,7 @@ class CoupledRec(Rec):
         prg = f'|  iter {self.iter:>4}  ' \
               f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
               f'|  err {self.errs[-1]:0.6f}  ' \
-              f'|  max {self.shared_image[:, :, :, 0].max():0.5f}  '
+              f'|  sup {devlib.sum(self.support_obj.get_support()):>8}  '
         if self.ctrl_error is not None:
             prg += f"|  NMI {self.ctrl_error[-1][0]:0.6f}  "
             prg += f"|  LNMI {self.ctrl_error[-1][1]:0.6f}  "
