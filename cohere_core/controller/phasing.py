@@ -517,7 +517,7 @@ class Peak:
         print(f"Loading peak {self.hkl}")
 
         # Geometry parameters
-        self.g_vec = devlib.array([0, * self.hkl]) * 2*pi/geometry["lattice"]
+        self.g_vec = devlib.array(self.hkl) * 2*pi/geometry["lattice"]
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
         self.size = geometry["final_size"]
         self.rs_lab_to_det = np.array(geometry["rmatrix"]) / geometry["rs_voxel_size"]
@@ -633,8 +633,8 @@ class CoupledRec(Rec):
             return -1
 
         # Define the shared image
-        self.shared_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1, 1])
-        self.rho_hat = devlib.array([1, 0, 0, 0])  # This is the density "unit vector" in the shared object.
+        self.rho_image = devlib.absolute(self.ds_image)
+        self.u_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1])
 
         # Define the multipeak projection weighting and tapering
         coeff = self.params["mp_taper"] / (self.params["mp_taper"] - 1)
@@ -653,31 +653,34 @@ class CoupledRec(Rec):
         # s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
         # s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
         #
-        sup = self.support_obj.get_support()[:, :, :, None]
-        self.shared_image = self.shared_image * sup
+        sup = self.support_obj.get_support()
+        rho = self.rho_image * sup
+        u_x = self.u_image[:, :, :, 0] * sup
+        u_y = self.u_image[:, :, :, 1] * sup
+        u_z = self.u_image[:, :, :, 2] * sup
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
         if self.params["calc_strain"]:
             J = self.calc_jacobian()
-            s_xx = J[:,:,:,0,0][:,:,:,None]
-            s_yy = J[:,:,:,1,1][:,:,:,None]
-            s_zz = J[:,:,:,2,2][:,:,:,None]
-            s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)[:,:,:,None]
-            s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
-            s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
-            final_rec = devlib.concatenate((self.shared_image, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup), axis=-1)
+            s_xx = J[:,:,:,0,0]
+            s_yy = J[:,:,:,1,1]
+            s_zz = J[:,:,:,2,2]
+            s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)
+            s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)
+            s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)
+            final_rec = devlib.stack((rho, u_x, u_y, u_z, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup))
         else:
             s_00 = devlib.zeros(sup.shape)
-            final_rec = devlib.concatenate((self.shared_image, s_00, s_00, s_00, s_00, s_00, s_00, sup), axis=-1)
+            final_rec = devlib.stack((rho, u_x, u_y, s_00, s_00, s_00, s_00, s_00, s_00, sup))
 
         devlib.save(save_dir + "/reconstruction", final_rec)
-        devlib.save(save_dir + "/image", self.shared_image)
-        devlib.save(save_dir + "/shared_density", self.shared_image[:, :, :, 0])
-        devlib.save(save_dir + "/shared_u1", self.shared_image[:, :, :, 1])
-        devlib.save(save_dir + "/shared_u2", self.shared_image[:, :, :, 2])
-        devlib.save(save_dir + "/shared_u3", self.shared_image[:, :, :, 3])
-        devlib.save(save_dir + '/support', self.support_obj.get_support())
+        devlib.save(save_dir + "/image", devlib.stack((rho, u_x, u_y, u_z)))
+        devlib.save(save_dir + "/shared_density", rho)
+        devlib.save(save_dir + "/shared_u1", u_x)
+        devlib.save(save_dir + "/shared_u2", u_y)
+        devlib.save(save_dir + "/shared_u3", u_z)
+        devlib.save(save_dir + '/support', sup)
 
         errs = array('f', self.errs)
 
@@ -768,30 +771,30 @@ class CoupledRec(Rec):
 
         beta = self.proj_weight[self.iter]
         pk = self.peak_objs[self.pk]
-        old_image = (devlib.dot(self.shared_image, pk.g_vec) / pk.gdotg)[:, :, :, None] * pk.g_vec + \
-                    devlib.dot(self.shared_image, self.rho_hat)[:, :, :, None] * self.rho_hat
-        new_image = (devlib.angle(self.ds_image) / pk.gdotg)[:, :, :, None] * pk.g_vec + \
-                    devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat * pk.norm
-        self.shared_image = self.shared_image + beta * (new_image - old_image)
+        self.rho_image = (1-beta) * self.rho_image + beta * devlib.absolute(self.ds_image) * pk.norm
+
+        old_u = (devlib.dot(self.u_image, pk.g_vec) / pk.gdotg)[:, :, :, None] * pk.g_vec
+        new_u = (devlib.angle(self.ds_image) / pk.gdotg)[:, :, :, None] * pk.g_vec
+        self.u_image = self.u_image + beta * (new_u - old_u)
         if self.er_iter:
-            self.shared_image = self.shared_image * self.support_obj.support[:, :, :, None]
+            self.rho_image = self.rho_image * self.support_obj.support
+            self.u_image = self.u_image * self.support_obj.support[:, :, :, None]
             self.shift_to_center()
 
     def to_working_image(self):
-        phi = devlib.dot(self.shared_image, self.peak_objs[self.pk].g_vec)
-        rho = self.shared_image[:, :, :, 0] / self.peak_objs[self.pk].norm
-        self.ds_image = rho * devlib.exp(1j * phi)
+        pk = self.peak_objs[self.pk]
+        self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec)) / pk.norm
         if not self.fast_resample:
-            self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_lab_to_det, self.dims[0])
-            self.support_obj.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_lab_to_det,
-                                                self.dims[0])
+            self.ds_image = resample(self.ds_image, pk.ds_lab_to_det, self.dims[0])
+            self.support_obj.support = resample(self.support_obj.support, pk.ds_lab_to_det, self.dims[0])
             self.support_obj.make_binary()
 
     def get_control_error(self):
+        pk = self.peak_objs[self.pk]
         if self.ctrl_peak is None:
             return
-        phi = devlib.dot(self.shared_image, self.peak_objs[self.pk].g_vec)
-        rho = self.shared_image[:, :, :, 0] / self.peak_objs[self.pk].norm
+        phi = devlib.dot(self.u_image, pk.g_vec)
+        rho = self.rho_image / pk.norm
         img = devlib.absolute(devlib.ifft(rho * devlib.exp(1j * phi)))
         lin_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=False)
         nmi = devlib.calc_nmi(lin_hist).get()
@@ -823,21 +826,22 @@ class CoupledRec(Rec):
         self.fast_resample = False
 
     def get_density(self):
-        return self.shared_image[:, :, :, 0]
+        return self.rho_image
 
     def get_distortion(self):
-        return self.shared_image[:, :, :, 1:].swapaxes(3, 2).swapaxes(2, 1).swapaxes(1, 0)
+        return self.u_image.swapaxes(3, 2).swapaxes(2, 1).swapaxes(1, 0)
 
     def flip(self):
-        self.shared_image = devlib.flip(self.shared_image, axis=(0, 1, 2))
-        self.shared_image[:, :, :, 1:] *= -1
+        self.rho_image = devlib.flip(self.rho_image, axis=(0, 1, 2))
+        self.u_image = -1 * devlib.flip(self.u_image, axis=(0, 1, 2))
         self.support_obj.flip()
 
     def shift_to_center(self):
-        ind = devlib.center_of_mass(self.shared_image[:, :, :, 0])
+        ind = devlib.center_of_mass(self.rho_image)
         shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
         shift_dist = devlib.to_numpy(shift_dist).tolist()
-        self.shared_image = devlib.roll(self.shared_image, shift_dist, axis=(0, 1, 2))
+        self.rho_image = devlib.roll(self.rho_image, shift_dist, axis=(0, 1, 2))
+        self.u_image = devlib.roll(self.u_image, shift_dist, axis=(0, 1, 2))
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=(0, 1, 2))
         self.support_obj.support = devlib.roll(self.support_obj.support, shift_dist, axis=(0, 1, 2))
 
