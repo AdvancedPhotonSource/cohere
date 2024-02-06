@@ -387,6 +387,10 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def stack(tup):
+        pass
+
+    @abc.abstractmethod
     def amin(arr):
         pass
 

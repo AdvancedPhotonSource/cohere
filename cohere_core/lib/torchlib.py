@@ -295,6 +295,9 @@ class torchlib(cohlib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
+    def stack(tup):
+        raise NotImplementedError
+
     def amin(arr):
         raise NotImplementedError
 

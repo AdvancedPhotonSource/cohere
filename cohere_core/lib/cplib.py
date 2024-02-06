@@ -222,6 +222,9 @@ class cplib(cohlib):
     def concatenate(tup, axis=0):
         return cp.concatenate(tup, axis)
 
+    def stack(tup):
+        return cp.stack(tup)
+
     def amin(arr):
         return cp.amin(arr)
 
