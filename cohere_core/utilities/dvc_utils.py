@@ -1,4 +1,5 @@
 import math
+import cmath
 import cohere_core.utilities.utils as ut
 
 _docformat__ = 'restructuredtext en'
@@ -87,14 +88,13 @@ def center_sync(image, support):
         shifted arrays
     """
     shape = image.shape
-    import numpy as np
 
     # set center phase to zero, use as a reference
     phi0 = math.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
                    image.flatten().real[int(image.flatten().shape[0] / 2)])
-    image = image * dvclib.exp(-1j * phi0)
+    image = image * cmath.exp(-1j * phi0)
 
-    com = dvclib.center_of_mass(dvclib.astype(support, dtype=np.int32))
+    com = dvclib.center_of_mass(dvclib.astype(support, dtype='int32'))
     # place center of mass in the center
     sft = [shape[i] / 2.0 - com[i] + .5  for i in range(len(shape))]
     image = dvclib.roll(image, sft)

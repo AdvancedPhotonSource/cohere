@@ -64,7 +64,11 @@ class torchlib(cohlib):
         return arr.dtype
 
     def astype(arr, dtype):
-        return arr.astype(dtype=dtype)
+        # this is kind of nasty, it does not understand 'int', so need to convert for the cases
+        # that will be used
+        if dtype == 'int32':
+            dtype = torch.int32
+        return arr.type(dtype=dtype)
 
     def size(arr):
         return torch.numel(arr)
@@ -213,27 +217,32 @@ class torchlib(cohlib):
         return torch.squeeze(arr)
 
     def gaussian(dims, sigma, **kwargs):
-        def gaussian1(dim, sigma):
+        def gaussian1(dim, sig):
             x = torch.arange(dim, device=torchlib.device) - dim // 2
             if dim % 2 == 0:
                 x = x + 0.5
-            gauss = torch.exp(-(x ** 2.0) / (2 * sigma ** 2))
+            gauss = torch.exp(-(x ** 2.0) / (2 * sig ** 2))
             return gauss / gauss.sum()
 
         if isinstance(sigma, int) or isinstance(sigma, float):
             sigma = [sigma] * len(dims)
-        if len(sigma) < len(dims):
-            print ('gaussian_filter: sigma should be float or a list with float for each dimension')
 
-        gaussian = gaussian1(dims[0], sigma[0])
-        for i in range(1, len(dims)):
-            gaussian = gaussian * gaussian1(dims[i], sigma[i])
+        last_axis = len(dims) - 1
+        last_dim = dims[-1]
+        gaussian = gaussian1(dims[last_axis], sigma[last_axis]).repeat(*dims[:-1], 1)
+        for i in range(int(len(dims)) - 1):
+            tdims = dims[:-1]
+            tdims[i] = last_dim
+            temp = gaussian1(dims[i], sigma[i])
+            temp = temp.repeat(*tdims, 1)
+            temp = torch.swapaxes(temp, i, last_axis)
+            gaussian *= temp
         return gaussian / gaussian.sum()
 
     def gaussian_filter(arr, sigma, **kwargs):
         # will not work on M1 until the fft fuctions are supported
-        dims = arr.size()
-        dist = torchlib.gaussian(dims, 1/sigma)
+        dims = list(arr.shape)
+        dist = torchlib.gaussian(dims, 1 / sigma)
         arr_f = torch.fft.ifftshift(torch.fft.fftn(torch.fft.ifftshift(arr)))
         filter = arr_f * dist
         filter = torch.fft.ifftshift(torch.fft.ifftn(torch.fft.ifftshift(filter)))
