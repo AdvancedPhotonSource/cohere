@@ -517,7 +517,37 @@ class Peak:
         print(f"Loading peak {self.hkl}")
 
         # Geometry parameters
-        self.g_vec = devlib.array(self.hkl) * 2*pi/geometry["lattice"]
+        try:
+            a, b, c, alpha, beta, gamma = geometry["lattice"]
+            alpha *= np.pi / 180
+            beta *= np.pi / 180
+            gamma *= np.pi / 180
+        except TypeError:
+            # If only a single value is given, assume a cubic lattice
+            a = b = c = geometry["lattice"]
+            alpha = beta = gamma = pi/2
+        # The next part gets a little messy, so I'm going to predefine some things:
+        cosa, cosb, sing, cosg = np.cos(alpha), np.cos(beta), np.sin(gamma), np.cos(gamma)
+
+        # Convert the (possibly nonorthogonal) basis into cartesian coordinates
+        # x1 is defined to be along the x-axis
+        x1 = (2*pi/a) * devlib.array([1, 0, 0])
+
+        # x2 is defined to be in the xy-plane
+        x2 = (2*pi/b) * devlib.array([cosg, sing, 0])
+
+        # x3 is defined by the following system of equations:
+        # x1.x3 = (2pi/a) * (2pi/c) * cos(beta)
+        # x2.x3 = (2pi/b) * (2pi/c) * cos(alpha)
+        # x3.x3 = (2pi/c)^2
+        # which can be solved to give:
+        x3 = (2*pi/c) * devlib.array([
+            cosb,
+            (cosa - cosb*cosg)/sing,
+            np.sqrt(2*cosa*cosb*cosg + sing**2 - cosa**2 - cosb**2)/sing
+        ])
+
+        self.g_vec = self.hkl[0]*x1 + self.hkl[1]*x2 + self.hkl[2]*x3
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
         self.size = geometry["final_size"]
         self.rs_lab_to_det = np.array(geometry["rmatrix"]) / geometry["rs_voxel_size"]
