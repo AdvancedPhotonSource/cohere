@@ -161,6 +161,7 @@ class Rec:
         self.saved_data = None
         self.er_iter = False  # Indicates whether the last iteration done was ER, used in CoupledRec
 
+
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         if device_id != -1:
@@ -268,20 +269,6 @@ class Rec:
             # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
 
             self.ds_image *= self.support_obj.get_support()
-        return 0
-
-
-    def breed1(self):
-        breed_mode = self.params['ga_breed_modes'][self.gen]
-        if breed_mode != 'none':
-            try:
-                self.ds_image = dvut.breed(breed_mode, self.alpha_dir, self.ds_image)
-                self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_sw_thresholds'][self.gen],
-                                                           self.params['ga_sw_gauss_sigmas'][self.gen])
-            except:
-                print('exception during breeding')
-                return -1
-
         return 0
 
 
