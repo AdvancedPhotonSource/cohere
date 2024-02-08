@@ -672,7 +672,7 @@ class CoupledRec(Rec):
             final_rec = devlib.stack((rho, u_x, u_y, u_z, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup))
         else:
             s_00 = devlib.zeros(sup.shape)
-            final_rec = devlib.stack((rho, u_x, u_y, s_00, s_00, s_00, s_00, s_00, s_00, sup))
+            final_rec = devlib.stack((rho, u_x, u_y, u_z, s_00, s_00, s_00, s_00, s_00, s_00, sup))
 
         devlib.save(save_dir + "/reconstruction", final_rec)
         devlib.save(save_dir + "/image", devlib.stack((rho, u_x, u_y, u_z)))
@@ -737,7 +737,7 @@ class CoupledRec(Rec):
             self.pk = i
             grad_phi.append(self.get_phase_gradient())
         grad_phi = devlib.array(grad_phi)
-        G = devlib.array([peak.g_vec[1:] for peak in self.peak_objs])
+        G = devlib.array([peak.g_vec for peak in self.peak_objs])
         grad_phi = devlib.moveaxis(devlib.moveaxis(grad_phi, 0, -1), 0, -1)
         cond = devlib.where(self.support_obj.get_support(), True, False)
         final_shape = (grad_phi.shape[0], grad_phi.shape[1], grad_phi.shape[2], 3, 3)
@@ -771,11 +771,13 @@ class CoupledRec(Rec):
 
         beta = self.proj_weight[self.iter]
         pk = self.peak_objs[self.pk]
+
         self.rho_image = (1-beta) * self.rho_image + beta * devlib.absolute(self.ds_image) * pk.norm
 
         old_u = (devlib.dot(self.u_image, pk.g_vec) / pk.gdotg)[:, :, :, None] * pk.g_vec
         new_u = (devlib.angle(self.ds_image) / pk.gdotg)[:, :, :, None] * pk.g_vec
         self.u_image = self.u_image + beta * (new_u - old_u)
+
         if self.er_iter:
             self.rho_image = self.rho_image * self.support_obj.support
             self.u_image = self.u_image * self.support_obj.support[:, :, :, None]
@@ -796,12 +798,15 @@ class CoupledRec(Rec):
         phi = devlib.dot(self.u_image, pk.g_vec)
         rho = self.rho_image / pk.norm
         img = devlib.absolute(devlib.ifft(rho * devlib.exp(1j * phi)))
+
         lin_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=False)
         nmi = devlib.calc_nmi(lin_hist).get()
         ehd = devlib.calc_ehd(lin_hist).get()
+
         log_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=True)
         lnmi = devlib.calc_nmi(log_hist).get()
         lehd = devlib.calc_ehd(log_hist).get()
+
         self.ctrl_error.append([nmi, lnmi, ehd, lehd])
 
     def progress_trigger(self):
@@ -817,11 +822,6 @@ class CoupledRec(Rec):
             prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
         print(prg)
 
-    # def shrink_wrap_trigger(self):
-    #     if self.proj_weight[self.iter] > 0.9:
-    #         args = (self.ds_image,)
-    #         self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
-    #
     def switch_resampling(self):
         self.fast_resample = False
 
