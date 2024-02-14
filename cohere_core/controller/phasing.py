@@ -813,6 +813,9 @@ class CoupledRec(Rec):
             self.u_image = self.u_image * self.support_obj.support[:, :, :, None]
             self.shift_to_center()
 
+        ctr = self.dims[0] / 2
+        self.u_image = self.u_image[:, :, :] - self.u_image[ctr, ctr, ctr]
+
     def to_working_image(self):
         pk = self.peak_objs[self.pk]
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec)) / pk.norm
