@@ -667,10 +667,9 @@ class CoupledRec(Rec):
         self.u_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1])
 
         # Define the multipeak projection weighting and tapering
-        coeff = self.params["mp_taper"] / (self.params["mp_taper"] - 1)
-        self.proj_weight = devlib.square(devlib.cos(devlib.linspace(coeff*1.57, 1.57, self.iter_no).clip(0, 2)))
-        self.proj_weight = self.proj_weight * self.params["mp_max_weight"]
-
+        self.proj_weight = devlib.array([self.params["mp_weight_init"] for _ in range(self.iter_no)])
+        for i, w in zip(self.params["mp_weight_trig"], self.params["mp_weight_vals"]):
+            self.proj_weight[i:] = w
         return 0
 
     def save_res(self, save_dir):
@@ -777,6 +776,60 @@ class CoupledRec(Rec):
         for i, j, k in tqdm.tqdm(ind):
             jacobian[i, j, k] = devlib.lstsq(G, grad_phi[i, j, k])[0]
         return jacobian
+
+    def iterate(self):
+        self.iter = -1
+        start_t = time.time()
+
+        half = self.dims[0] // 2
+        qtr = self.dims[0] // 4
+        if self.params["live_view"]:
+            fig, axs = plt.subplots(2, 3, figsize=(12, 9), sharex="all", sharey="all", layout="constrained")
+            plt.show(block=False)
+        try:
+            for f in self.flow:
+                f()
+                if f.__name__ == "next" and self.params["live_view"]:
+                    plt.suptitle(
+                        f"iteration: {self.iter}\n"
+                        f"peak: {self.peak_objs[self.pk].hkl}\n"
+                        f"beta: {self.proj_weight[self.iter]}"
+                    )
+                    for func, row in zip([devlib.absolute, devlib.angle], axs):
+                        for ax in row:
+                            ax.clear()
+                            ax.set_xticks(())
+                            ax.set_yticks(())
+                        row[0].set_ylabel(f"{func.__name__}")
+                        row[0].set_title("XY-plane")
+                        row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
+                        row[1].set_title("XZ-plane")
+                        row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
+                        row[2].set_title("YZ-plane")
+                        row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get())
+                    plt.draw()
+                    plt.pause(0.1)
+        except Exception as error:
+            print(error)
+            return -1
+
+        print('iterate took ', (time.time() - start_t), ' sec')
+
+        if self.params["live_view"]:
+            plt.show()
+
+        if devlib.hasnan(self.ds_image):
+            print('reconstruction resulted in NaN')
+            return -1
+
+        if self.aver is not None:
+            ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
+            self.ds_image *= ratio / self.aver_iter
+
+        mx = devlib.amax(devlib.absolute(self.ds_image))
+        self.ds_image = self.ds_image / mx
+
+        return 0
 
     def switch_peaks(self):
         self.to_shared_image()
