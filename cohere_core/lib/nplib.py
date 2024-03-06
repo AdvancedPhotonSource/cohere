@@ -78,8 +78,8 @@ class nplib(cohlib):
     def ifft(arr):
         return np.fft.ifftn(arr, norm='forward')
 
-    def fftconvolve(arr1, arr2):
-        return convolve(arr1, arr2)
+    def fftconvolve(arr1, kernel):
+        return convolve(arr1, kernel)
 
     def correlate(arr1, arr2, mode='same', method='auto'):
         return correlate(arr1, arr2, mode, method)

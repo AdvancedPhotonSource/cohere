@@ -136,19 +136,21 @@ class torchlib(cohlib):
         except Exception as e:
             print('not supported error: ' + repr(e))
 
-    def fftconvolve(arr1, arr2):
-        shape1 = arr1.size()
-        shape2 = arr2.size()
-        pad1 = tuple([d//2 for d in shape2 for _ in (0, 1)])
-        pad2 = tuple([d//2 for d in shape1 for _ in (0, 1)])
-        parr1 = torch.nn.functional.pad(arr1, pad1)
-        parr2 = torch.nn.functional.pad(arr2, pad2)
-        conv = torch.fft.ifftn(torch.fft.fftn(parr1) * torch.fft.fftn(parr2))
-
-        for i in range(len(shape2)):
-            splitted = torch.split(conv, [shape2[i] //2, shape1[i], shape2[i] //2], dim=i)
-            conv = splitted[1]
-        return conv
+    def fftconvolve(arr1, kernel):
+        print('not supported yet in torch, use different library')
+        raise
+        # # kernel shape can be smaller than arr1 shape in each dim
+        # sh1 = list(arr1.size())
+        # sh2 = list(kernel.size())
+        # if sh1 != sh2:
+        #     # the pad is added from last dim to first
+        #     sh1.reverse()
+        #     sh2.reverse()
+        #     pad = [((sh1[i]-sh2[i])//2, sh1[i] - sh2[i] - (sh1[i]-sh2[i])//2) for i in range(len(sh1))]
+        #     pad = tuple(sum(pad, ()))
+        #     kernel = torch.nn.functional.pad(kernel, pad)
+        # conv = torch.fft.ifftn(torch.fft.fftn(arr1) * torch.fft.fftn(kernel))
+        # return conv
 
     def where(cond, x, y):
         return torch.where(cond, x, y)

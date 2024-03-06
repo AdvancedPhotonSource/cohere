@@ -78,9 +78,9 @@ class cplib(cohlib):
     def ifft(arr, norm='forward'):
         return cp.fft.ifftn(arr, norm=norm)
 
-    def fftconvolve(arr1, arr2):
-        return sc.convolve(arr1, arr2)
-        # return cupyx.scipy.signal.convolve(arr1, arr2, mode='same')
+    def fftconvolve(arr1, kernel):
+        from cupyx.scipy import signal
+        return signal.fftconvolve(arr1, kernel, mode='same')
 
     def correlate(arr1, arr2, mode='same', method='fft'):
         from cupyx.scipy.signal import correlate
