@@ -163,14 +163,15 @@ class Feature(ABC):
         :param params: configuration parameters
         :return:
         """
-        if self.key in sub_rows_trigs.keys():
-            row = sub_rows_trigs[self.key][0]
-            sub_trigs = sub_rows_trigs[self.key][1]
+        if self.trig_name in sub_rows_trigs.keys():
+            row = sub_rows_trigs[self.trig_name][0]
+            sub_trigs = sub_rows_trigs[self.trig_name][1]
             sub_objs = {}
             for sub_t in sub_trigs:
                 (beg, end, idx) = sub_t
                 index = int(idx)
-                sub_objs[index] = self.create_obj(params, index=index, beg=beg, end=end)
+                if index not in sub_objs.keys():
+                    sub_objs[index] = self.create_obj(params, index=index, beg=beg, end=end)
             trigs = [i-1 for i in row.tolist() if i != 0]
             # the operation of creating object might fail
             # if conditions are not met, ex: the sw_type is not supported
@@ -185,7 +186,6 @@ class Feature(ABC):
 
 class ShrinkWrap(Feature):
     def __init__(self, params, sub_rows_trigs):
-        self.key = 'SW'
         self.trig_name = 'shrink_wrap_trigger'
         super().__init__(sub_rows_trigs, params)
 
@@ -195,7 +195,6 @@ class ShrinkWrap(Feature):
             self.threshold = threshold
 
         def apply_trigger(self, *args):
-#            print('shrink wrap, sigma', self.gauss_sigma)
             ds_image = args[0]
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
@@ -234,7 +233,6 @@ class ShrinkWrap(Feature):
 
 class PhaseMod(Feature):
     def __init__(self, params, sub_rows_trigs):
-        self.key = 'PHM'
         self.trig_name = 'phm_trigger'
         super().__init__(sub_rows_trigs, params)
 
@@ -244,7 +242,6 @@ class PhaseMod(Feature):
             self.phm_phase_max = phm_phase_max
 
         def apply_trigger(self, *args):
-#            print('phm trig, phase min', self.phm_phase_min)
             ds_image = args[0]
             phase = devlib.angle(ds_image)
             return (phase > self.phm_phase_min) & (phase < self.phm_phase_max)
@@ -274,7 +271,6 @@ class PhaseMod(Feature):
 
 class LowPassFilter(Feature):
     def __init__(self, params, sub_rows_trigs):
-        self.key = 'LPF'
         self.trig_name = 'lowpass_filter_trigger'
         super().__init__(sub_rows_trigs, params)
 
@@ -293,7 +289,6 @@ class LowPassFilter(Feature):
             iter = args[1]
             ds_image = args[2]
             filter_sigma = self.filter_sigmas[iter - self.iter_offset]
- #           print('in apply_low_filter, filter_sigma', filter_sigma)
             return (devlib.gaussian_filter(data, filter_sigma), dvut.shrink_wrap(ds_image, self.threshold, 1/filter_sigma))
 
 

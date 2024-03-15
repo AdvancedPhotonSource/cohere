@@ -116,23 +116,23 @@ class Rec:
     __all__ = []
     def __init__(self, params, data_file):
         self.iter_functions = [self.next,
-                          self.lowpass_filter_trigger,
-                          self.reset_resolution,
-                          self.shrink_wrap_trigger,
-                          self.phm_trigger,
-                          self.to_reciprocal_space,
-                          self.new_func_trigger,
-                          self.pc_trigger,
-                          self.pc_modulus,
-                          self.modulus,
-                          self.set_prev_pc_trigger,
-                          self.to_direct_space,
-                          self.er,
-                          self.hio,
-                          self.new_alg,
-                          self.twin_trigger,
-                          self.average_trigger,
-                          self.progress_trigger]
+                               self.lowpass_filter_operation,
+                               self.reset_resolution,
+                               self.shrink_wrap_operation,
+                               self.phm_operation,
+                               self.to_reciprocal_space,
+                               self.new_func_operation,
+                               self.pc_operation,
+                               self.pc_modulus,
+                               self.modulus,
+                               self.set_prev_pc,
+                               self.to_direct_space,
+                               self.er,
+                               self.hio,
+                               self.new_alg,
+                               self.twin_operation,
+                               self.average_operation,
+                               self.progress_operation]
 
         if 'init_guess' not in params:
             params['init_guess'] = 'random'
@@ -220,9 +220,17 @@ class Rec:
             self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
             first_run = False
 
+        # When running GA the lowpass filter, phm, and twin triggers should be active only during first
+        # generation. The code below inactivates the triggers in subsequent generations.
+        # This will be removed in the future when each generation will have own configuration.
+        if not first_run:
+            self.params.pop('lowpass_filter_trigger', None)
+            self.params.pop('phm_trigger', None)
+            self.params.pop('twin_trigger', None)
+
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
-        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
+        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen)
         if flow is None:
             return -1
 
@@ -230,7 +238,7 @@ class Rec:
         (op_no, self.iter_no) = flow.shape
         for i in range(self.iter_no):
             for j in range(op_no):
-                if flow[j, i] == 1:
+                if flow[j, i] > 0:
                     self.flow.append(self.iter_functions[j])
 
         self.aver = None
@@ -352,29 +360,29 @@ class Rec:
     def next(self):
         self.iter = self.iter + 1
 
-    def lowpass_filter_trigger(self):
+    def lowpass_filter_operation(self):
         args = (self.data, self.iter, self.ds_image)
         (self.iter_data, self.support_obj.support) = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
 
-    def shrink_wrap_trigger(self):
+    def shrink_wrap_operation(self):
         args = (self.ds_image,)
         self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
 
-    def phm_trigger(self):
+    def phm_operation(self):
         args = (self.ds_image,)
         self.support_obj.support *= self.phm_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
 
-    def new_func_trigger(self):
+    def new_func_operation(self):
         self.params['new_param'] = 1
         print(f'in new_func_trigger, new_param {self.params["new_param"]}')
 
-    def pc_trigger(self):
+    def pc_operation(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
 
     def pc_modulus(self):
@@ -393,7 +401,7 @@ class Rec:
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
-    def set_prev_pc_trigger(self):
+    def set_prev_pc(self):
         self.pc_obj.set_previous(devlib.absolute(self.rs_amplitudes))
 
     def to_direct_space(self):
@@ -412,7 +420,7 @@ class Rec:
     def new_alg(self):
         self.ds_image = 2.0 * (self.ds_image_raw * self.support_obj.get_support()) - self.ds_image_raw
 
-    def twin_trigger(self):
+    def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
         # com = devlib.center_of_mass(devlib.absolute(self.ds_image))
         # sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
@@ -429,7 +437,7 @@ class Rec:
         else:
             self.ds_image[:, : half_y, :] = 0
 
-    def average_trigger(self):
+    def average_operation(self):
         if self.aver is None:
             self.aver = devlib.to_numpy(devlib.absolute(self.ds_image))
             self.aver_iter = 1
@@ -437,7 +445,7 @@ class Rec:
             self.aver = self.aver + devlib.to_numpy(devlib.absolute(self.ds_image))
             self.aver_iter += 1
 
-    def progress_trigger(self):
+    def progress_operation(self):
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def get_ratio(self, divident, divisor):
@@ -556,7 +564,7 @@ class CoupledRec(Rec):
     def __init__(self, params, peak_dirs):
         super().__init__(params, None)
 
-        self.iter_functions = self.iter_functions + [self.switch_resampling, self.switch_peaks]
+        self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peaks_operation]
 
         if "switch_peak_trigger" not in self.params:
             self.params["switch_peak_trigger"] = [0, 5]
@@ -731,7 +739,7 @@ class CoupledRec(Rec):
             jacobian[i, j, k] = devlib.lstsq(G, grad_phi[i, j, k])[0]
         return jacobian
 
-    def switch_peaks(self):
+    def switch_peaks_operation(self):
         self.to_shared_image()
         self.get_control_error()
         self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
@@ -787,7 +795,7 @@ class CoupledRec(Rec):
         lehd = devlib.calc_ehd(log_hist).get()
         self.ctrl_error.append([nmi, lnmi, ehd, lehd])
 
-    def progress_trigger(self):
+    def progress_operation(self):
         ornt = self.peak_objs[self.pk].hkl
         prg = f'|  iter {self.iter:>4}  ' \
               f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
@@ -800,12 +808,7 @@ class CoupledRec(Rec):
             prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
         print(prg)
 
-    # def shrink_wrap_trigger(self):
-    #     if self.proj_weight[self.iter] > 0.9:
-    #         args = (self.ds_image,)
-    #         self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
-    #
-    def switch_resampling(self):
+    def switch_resampling_operation(self):
         self.fast_resample = False
 
     def get_density(self):

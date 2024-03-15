@@ -354,7 +354,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         prev_dirs = current_dirs
 
         # compare current alpha and previous. If previous is better, set it as alpha.
-        # no need toset alpha  for last generation
+        # no need to set alpha  for last generation
         if (g == 0
                 or
                 best_metrics[metric_type] >= alpha_metrics[metric_type] and
