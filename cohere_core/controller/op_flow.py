@@ -192,6 +192,9 @@ def fill_sub_trigger_row(sub_iters, sub_trigs, iter_no, last_trig):
     for (b, e, idx) in sub_iters:
         index = int(idx)
         sub_trig_idx_row[b:e] = index + 1
+        if len(sub_trigs) - 1 < index:
+            print('not enough entries in sub-trigger')
+            raise
         trigger = sub_trigs[index].copy()
         trigger[0] += b
         if len(trigger) == 2:
