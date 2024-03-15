@@ -449,8 +449,9 @@ class Rec:
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def get_ratio(self, divident, divisor):
-        divisor = devlib.where((divisor != 0.0), divisor, 1.0)
-        ratio = divident / divisor
+        # divisor = devlib.where((divisor != 0.0), divisor, 1.0)
+        # ratio = divident / divisor
+        ratio = devlib.where((divisor > 1e-9), divident / divisor, 1.0)
         return ratio
 
 
