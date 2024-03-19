@@ -203,13 +203,23 @@ class Rec:
 
 
     def init(self, dir=None, alpha_dir=None, gen=None):
-        def create_feat_objects(params, feats):
+        def create_feat_objects(params, trig_op_info):
             if 'shrink_wrap_trigger' in params:
-                self.shrink_wrap_obj = ft.ShrinkWrap(params, feats)
+                self.shrink_wrap_obj = ft.create('shrink_wrap', params, trig_op_info)
+                if self.shrink_wrap_obj is None:
+                    print('failed to create shrink wrap object')
+                    return False
             if 'phm_trigger' in params:
-                self.phm_obj = ft.PhaseMod(params, feats)
+                self.phm_obj = ft.create('phm_phase', params, trig_op_info)
+                if self.phm_obj is None:
+                    print('failed to create phase mod object')
+                    return False
             if 'lowpass_filter_trigger' in params:
-                self.lowpass_filter_obj = ft.LowPassFilter(params, feats)
+                self.lowpass_filter_obj = ft.LowPassFilter('lowpass_filter', params, trig_op_info)
+                if self.lowpass_filter_obj is None:
+                    print('failed to create lowpass filter object')
+                    return False
+            return True
 
         if self.ds_image is not None:
             first_run = False
@@ -251,7 +261,9 @@ class Rec:
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
         # create the object even if the feature inactive, it will be empty
-        create_feat_objects(self.params, feats)
+        # If successful, it will return True, otherwise False
+        if not create_feat_objects(self.params, feats):
+            return -1
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -309,11 +321,11 @@ class Rec:
             print(error)
             return -1
 
-        print('iterate took ', (time.time() - start_t), ' sec')
-
         if devlib.hasnan(self.ds_image):
             print('reconstruction resulted in NaN')
             return -1
+
+        print('iterate took ', (time.time() - start_t), ' sec')
 
         if self.aver is not None:
             ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
@@ -449,9 +461,7 @@ class Rec:
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def get_ratio(self, divident, divisor):
-        # divisor = devlib.where((divisor != 0.0), divisor, 1.0)
-        # ratio = divident / divisor
-        ratio = devlib.where((divisor > 1e-9), divident / divisor, 1.0)
+        ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
         return ratio
 
 

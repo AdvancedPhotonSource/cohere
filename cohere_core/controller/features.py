@@ -6,7 +6,7 @@ __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['Pcdi',
-           'Feature',
+           'TriggeredOp',
            'ShrinkWrap',
            'PhaseMod',
            'LowPassFilter']
@@ -89,12 +89,12 @@ class Pcdi:
         self.kernel = devlib.absolute(self.kernel) / coh_sum
 
 
-class Feature(ABC):
+class TriggeredOp(ABC):
     """
-    Base class for features. This class creates feature objects and manages the trigger or subtrigger depending on
+    Base class for Triggered operation. This class creates feature objects and manages the trigger or subtrigger depending on
     configuration.
     """
-    def __init__(self, sub_rows_trigs, params):
+    def __init__(self, trig_op_name):
         # the self.objs will hold either one concrete feature object if configuration is for general trigger,
         # i.e. spanning across all iterations,
         # or it will hold a list of objects, each being a concrete sub-feature, appearing in order that will be
@@ -105,10 +105,8 @@ class Feature(ABC):
         # or to self.apply_trigger_seq if sub-triggers are configured
         self.f = None
 
-        # this function sets self.objs and self.f and creates all objects
-        self.create_objs(sub_rows_trigs, params)
+        self.trig_op_name = trig_op_name  # ex: 'shrink_wrap_trigger'
 
-        self.trig_name = None  # ex: 'shrink_wrap_trigger'
 
     def apply_trigger_obj(self, *args):
         """
@@ -150,7 +148,7 @@ class Feature(ABC):
         """
         pass
 
-    def create_objs(self, sub_rows_trigs, params):
+    def create_objs(self, params, sub_rows_trigs):
         """
         The params map contains value of the feature trigger. If the trigger is configured as a general one,
         i.e. a single trigger, the self.objs is set to the created instance of the feature, and the self.f
@@ -163,9 +161,10 @@ class Feature(ABC):
         :param params: configuration parameters
         :return:
         """
-        if self.trig_name in sub_rows_trigs.keys():
-            row = sub_rows_trigs[self.trig_name][0]
-            sub_trigs = sub_rows_trigs[self.trig_name][1]
+        trigger_name = f'{self.trig_op_name}_trigger'
+        if trigger_name in sub_rows_trigs.keys():
+            row = sub_rows_trigs[trigger_name][0]
+            sub_trigs = sub_rows_trigs[trigger_name][1]
             sub_objs = {}
             for sub_t in sub_trigs:
                 (beg, end, idx) = sub_t
@@ -179,15 +178,14 @@ class Feature(ABC):
             self.objs = [sub_objs[idx] for idx in trigs]
             self.f = self.apply_trigger_seq
         else:
-            if self.trig_name in params:
+            if trigger_name in params:
                 self.objs = self.create_obj(params)
                 self.f = self.apply_trigger_obj
 
 
-class ShrinkWrap(Feature):
-    def __init__(self, params, sub_rows_trigs):
-        self.trig_name = 'shrink_wrap_trigger'
-        super().__init__(sub_rows_trigs, params)
+class ShrinkWrap(TriggeredOp):
+    def __init__(self, trig_op):
+        super().__init__(trig_op)
 
     class GaussSW:
         def __init__(self, gauss_sigma, threshold):
@@ -239,10 +237,9 @@ class ShrinkWrap(Feature):
         return self.GaussSW(sigma, threshold)
 
 
-class PhaseMod(Feature):
-    def __init__(self, params, sub_rows_trigs):
-        self.trig_name = 'phm_trigger'
-        super().__init__(sub_rows_trigs, params)
+class PhaseMod(TriggeredOp):
+    def __init__(self, trig_op):
+        super().__init__(trig_op)
 
     class PhasePHM:
         def __init__(self, phm_phase_min, phm_phase_max):
@@ -277,10 +274,9 @@ class PhaseMod(Feature):
         return self.PhasePHM(phase_min, phase_max)
 
 
-class LowPassFilter(Feature):
-    def __init__(self, params, sub_rows_trigs):
-        self.trig_name = 'lowpass_filter_trigger'
-        super().__init__(sub_rows_trigs, params)
+class LowPassFilter(TriggeredOp):
+    def __init__(self, trig_op):
+        super().__init__(trig_op)
 
     class Filter:
         def __init__(self, filter_range, iter_range, threshold):
@@ -327,5 +323,22 @@ class LowPassFilter(Feature):
         if len(filter_range) == 1:
             filter_range.append(1.0)
         return self.Filter(filter_range, iter_range, threshold)
+
+def create(trig_op, params, trig_op_info):
+    if trig_op == 'shrink_wrap':
+        to = ShrinkWrap(trig_op)
+    if trig_op == 'phm_phase':
+        to = PhaseMod(trig_op)
+    if trig_op == 'lowpass_filter':
+        to = LowPassFilter(trig_op)
+
+    # this function sets self.objs and self.f and creates all objects
+    try:
+        to.create_objs(params, trig_op_info)
+        return to
+    except:
+        return None
+
+
 
 

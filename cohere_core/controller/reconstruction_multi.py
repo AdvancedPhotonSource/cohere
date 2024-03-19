@@ -109,22 +109,23 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     worker = calc.Rec(pars, datafile)
     ret = worker.init_dev(devices[rank])
     if ret < 0:
+        print(f'rank {rank} failed initializing device {devices[rank]}')
         return
 
     ret = worker.init(prev_dir)
     if ret < 0:
+        print(f'rank {rank} failed, reconstruction failed, check algorithm sequence and triggers in configuration')
         return
 
     ret = worker.iterate()
     if ret < 0:
+        print(f'reconstruction for rank {rank} failed during iterations')
         return
 
     save_sub = ut.join(save_dir, str(rank))
     if not os.path.isdir(save_sub):
         os.mkdir(save_sub)
     worker.save_res(save_sub)
-
-    print('done multi-reconstruction')
 
 
 def main():

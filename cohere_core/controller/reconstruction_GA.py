@@ -171,11 +171,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         tracing.set_map(tracing_map)
 
     active = True
+    success = True
     for g in range(pars['ga_generations']):
         was_active = active
         if g == 0:
             ret = worker.init_dev(devices[rank])
             if ret < 0:
+                print(f'rank {rank} failed initializing device {devices[rank]}')
                 active = False
             if active:
                 if pars['init_guess'] == 'AI_guess' and rank == 0:
@@ -189,11 +191,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 else:
                     ret = worker.init(None, alpha_dir, g)
                 if ret < 0:
-                    active = False
+                    print('failed init, check config')
+                    break
         else:
             if active:
                 ret = worker.init(None, alpha_dir, g)
                 if ret < 0:
+                    print(f'rank {rank} reconstruction failed, check algorithm sequence and triggers in configuration')
                     active = False
 
             if active:
@@ -207,6 +211,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         if active:
             ret = worker.iterate()
             if ret < 0:
+                print(f'reconstruction for rank {rank} failed during iterations')
                 active = False
 
         if active:
@@ -291,10 +296,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         comm.Barrier()
 
-    if rank == 0:
+    if rank == 0 and success:
         tracing.save(save_dir)
-
-    print('finished GA')
 
 
 def main():

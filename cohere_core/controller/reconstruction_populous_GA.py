@@ -84,10 +84,14 @@ def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
     worker, prev_dir, save_dir = rec_attrs
     thr = threading.current_thread()
     if worker.init_dev(thr.gpu) < 0:
+        print(f'reconstruction failed, device not initialized to {thr.gpu}')
         metric = None
     else:
         ret_code = worker.init(prev_dir, alpha_dir, gen)
-        if ret_code == 0:
+        if ret_code < 0:
+            print('reconstruction failed, check algorithm sequence and triggers in configuration')
+            metric = None
+        else:
             if gen is not None and gen > 0:
                 worker.breed()
 
@@ -95,8 +99,9 @@ def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
             if ret_code == 0:
                 worker.save_res(save_dir)
                 metric = worker.get_metric(metric_type)
-        if ret_code < 0:    # bad reconstruction
-            metric = None
+            else:    # bad reconstruction
+                print('reconstruction failed during iterations')
+                metric = None
 
     return [metric, save_dir]
 
@@ -165,7 +170,10 @@ def multi_rec(save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type
         pool.terminate()
 
     if q is not None:
-        q.put(results[0])
+        if len(results) == 0:
+            q.put('failed')
+        else:
+            q.put(results[0])
 
 
 def order_dirs(tracing, dirs, evals, metric_type):
@@ -338,6 +346,10 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         p.join()
 
         results = q.get()
+        if results == 'failed':
+            print('reconstruction failed')
+            return
+
         evals = []
         temp_dirs = []
         for r in results:

@@ -47,14 +47,21 @@ def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
     else:
         device = dev[0]
     if worker.init_dev(device) < 0:
+        print (f'reconstruction failed, device not initialized to {device}')
         return
 
     ret_code = worker.init(continue_dir)
     if ret_code < 0:
+        print ('reconstruction failed, check algorithm sequence and triggers in configuration')
         return
+
     ret_code = worker.iterate()
-    if ret_code == 0:
-        worker.save_res(save_dir)
+    if ret_code < 0:
+        print ('reconstruction failed during iterations')
+        return
+
+    worker.save_res(save_dir)
+    return
 
 
 def reconstruction(lib, conf_file, datafile, dir, dev=None):
