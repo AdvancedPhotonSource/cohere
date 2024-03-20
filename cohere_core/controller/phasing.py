@@ -215,7 +215,7 @@ class Rec:
                     print('failed to create phase mod object')
                     return False
             if 'lowpass_filter_trigger' in params:
-                self.lowpass_filter_obj = ft.LowPassFilter('lowpass_filter', params, trig_op_info)
+                self.lowpass_filter_obj = ft.create('lowpass_filter', params, trig_op_info)
                 if self.lowpass_filter_obj is None:
                     print('failed to create lowpass filter object')
                     return False

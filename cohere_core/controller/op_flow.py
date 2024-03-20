@@ -19,8 +19,7 @@ sub_triggers = {'SW' : 'shrink_wrap_trigger',
 # This list contains triggers that will be active at the last iteration defined by trigger, despite
 # not being a trigger calculated by the step formula.
 # It applies to sub-triggers, setting the last iteration to that of sub-trigger.
-last_iter_op_triggers = ['lowpass_filter_trigger',
-                         'progress_trigger',
+last_iter_op_triggers = ['progress_trigger',
                          'switch_peaks_trigger',
                          'switch_resampling_trigger']
 
@@ -232,6 +231,25 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
 
     # do some checks to find if the sequence and configuration are runnable
     # and special cases
+
+    # this array is a mask blocking shrink wrap when low pass filter is active
+    apply_sw_row = np.ones(iter_no, dtype=int)
+    last_lpf = None
+    if 'lowpass_filter_trigger' in params:
+        if 'lowpass_filter_trigger' in sub_iters:
+            for b, e, i in sub_iters['lowpass_filter_trigger']:
+                apply_sw_row[b:e] = 0
+                last_lpf = e
+        elif len(params['lowpass_filter_trigger']) < 2:
+            print('Low pass trigger misconfiguration error. This trigger should have upper bound.')
+            raise
+        elif params['lowpass_filter_trigger'][2] >= iter_no:
+            print('Low pass trigger misconfiguration error. The upper bound should be less than total iterations.')
+            raise
+        else:
+            apply_sw_row[params['lowpass_filter_trigger'][0]:params['lowpass_filter_trigger'][2]] = 0
+            last_lpf = params['lowpass_filter_trigger'][2]
+
     if pc_start is not None:
         if pc_start == 0:
             print('partial coherence is configured in first iteration, allow several ER before')
@@ -242,7 +260,6 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
 
     # initialize
     sub_trig_op = {}
-    last_lpf = None
 
     # create empty array with the size of number of all functions by number of all iterations
     flow_arr = np.zeros((len(flow_items_list), iter_no), dtype=int)
@@ -275,19 +292,15 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
                     flow_arr[i] = fill_trigger_row(params[trigger_name], iter_no, last_trig)
 
                 # handle special cases
-                if flow_item == 'lowpass_filter_operation':
-                    last_lpf = np.max(np.nonzero(flow_arr[i]))
-                    if last_lpf == iter_no - 1:
-                        print('misconfiguration warning: the low-pass filter typically is configured for the first half of iterations. It is running in all iterations.')
-                if flow_item == 'shrink_wrap_operation' and last_lpf is not None:
+                if flow_item == 'shrink_wrap_operation':
                     # shrink wrap is blocked by low pass filter
-                    flow_arr[i][:last_lpf + 1] = 0
+                    flow_arr[i] = flow_arr[i] * apply_sw_row
         elif flow_item == 'set_prev_pc' and pc_start is not None:
             # set_prev_pc is executed one iteration before pc_trigger
             pc_row = flow_items_list.index('pc_operation')
             flow_arr[i, : -1] = flow_arr[pc_row, 1:]
         elif flow_item == 'reset_resolution' and last_lpf is not None:
             # reset low pass filter (i.e. data set to original) after the last LPF operation
-            flow_arr[i][last_lpf+1] = 1
+            flow_arr[i][last_lpf] = 1
 
     return pc_start is not None, flow_arr, sub_trig_op
