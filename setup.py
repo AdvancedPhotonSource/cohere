@@ -11,6 +11,7 @@ setuptools.setup(
                         'scikit-learn',
                         'tifffile',
                         'tensorflow',
+                        'tqdm'
                         ],
       classifiers=[
             'Intended Audience :: Science/Research',
