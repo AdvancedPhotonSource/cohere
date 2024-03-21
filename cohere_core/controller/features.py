@@ -197,6 +197,16 @@ class ShrinkWrap(TriggeredOp):
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
 
+    class Gauss1SW:
+        def __init__(self, gauss_sigma, threshold):
+            self.gauss_sigma = gauss_sigma
+            self.threshold = threshold
+
+        def apply_trigger(self, *args):
+            ds_image = args[0]
+            return dvut.shrink_wrap(ds_image, self.threshold + .01, self.gauss_sigma)
+
+
     def create_obj(self, params, index=None, beg=None, end=None):
         if 'shrink_wrap_type' not in params:
             print('shrink_wrap_type parameter not defined')
@@ -214,6 +224,11 @@ class ShrinkWrap(TriggeredOp):
             if sw_type == 'GAUSS':
                 sigma = params['shrink_wrap_gauss_sigma']
                 threshold = params['shrink_wrap_threshold']
+                return self.GaussSW(sigma, threshold)
+            elif sw_type == 'GAUSS1':
+                sigma = params['shrink_wrap_gauss_sigma']
+                threshold = params['shrink_wrap_threshold']
+                return self.Gauss1SW(sigma, threshold)
             else:
                 print(f'{sw_type} shrink wrap type is not supported')
                 raise
@@ -231,10 +246,21 @@ class ShrinkWrap(TriggeredOp):
                     print(f'shrink_wrap_threshold not defined for sub-trigger {index}')
                     raise
                 threshold = params['shrink_wrap_threshold'][index]
+                return self.GaussSW(sigma, threshold)
+            elif sw_type == 'GAUSS1':
+                if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
+                    print(f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}')
+                    raise
+                sigma = params['shrink_wrap_gauss_sigma'][index]
+                if len(params['shrink_wrap_threshold']) - 1 < index:
+                    print(f'shrink_wrap_threshold not defined for sub-trigger {index}')
+                    raise
+                threshold = params['shrink_wrap_threshold'][index]
+                return self.Gauss1SW(sigma, threshold)
             else:
                 print(f'{sw_type} shrink wrap type is not supported')
                 raise
-        return self.GaussSW(sigma, threshold)
+
 
 
 class PhaseMod(TriggeredOp):
