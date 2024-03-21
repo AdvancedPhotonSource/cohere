@@ -208,24 +208,37 @@ class ShrinkWrap(TriggeredOp):
 
 
     def create_obj(self, params, index=None, beg=None, end=None):
+        def check_Gauss_type():
+            # for now cohere supports only Gauss type, so the following parameters are mandatory
+            if 'shrink_wrap_gauss_sigma' not in params:
+                print('shrink_wrap_gauss_sigma parameter not defined')
+                raise
+            if 'shrink_wrap_threshold' not in params:
+                print('shrink_wrap_threshold parameter not defined')
+                raise
+
+        def check_Gauss1_type():
+            # for now cohere supports only Gauss type, so the following parameters are mandatory
+            if 'shrink_wrap_gauss_sigma' not in params:
+                print('shrink_wrap_gauss_sigma parameter not defined')
+                raise
+            if 'shrink_wrap_threshold' not in params:
+                print('shrink_wrap_threshold parameter not defined')
+                raise
+
         if 'shrink_wrap_type' not in params:
             print('shrink_wrap_type parameter not defined')
-            raise
-        # for now cohere supports only Gauss type, so the following parameters are mandatory
-        if 'shrink_wrap_gauss_sigma' not in params:
-            print('shrink_wrap_gauss_sigma parameter not defined')
-            raise
-        if 'shrink_wrap_threshold' not in params:
-            print('shrink_wrap_threshold parameter not defined')
             raise
 
         if index is None:
             sw_type = params['shrink_wrap_type']
             if sw_type == 'GAUSS':
+                check_Gauss_type()
                 sigma = params['shrink_wrap_gauss_sigma']
                 threshold = params['shrink_wrap_threshold']
                 return self.GaussSW(sigma, threshold)
             elif sw_type == 'GAUSS1':
+                check_Gauss1_type()
                 sigma = params['shrink_wrap_gauss_sigma']
                 threshold = params['shrink_wrap_threshold']
                 return self.Gauss1SW(sigma, threshold)
@@ -238,6 +251,7 @@ class ShrinkWrap(TriggeredOp):
                 raise
             sw_type = params['shrink_wrap_type'][index]
             if sw_type == 'GAUSS':
+                check_Gauss_type()
                 if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
                     print(f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}')
                     raise
@@ -248,6 +262,7 @@ class ShrinkWrap(TriggeredOp):
                 threshold = params['shrink_wrap_threshold'][index]
                 return self.GaussSW(sigma, threshold)
             elif sw_type == 'GAUSS1':
+                check_Gauss1_type()
                 if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
                     print(f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}')
                     raise
