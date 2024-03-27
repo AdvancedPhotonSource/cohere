@@ -1,12 +1,13 @@
 import numpy as np
 import re
 
-# This dict maps the mnemonics used in algorithm sequence with algorithms.
-algs = {'ER': ('er', 'modulus'),
-        'HIO': ('hio', 'modulus'),
-        'ERpc': ('er', 'pc_modulus'),
-        'HIOpc': ('hio', 'pc_modulus'),
-        'SF' : ('new_alg', 'pc_modulus'),
+# This dict maps the mnemonic used when defining algorithm sequence parameter to the four steps of
+# phase retrieval algorithm functions.
+
+algs = {'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er'),
+        'HIO': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'hio'),
+        'ERpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'er'),
+        'HIOpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'hio'),
         }
 
 # This map keeps the names of triggers that can be configured as sub-trigger, i.e. be a trigger for the iteration span
@@ -124,7 +125,7 @@ def get_alg_rows(s, pc_conf_start):
                     sub_rows[sub_t] = []
                 sub_rows[sub_t].append((entry[2], entry[0] + entry[2], idx))
         i += repeat
-
+    print('alg rows', alg_rows)
     return alg_rows, sub_rows, iter_no, pc_start
 
 
@@ -266,8 +267,8 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
 
     # fill the flow array with ones if function should execute in iteration
     for i, flow_item in enumerate(flow_items_list):
-        if flow_item == 'next' or flow_item == 'to_reciprocal_space' or flow_item == 'to_direct_space':
-            # these functions are executed in each iteration
+        if flow_item == 'next':
+        # these functions are executed in each iteration
             flow_arr[i, :] = 1
         elif flow_item in alg_rows.keys():
             # fill out the algorithm rows
