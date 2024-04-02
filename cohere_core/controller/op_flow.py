@@ -125,7 +125,7 @@ def get_alg_rows(s, pc_conf_start):
                     sub_rows[sub_t] = []
                 sub_rows[sub_t].append((entry[2], entry[0] + entry[2], idx))
         i += repeat
-    print('alg rows', alg_rows)
+
     return alg_rows, sub_rows, iter_no, pc_start
 
 

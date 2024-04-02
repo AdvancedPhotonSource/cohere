@@ -29,7 +29,7 @@ def main():
     # The result available is a dictionary with key, value pars of GPU ID, number pf available jobs
     available = ut.get_avail_gpu_runs(devs[use_host_name], run_size)
     # the printed hostname and available devices will be received through pipe object by calling code
-    print(use_host_name, str(available))
+    print([use_host_name, available])
 
 
 if __name__ == "__main__":

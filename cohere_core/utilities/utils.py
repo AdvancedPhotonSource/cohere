@@ -779,15 +779,13 @@ def get_avail_hosts_gpu_runs(devices, run_mem):
     :return:
     """
     hosts = ','.join(devices.keys())
-    script = '/host_utils.py'
-    script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
+    script = join(os.path.realpath(os.path.dirname(__file__)), 'host_utils.py')
     command = ['mpiexec', '-n', str(len(devices)), '--host', hosts, 'python', script, str(devices), str(run_mem)]
-    result = subprocess.run(command, stdout=subprocess.PIPE)
-    mem = result.stdout.decode("utf-8").strip()
+    result = subprocess.run(command, stdout=subprocess.PIPE, text=True).stdout
     mem_map = {}
-    for line in mem.splitlines():
-        entry = line.split(" ", 1)
-        mem_map[entry[0]] = ast.literal_eval(entry[1])
+    for entry in result.splitlines():
+        host_devs = ast.literal_eval(entry)
+        mem_map[host_devs[0]] = host_devs[1]
     return mem_map
 
 
@@ -912,7 +910,7 @@ def get_gpu_use(devices, no_jobs, job_size):
         host_file = open(hostfile_name, mode='w+')
         linesep = os.linesep
         for h, ds in hosts_picked_devs:
-            host_file.write(f'{h}: {str(len(ds))}{linesep}')
+            host_file.write(f'{h}:{str(len(ds))}{linesep}')
             picked_devs.append(ds)
         host_file.close()
 
