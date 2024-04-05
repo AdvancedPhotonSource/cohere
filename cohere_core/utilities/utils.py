@@ -850,7 +850,7 @@ def get_balanced_load(avail_runs, runs):
     return load, runs
 
 
-def get_gpu_use(devices, no_jobs, job_size, hostfile_name=None):
+def get_gpu_use(devices, no_jobs, job_size):
     """
     Determines available GPUs that match configured devices, and selects the optimal distribution of jobs on available devices. If devices is configured as dict (i.e. cluster configuration) then a file "hosts" is created in the running directory. This file contains hosts names and number of jobs to run on that host.
     Parameters
@@ -879,11 +879,11 @@ def get_gpu_use(devices, no_jobs, job_size, hostfile_name=None):
         return picked_devs
 
     if type(devices) != dict:  # a configuration for local host
+        hostfile_name = None
         avail_jobs = get_avail_gpu_runs(devices, job_size)
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
         picked_devs = unpack_load(balanced_load)
     else:  # cluster configuration
-        cluster_conf = True
         hosts_avail_jobs = get_avail_hosts_gpu_runs(devices, job_size)
         avail_jobs = {}
         # collapse the host dict into one dict by adding hostname in front of key (gpu id)
@@ -905,6 +905,7 @@ def get_gpu_use(devices, no_jobs, job_size, hostfile_name=None):
         hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
 
         picked_devs = []
+        hostfile_name = f'hostfile_{os.getpid()}'
         host_file = open(hostfile_name, mode='w+')
         linesep = os.linesep
         for h, ds in hosts_picked_devs:
@@ -912,7 +913,7 @@ def get_gpu_use(devices, no_jobs, job_size, hostfile_name=None):
             picked_devs.append(ds)
         host_file.close()
 
-    return picked_devs, min(avail_jobs_no, no_jobs)
+    return picked_devs, min(avail_jobs_no, no_jobs), hostfile_name
 
 
 def arr_property(arr):
