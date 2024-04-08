@@ -38,7 +38,6 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['set_lib',
            'get_norm',
            'reconstruction',
-           'Support',
            'Breeder',
            'Rec']
 
@@ -54,37 +53,6 @@ def get_norm(arr):
     return devlib.sum(devlib.square(devlib.absolute(arr)))
 
 
-class Support:
-    """
-    Support class is a state holder for the support array. It initializes the support at creation time.
-    Features that modify support: shrink wrap, phase modifier, lowpass filter.
-    """
-    def __init__(self, params, dims, dir=None):
-        # create or get initial support
-        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
-            initial_support_area = params['initial_support_area']
-            init_support = []
-            for i in range(len(initial_support_area)):
-                if type(initial_support_area[0]) == int:
-                    init_support.append(initial_support_area[i])
-                else:
-                    init_support.append(int(initial_support_area[i] * dims[i]))
-            center = devlib.full(init_support, 1)
-            self.support = dvut.pad_around(center, dims, 0)
-        else:
-            self.support = devlib.load(ut.join(dir, 'support.npy'))
-
-    def get_support(self):
-        return self.support
-
-    def flip(self):
-        self.support = devlib.flip(self.support)
-
-    def make_binary(self):
-        self.support = devlib.absolute(self.support)
-        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
-
-
 class Breeder:
     def __init__(self, alpha_dir):
         self.alpha_dir = alpha_dir
@@ -93,7 +61,7 @@ class Breeder:
         if breed_mode != 'none':
             try:
                 phaser.ds_image = dvut.breed(breed_mode, self.alpha_dir, phaser.ds_image)
-                phaser.support_obj.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
+                phaser.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
             except:
                 print('exception during breeding')
                 return -1
@@ -257,7 +225,15 @@ class Rec:
         self.gen = gen
         self.prev_dir = dir
         self.alpha_dir = alpha_dir
-        self.support_obj = Support(self.params, self.dims, dir)
+
+        # create or get initial support
+        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
+            init_support = [int(self.params['initial_support_area'][i] * self.dims[i]) for i in range(len(self.dims))]
+            center = devlib.full(init_support, 1)
+            self.support = dvut.pad_around(center, self.dims, 0)
+        else:
+            self.support = devlib.load(ut.join(dir, 'support.npy'))
+
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
         # create the object even if the feature inactive, it will be empty
@@ -288,7 +264,7 @@ class Rec:
             # the line below are for testing to set the initial guess to support
             # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
 
-            self.ds_image *= self.support_obj.get_support()
+            self.ds_image *= self.support
         return 0
 
 
@@ -338,7 +314,7 @@ class Rec:
 
     def save_res(self, save_dir, only_image=False):
         # center image's center_of_mass and sync support
-        self.ds_image, self.support_obj.support = dvut.center_sync(self.ds_image, self.support_obj.support)
+        self.ds_image, self.support = dvut.center_sync(self.ds_image, self.support)
 
         from array import array
 
@@ -350,7 +326,7 @@ class Rec:
         if only_image:
             return 0
 
-        devlib.save(ut.join(save_dir, 'support'), self.support_obj.get_support())
+        devlib.save(ut.join(save_dir, 'support'), self.support)
         if self.is_pc:
             devlib.save(ut.join(save_dir, 'coherence'), self.pc_obj.kernel)
         errs = array('f', self.errs)
@@ -374,18 +350,18 @@ class Rec:
 
     def lowpass_filter_operation(self):
         args = (self.data, self.iter, self.ds_image)
-        (self.iter_data, self.support_obj.support) = self.lowpass_filter_obj.apply_trigger(*args)
+        (self.iter_data, self.support) = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
 
     def shrink_wrap_operation(self):
         args = (self.ds_image,)
-        self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
+        self.support = self.shrink_wrap_obj.apply_trigger(*args)
 
     def phm_operation(self):
         args = (self.ds_image,)
-        self.support_obj.support *= self.phm_obj.apply_trigger(*args)
+        self.support *= self.phm_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
@@ -421,16 +397,15 @@ class Rec:
 
     def er(self):
         self.er_iter = True
-        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
+        self.ds_image = self.ds_image_raw * self.support
 
     def hio(self):
         self.er_iter = False
         combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
-        support = self.support_obj.get_support()
-        self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
+        self.ds_image = devlib.where((self.support > 0), self.ds_image_raw, combined_image)
 
     def new_alg(self):
-        self.ds_image = 2.0 * (self.ds_image_raw * self.support_obj.get_support()) - self.ds_image_raw
+        self.ds_image = 2.0 * (self.ds_image_raw * self.support) - self.ds_image_raw
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
@@ -463,6 +438,10 @@ class Rec:
     def get_ratio(self, divident, divisor):
         ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
         return ratio
+
+    def make_binary(self):
+        self.support = devlib.absolute(self.support)
+        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
 
 
 def resample(data, matrix, size=None, plot=False):
@@ -658,7 +637,7 @@ class CoupledRec(Rec):
         # s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
         # s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
         #
-        sup = self.support_obj.get_support()[:, :, :, None]
+        sup = self.support[:, :, :, None]
         self.shared_image = self.shared_image * sup
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
@@ -682,7 +661,7 @@ class CoupledRec(Rec):
         devlib.save(save_dir + "/shared_u1", self.shared_image[:, :, :, 1])
         devlib.save(save_dir + "/shared_u2", self.shared_image[:, :, :, 2])
         devlib.save(save_dir + "/shared_u3", self.shared_image[:, :, :, 3])
-        devlib.save(save_dir + '/support', self.support_obj.get_support())
+        devlib.save(save_dir + '/support', self.support)
 
         errs = array('f', self.errs)
 
@@ -741,7 +720,7 @@ class CoupledRec(Rec):
         grad_phi = devlib.array(grad_phi)
         G = devlib.array([peak.g_vec[1:] for peak in self.peak_objs])
         grad_phi = devlib.moveaxis(devlib.moveaxis(grad_phi, 0, -1), 0, -1)
-        cond = devlib.where(self.support_obj.get_support(), True, False)
+        cond = devlib.where(self.support, True, False)
         final_shape = (grad_phi.shape[0], grad_phi.shape[1], grad_phi.shape[2], 3, 3)
         ind = devlib.moveaxis(devlib.indices(cond.shape), 0, -1).reshape((-1, 3))[cond.ravel()].get()
         jacobian = devlib.zeros(final_shape)
@@ -767,9 +746,9 @@ class CoupledRec(Rec):
             else:
                 self.shift_to_center()
                 self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_det_to_lab, self.dims[0])
-                self.support_obj.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_det_to_lab,
+                self.support = resample(self.support, self.peak_objs[self.pk].ds_det_to_lab,
                                                     self.dims[0], plot=True)
-                self.support_obj.make_binary()
+                self.make_binary()
 
         beta = self.proj_weight[self.iter]
         pk = self.peak_objs[self.pk]
@@ -779,7 +758,7 @@ class CoupledRec(Rec):
                     devlib.absolute(self.ds_image)[:, :, :, None] * self.rho_hat * pk.norm
         self.shared_image = self.shared_image + beta * (new_image - old_image)
         if self.er_iter:
-            self.shared_image = self.shared_image * self.support_obj.support[:, :, :, None]
+            self.shared_image = self.shared_image * self.support[:, :, :, None]
             self.shift_to_center()
 
     def to_working_image(self):
@@ -788,9 +767,9 @@ class CoupledRec(Rec):
         self.ds_image = rho * devlib.exp(1j * phi)
         if not self.fast_resample:
             self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_lab_to_det, self.dims[0])
-            self.support_obj.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_lab_to_det,
+            self.support = resample(self.support, self.peak_objs[self.pk].ds_lab_to_det,
                                                 self.dims[0])
-            self.support_obj.make_binary()
+            self.make_binary()
 
     def get_control_error(self):
         if self.ctrl_peak is None:
@@ -831,7 +810,7 @@ class CoupledRec(Rec):
     def flip(self):
         self.shared_image = devlib.flip(self.shared_image, axis=(0, 1, 2))
         self.shared_image[:, :, :, 1:] *= -1
-        self.support_obj.flip()
+        self.support = devlib.flip(self.support, axis=(0, 1, 2))
 
     def shift_to_center(self):
         ind = devlib.center_of_mass(self.shared_image[:, :, :, 0])
@@ -839,7 +818,7 @@ class CoupledRec(Rec):
         shift_dist = devlib.to_numpy(shift_dist).tolist()
         self.shared_image = devlib.roll(self.shared_image, shift_dist, axis=(0, 1, 2))
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=(0, 1, 2))
-        self.support_obj.support = devlib.roll(self.support_obj.support, shift_dist, axis=(0, 1, 2))
+        self.support = devlib.roll(self.support, shift_dist, axis=(0, 1, 2))
 
 
 def reconstruction(datafile, **kwargs):
