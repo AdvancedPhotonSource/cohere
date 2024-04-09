@@ -93,7 +93,7 @@ def get_alg_rows(s, pc_conf_start):
         repeat = entry[0]
         funs = entry[1].split('.')
         if funs[0] not in algs:
-            print(f'undefined algorithm {funs[0]}')
+            print(f'algorithm {funs[0]} is not defined in op_flow.py file, algs dict.')
             raise
         # the pc will not be executed if pc_conf_start is None
         # this code will be revised after each generation has separate config
@@ -119,7 +119,7 @@ def get_alg_rows(s, pc_conf_start):
                 (trig_op, idx) = match.groups(0)
                 sub_t = sub_triggers[trig_op]
                 if trig_op not in sub_triggers.keys():
-                    print(f'the sub-trigger {trig_op} must be defined in sub_triggers dict')
+                    print(f'the sub-trigger {trig_op} must be defined in op_flow.py file, sub_triggers dict.')
                     raise
                 if sub_t not in sub_rows:
                     sub_rows[sub_t] = []
@@ -228,7 +228,10 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
 
     # parse algorithm sequence to get the algorithm rows and sub-triggers rows, number iterations,
     # and partial coherence starting iteration
-    (alg_rows, sub_iters, iter_no, pc_start) = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
+    try:
+        (alg_rows, sub_iters, iter_no, pc_start) = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
+    except:
+        return False, None, None
 
     # do some checks to find if the sequence and configuration are runnable
     # and special cases
