@@ -610,54 +610,53 @@ def ver_config_rec(config_map):
                     return (error_message)
 
     config_parameter = 'Phasesupporttrigger'
-    if 'phm_trigger' in config_map:
-        if '.PHM' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['phm_trigger'], iter_no, 'phase modulus')
-            print(m)
+    if 'phc_trigger' in config_map:
+        if '.PHC' not in config_map['algorithm_sequence']:
+            m = verify_trigger(config_map['phc_trigger'], iter_no, 'phase constrain')
             if len(m) > 0:
                 print(m)
                 return(m)
-            if not ver_list_int('phm_trigger', config_map['phm_trigger']):
+            if not ver_list_int('phc_trigger', config_map['phc_trigger']):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
-            config_parameter = 'Phmphasemin'
-            if 'phm_phase_min' in config_map:
-                phm_phase_min = config_map['phm_phase_min']
-                if type(phm_phase_min) != float:
+            config_parameter = 'Phcphasemin'
+            if 'phc_phase_min' in config_map:
+                phc_phase_min = config_map['phc_phase_min']
+                if type(phc_phase_min) != float:
                     config_error = 0
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
 
-            config_parameter = 'Phmphasemax'
-            if 'phm_phase_max' in config_map:
-                phm_phase_max = config_map['phm_phase_max']
-                if type(phm_phase_max) != float:
+            config_parameter = 'Phcphasemax'
+            if 'phc_phase_max' in config_map:
+                phc_phase_max = config_map['phc_phase_max']
+                if type(phc_phase_max) != float:
                     config_error = 0
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
         else:
-            for t in config_map['phm_trigger']:
-                if not ver_list_int('phm_trigger', t):
+            for t in config_map['phc_trigger']:
+                if not ver_list_int('phc_trigger', t):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
-            config_parameter = 'Phmphasemin'
-            if 'phm_phase_min' in config_map:
-                if not ver_list_float('phm_phase_min', config_map['phm_phase_min']):
+            config_parameter = 'Phcphasemin'
+            if 'phc_phase_min' in config_map:
+                if not ver_list_float('phc_phase_min', config_map['phc_phase_min']):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
 
-            config_parameter = 'Phmphasemax'
-            if 'phm_phase_max' in config_map:
-                if not ver_list_float('phm_phase_max', config_map['phm_phase_max']):
+            config_parameter = 'Phcphasemax'
+            if 'phc_phase_max' in config_map:
+                if not ver_list_float('phc_phase_max', config_map['phc_phase_max']):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)

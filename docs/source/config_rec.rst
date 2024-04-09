@@ -75,7 +75,7 @@ General
 ::
 
     algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
-    algorithm_sequence = "20*ER.LPF0.PHM0 + 180*HIO.LPF1 + 2* (20*ER.SW0 + 180*HIO.SW1) + 20*ER.SW2"
+    algorithm_sequence = "20*ER.LPF0.PHC0 + 180*HIO.LPF1 + 2* (20*ER.SW0 + 180*HIO.SW1) + 20*ER.SW2"
 
 - hio_beta:
 | optional, default is .9. A parameter used in hio algorithm.
@@ -149,32 +149,32 @@ Shrink wrap
 
 Phase constrain
 +++++++++++++++
-| At the beginning iterations the support area is modified in respect to the phase. Support area will include only points with calculated phase intside of the defined bounds.
+| At the beginning iterations the support area is modified in respect to the phase. Support area will include only points with calculated phase inside of the defined bounds.
 | Alternatively can be defined as list of sub-triggers. If sub-triggers are used, the parameters must be lists as well.
 
-- phase_support_trigger:
+- phc_trigger:
 | defines when to update support array using the parameters below by applying phase constrain.
 | examples:
 ::
 
-    phase_support_trigger = [0, 1, 310]
-    phase_support_trigger = [[0, 1, 310], [0,2]]  # sub-triggers
+    phc_trigger = [0, 1, 310]
+    phc_trigger = [[0, 1, 310], [0,2]]  # sub-triggers
 
-- phm_phase_min:
+- phc_phase_min:
 | optional, defaults too -1.57. Defines lower bound phase.
 | example:
 ::
 
-    phm_phase_min = -1.57
-    phm_phase_min = [-1.5, -1.57]  # sub-triggers
+    phc_phase_min = -1.57
+    phc_phase_min = [-1.5, -1.57]  # sub-triggers
 
-- phm_phase_max:
+- phc_phase_max:
 | optional, defaults too 1.57. Defines upper bound phase.
 | examples:
 ::
 
-    phm_phase_max = 1.57
-    phm_phase_max = [1.5, 1.57]  # sub-triggers
+    phc_phase_max = 1.57
+    phc_phase_max = [1.5, 1.57]  # sub-triggers
 
 Partial coherence
 +++++++++++++++++

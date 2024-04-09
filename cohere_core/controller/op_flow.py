@@ -14,7 +14,7 @@ algs = {'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er'),
 # defined by preceding algorithm. The key is the trigger name and value is the mnemonic. The mnemonic is used in the
 # configuration.
 sub_triggers = {'SW' : 'shrink_wrap_trigger',
-             'PHM' : 'phm_trigger',
+             'PHC' : 'phc_trigger',
              'LPF' : 'lowpass_filter_trigger'}
 
 # This list contains triggers that will be active at the last iteration defined by trigger, despite
@@ -285,7 +285,11 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
                 # determined in algorithm sequence parsing if the triggered operation is configured
                 # with sub-triggers or trigger
                 if trigger_name in sub_iters.keys():
-                    flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
+                    try:
+                        flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
+                    except:
+                        flow_arr = None
+                        break
                     # add entry to sub trigger operation dict with key of the trigger mnemonic
                     # and the value of a list with the row and sub triggers iterations chunks
                     sub_trig_op[trigger_name] = (flow_arr[i], sub_iters[trigger_name])

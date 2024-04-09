@@ -87,7 +87,7 @@ class Rec:
                                self.lowpass_filter_operation,
                                self.reset_resolution,
                                self.shrink_wrap_operation,
-                               self.phm_operation,
+                               self.phc_operation,
                                self.to_reciprocal_space,
                                self.new_func_operation,
                                self.pc_operation,
@@ -177,10 +177,10 @@ class Rec:
                 if self.shrink_wrap_obj is None:
                     print('failed to create shrink wrap object')
                     return False
-            if 'phm_trigger' in params:
-                self.phm_obj = ft.create('phm_phase', params, trig_op_info)
-                if self.phm_obj is None:
-                    print('failed to create phase mod object')
+            if 'phc_trigger' in params:
+                self.phc_obj = ft.create('phc', params, trig_op_info)
+                if self.phc_obj is None:
+                    print('failed to create phase constrain object')
                     return False
             if 'lowpass_filter_trigger' in params:
                 self.lowpass_filter_obj = ft.create('lowpass_filter', params, trig_op_info)
@@ -198,12 +198,12 @@ class Rec:
             self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
             first_run = False
 
-        # When running GA the lowpass filter, phm, and twin triggers should be active only during first
+        # When running GA the lowpass filter, phc, and twin triggers should be active only during first
         # generation. The code below inactivates the triggers in subsequent generations.
         # This will be removed in the future when each generation will have own configuration.
         if not first_run:
             self.params.pop('lowpass_filter_trigger', None)
-            self.params.pop('phm_trigger', None)
+            self.params.pop('phc_trigger', None)
             self.params.pop('twin_trigger', None)
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
@@ -359,9 +359,9 @@ class Rec:
         args = (self.ds_image,)
         self.support = self.shrink_wrap_obj.apply_trigger(*args)
 
-    def phm_operation(self):
+    def phc_operation(self):
         args = (self.ds_image,)
-        self.support *= self.phm_obj.apply_trigger(*args)
+        self.support *= self.phc_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
@@ -862,11 +862,11 @@ def reconstruction(datafile, **kwargs):
             used to calculate the Gaussian filter
         initial_support_area : list
             If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support will be set to 1s to this dimensions centered.
-        phm_trigger : list
+        phc_trigger : list
             defines when to update support array using the parameters below by applaying phase constrain.
-        phm_phase_min : float
+        phc_phase_min : float
             point with phase below this value will be removed from support area
-        phm_phase_max : float
+        phc_phase_max : float
             point with phase over this value will be removed from support area
         pc_interval : int
             defines iteration interval to update coherence.

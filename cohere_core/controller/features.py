@@ -8,7 +8,7 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['Pcdi',
            'TriggeredOp',
            'ShrinkWrap',
-           'PhaseMod',
+           'PhaseConstrain',
            'LowPassFilter']
 
 
@@ -162,6 +162,7 @@ class TriggeredOp(ABC):
         :return:
         """
         trigger_name = f'{self.trig_op_name}_trigger'
+
         if trigger_name in sub_rows_trigs.keys():
             row = sub_rows_trigs[trigger_name][0]
             sub_trigs = sub_rows_trigs[trigger_name][1]
@@ -278,41 +279,41 @@ class ShrinkWrap(TriggeredOp):
 
 
 
-class PhaseMod(TriggeredOp):
+class PhaseConstrain(TriggeredOp):
     def __init__(self, trig_op):
         super().__init__(trig_op)
 
-    class PhasePHM:
-        def __init__(self, phm_phase_min, phm_phase_max):
-            self.phm_phase_min = phm_phase_min
-            self.phm_phase_max = phm_phase_max
+    class PhasePHC:
+        def __init__(self, phc_phase_min, phc_phase_max):
+            self.phc_phase_min = phc_phase_min
+            self.phc_phase_max = phc_phase_max
 
         def apply_trigger(self, *args):
             ds_image = args[0]
             phase = devlib.angle(ds_image)
-            return (phase > self.phm_phase_min) & (phase < self.phm_phase_max)
+            return (phase > self.phc_phase_min) & (phase < self.phc_phase_max)
 
 
     def create_obj(self, params, index=None, beg=None, end=None):
-        if 'phm_phase_min' not in params:
-            print('phm_phase_min parameter not defined')
+        if 'phc_phase_min' not in params:
+            print('phc_phase_min parameter not defined')
             raise
-        if 'phm_phase_max' not in params:
-            print('phm_phase_max parameter not defined')
+        if 'phc_phase_max' not in params:
+            print('phc_phase_max parameter not defined')
             raise
         if index is None:
-            phase_min = params['phm_phase_min']
-            phase_max = params['phm_phase_max']
+            phase_min = params['phc_phase_min']
+            phase_max = params['phc_phase_max']
         else:
-            if len(params['phm_phase_min']) - 1 < index:
-                print(f'phm_phase_min not defined for sub-trigger {index}')
+            if len(params['phc_phase_min']) - 1 < index:
+                print(f'phc_phase_min not defined for sub-trigger {index}')
                 raise
-            phase_min = params['phm_phase_min'][index]
-            if len(params['phm_phase_max']) - 1 < index:
-                print(f'phm_phase_max not defined for sub-trigger {index}')
+            phase_min = params['phc_phase_min'][index]
+            if len(params['phc_phase_max']) - 1 < index:
+                print(f'phc_phase_max not defined for sub-trigger {index}')
                 raise
-            phase_max = params['phm_phase_max'][index]
-        return self.PhasePHM(phase_min, phase_max)
+            phase_max = params['phc_phase_max'][index]
+        return self.PhasePHC(phase_min, phase_max)
 
 
 class LowPassFilter(TriggeredOp):
@@ -368,8 +369,8 @@ class LowPassFilter(TriggeredOp):
 def create(trig_op, params, trig_op_info):
     if trig_op == 'shrink_wrap':
         to = ShrinkWrap(trig_op)
-    if trig_op == 'phm_phase':
-        to = PhaseMod(trig_op)
+    if trig_op == 'phc':
+        to = PhaseConstrain(trig_op)
     if trig_op == 'lowpass_filter':
         to = LowPassFilter(trig_op)
 
