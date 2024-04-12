@@ -2,7 +2,7 @@
 Experiment Space
 ================
 | In order to group the files associated with an experiment in a structured manner user scripts will create a space dedicated to the experiment. The space, experiment directory, will be a sub-directory in working directory. The name of experiment directory is descriptive as it contains an ID and scan ranges.
-| ex: with experiment ID of "ABC", and scan "56-78", the experiment directory is ABC_56-78
+| ex: with experiment ID of "ABC", and scan "56-78", the experiment directory is ABC_56-78.
 | Below we show experiment directory structure for various use cases.
 
 Single reconstruction
@@ -26,7 +26,7 @@ Single reconstruction
 - The experiment should be set up with "conf" subdirectory containing configuration files. There are scripts that create the initial experiment space.
 - The script "beamline_preprocess.py" creates "prep_data.tif" file in "preprocessed_data" subdirectory. This is a file ready to be formatted.
 - The script "standard_preprocess.py" reads the "preprocessed_data.tif" file, formats it, and saves the result in the "phasing_data" subdirectory as "data.tif" file. This file is ready for reconstruction.
-- "run_reconstruction.py" script reads "data.tif" file and runs phasing. The results are stored in the "results_phasing" subdirectory in "image.npy" file, along with "support.npy, and "coherence.npy" if partial coherence feature is configured.
+- The "run_reconstruction.py" script reads "data.tif" file and runs phasing. The results are stored in the "results_phasing" subdirectory in "image.npy" file, along with "support.npy, and "coherence.npy" if partial coherence feature is configured.
 - The "beamline_visualization.py" script loads the arrays from "results_phasing" directory, processes the image and saves it in the results_viz directory.
 
 | After running all the scripts the experiment will have the following files:
@@ -45,6 +45,10 @@ Single reconstruction
 |                \|--results_phasing
 |                       \|--image.npy
 |                       \|--support.npy
+|                       \|--image.tif
+|                       \|--errors.npy
+|                       \|--errors.txt
+|                       \|--metrics.txt
 |                \|--results_viz
 |                       \|--image.vts
 |                       \|--support.viz
@@ -59,12 +63,24 @@ Multiple reconstruction
 |                       \|--0
 |                           \|--image.npy
 |                           \|--support.npy
+|                           \|--image.tif
+|                           \|--errors.npy
+|                           \|--errors.txt
+|                           \|--metrics.txt
 |                       \|--1
 |                           \|--image.npy
 |                           \|--support.npy
+|                           \|--image.tif
+|                           \|--errors.npy
+|                           \|--errors.txt
+|                           \|--metrics.txt
 |                       \|--2
 |                           \|--image.npy
 |                           \|--support.npy
+|                           \|--image.tif
+|                           \|--errors.npy
+|                           \|--errors.txt
+|                           \|--metrics.txt
 |                \|--results_viz
 |                       \|--0
 |                           \|--image.vts
@@ -79,42 +95,34 @@ Multiple reconstruction
 Genetic Algorithm
 +++++++++++++++++
 | Results of reconstruction when using GA are reflected in relevant directory structure. The "results" directory will have subdirectories reflecting the generation, and each generation subdirectory will have subdirectories reflecting the runs. The generation directory is a concatenation of "g", underscore, and the generation number.
-| Below is an example of "results" directory structure when running two generations and three reconstructions:
+| Below is an example of "results" directory structure when running two generations and three reconstructions. Only the last generation is saved.:
 | <experiment_dir>
 |                \|
 |                \|--results_phasing
-|                       \|--g_0
-|                           \|--0
-|                               \--image.npy
-|                               \|--support.npy
-|                           \|--1
-|                               \|--image.npy
-|                               \|--support.npy
-|                           \|--2
-|                               \|--image.npy
-|                               \|--support.npy
-|                       \|--g_1
+|                       \|--g_2
 |                           \|--0
 |                               \|--image.npy
 |                               \|--support.npy
+|                               \|--image.tif
+|                               \|--errors.npy
+|                               \|--errors.txt
+|                               \|--metrics.txt
 |                           \|--1
 |                               \|--image.npy
 |                               \|--support.npy
+|                               \|--image.tif
+|                               \|--errors.npy
+|                               \|--errors.txt
+|                               \|--metrics.txt
 |                           \|--2
 |                               \|--image.npy
 |                               \|--support.npy
+|                               \|--image.tif
+|                               \|--errors.npy
+|                               \|--errors.txt
+|                               \|--metrics.txt
 |                \|--results_viz
-|                       \|--g_0
-|                           \|--0
-|                               \|--image.vts
-|                               \|--support.vts
-|                           \|--1
-|                               \|--image.vts
-|                               \|--support.vts
-|                           \|--2
-|                               \|--image.vts
-|                               \|--support.vts
-|                       \|--g_1
+|                       \|--g_2
 |                           \|--0
 |                               \|--image.vts
 |                               \|--support.vts
@@ -145,6 +153,10 @@ Separate scans
 |                       \|--results_phasing
 |                             \|--image.npy
 |                             \|--support.npy
+|                             \|--image.tif
+|                             \|--errors.npy
+|                             \|--errors.txt
+|                             \|--metrics.txt
 |                        \|--results_viz
 |                             \|--image.vts
 |                             \|--support.vts
@@ -156,6 +168,10 @@ Separate scans
 |                       \|--results_phasing
 |                             \|--image.npy
 |                             \|--support.npy
+|                             \|--image.tif
+|                             \|--errors.npy
+|                             \|--errors.txt
+|                             \|--metrics.txt
 |                       \|--results_viz
 |                             \|--image.vts
 |                             \|--support.vts
@@ -182,18 +198,30 @@ Alternate configuration
 |                \|--results_phasing
 |                       \|--image.npy
 |                       \|--support.npy
+|                       \|--image.tif
+|                       \|--errors.npy
+|                       \|--errors.txt
+|                       \|--metrics.txt
 |                \|--results_viz
 |                       \|--image.vts
 |                       \|--support.viz
 |                \|--results_phasing_aa
 |                       \|--image.npy
 |                       \|--support.npy
+|                       \|--image.tif
+|                       \|--errors.npy
+|                       \|--errors.txt
+|                       \|--metrics.txt
 |                \|--results_viz_aa
 |                       \|--image.vts
 |                       \|--support.viz
 |                \|--results_phasing_bb
 |                       \|--image.npy
 |                       \|--support.npy
+|                       \|--image.tif
+|                       \|--errors.npy
+|                       \|--errors.txt
+|                       \|--metrics.txt
 |                \|--results_viz_bb
 |                       \|--image.vts
 |                       \|--support.viz
