@@ -5,7 +5,7 @@ develop
 
 Installation for development
 ============================
-The best practice is to create conda environment allocated for the development.
+The best practice is to create conda environment dedicated for the development.
 
   ::
 
@@ -51,11 +51,11 @@ The design allows to add a new feature in a standardized way. Typical feature is
     - In cohere_core/controller/phasing.py add code to set any new defaults when creating Rec object.
     - In utilities/config_verifier.py add code to verify added parameters.
 
-Adding new feature for sub-trigger
-==================================
+Adding new sub-trigger
+======================
 If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
     - In cohere_core/controller/op_flow.py add entry in the sub_triggers dictionary, where key is the arbitrary assigned mnemonics, and value is the trigger name.
-    - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same as shrink_wrap_obj, and other features.
+    - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same way as shrink_wrap_obj, and other features.
     - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with *args.
     - in cohere_core/controller/features.py add new feature class.
 

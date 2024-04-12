@@ -20,7 +20,7 @@ Parameters
      experiment_id = "ab"
 
 - scan:
-| Optional (but typically needed), string type encapsulating a single number, a range, or combination of numbers and ranges separated by comma, defining scans that will be read and combined to create data file. This parameter should not be set when running multi peak case.
+| Optional (but typically needed), string type encapsulating a single number, a range, or combination of numbers and ranges separated by comma, defining scans that will be read and combined to create data file. This parameter should not be set when running multi-peak case.
 | examples:
 ::
 
@@ -36,7 +36,7 @@ Parameters
     beamline = "aps_34idc"
 
 - multipeak:
-| Optional, boolean parameter indicating whether it is multi peak case. Defaults to False.
+| Optional, boolean parameter indicating whether it is multi-peak case. Defaults to False.
 | example:
 ::
 

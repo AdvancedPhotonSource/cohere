@@ -28,7 +28,7 @@ Parameters
     whitefield_filename = "/path/to/whitefield_file/whitefield.tif"
 
 - roi:
-| Typically read from a spec file. Defines the region of a detector that the data has been read from. Needed to determine corrections on the detector. The values in the list (refer to example below) are as follows: x coordinate starting point, x length, y coordinate starting point, y length.
+| Typically read from a spec file. Defines the region of a detector that the data has been read from. The values in the list (refer to example below) are as follows: x coordinate starting point, x length, y coordinate starting point, y length.
 | example:
 ::
 

@@ -91,7 +91,7 @@ Parameters
     intensity_threshold = 25.0
 
 - adjust_dimensions:
-| Optional, a list of numbers defining how to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right]. The final dimensions will be adjusted up to the good number for the FFT such as: powers of 2 or a*2^n, where a is 3, 5, or 9
+| Optional, a list of numbers defining how to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right]. The final dimensions will be adjusted up to the good number for the FFT such as: powers of 2 or a*2^n, where a is 3, 5, or 9.
 | example:
 ::
 
@@ -105,7 +105,7 @@ Parameters
     center_shift = [0,0,0]
 
 - binning:
-| Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect
+| Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
 | If auto_data is configured in main config file, this list will be overridden by calculated values.
 | example:
 ::

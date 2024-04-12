@@ -7,7 +7,7 @@ Using cohere with cohere-ui package
 Installing Scripts
 ##################
 | There are three ways to get the cohere-ui package onto your local computer, or remote computer.
-| It is assumed the user activated the environment where cohere was installed.
+| User should activate the environment where cohere was installed.
 
   ::
 
@@ -28,7 +28,7 @@ Installing Scripts
         wget https://github.com/AdvancedPhotonSource/cohere-ui/archive/main.zip
         unzip main.zip
 
-| After the package is installed run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.:
+| After the package is installed run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui.
 
   ::
 
