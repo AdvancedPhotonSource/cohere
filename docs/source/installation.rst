@@ -14,7 +14,7 @@ It is highly recommended to install the cohere_core package in conda environment
 
 | To create and activate the environment run the commands below::
 
-    conda create -y -n <env_name> -c conda-forge python=3.10 mpi4py=3.1.5 gputil psutil
+    conda create -y -n <env_name> -c conda-forge python=3.10
     conda activate <env_name>
 then run the cohere installation command::
 
@@ -38,7 +38,7 @@ This will install the latest development. It might be not 100 percent tested. Th
 
 Create environment, activate it and clone cohere repository. It contains the cohere-ui submodule. Run the following commands::
 
-    conda create --name <env_name> -c conda-forge python=3.10 mpi4py=3.1.5 gputil psutil mayavi pyqt scikit-image xrayutilities
+    conda create --name <env_name> -c conda-forge python=3.10 mayavi pyqt scikit-image xrayutilities
     conda activate <env_name>
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
