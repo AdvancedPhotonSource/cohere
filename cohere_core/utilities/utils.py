@@ -51,7 +51,6 @@ __all__ = ['join',
            'get_avail_gpu_runs',
            'get_one_dev',
            'get_gpu_use',
-           'arr_property',
            'estimate_no_proc'
            ]
 
@@ -364,8 +363,6 @@ def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
 
 def select_central_object(fp: np.ndarray) -> np.ndarray:
     """
-    Author: Yudong Yao
-
     :param fp:
     :return:
     """
@@ -390,8 +387,6 @@ def select_central_object(fp: np.ndarray) -> np.ndarray:
 
 def get_central_object_extent(fp: np.ndarray) -> list:
     """
-    Author: Yudong Yao
-
     :param fp:
     :return:
     """
@@ -405,8 +400,6 @@ def get_central_object_extent(fp: np.ndarray) -> list:
 
 def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
     """
-    Author: Yudong Yao
-
     :param fp: diffraction pattern
     :return: oversample ratio in each dimension
     """
@@ -434,8 +427,6 @@ def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
 
 def Resize(IN, dim):
     """
-    Author: Yudong Yao
-
     :param IN:
     :param dim:
     :return:
