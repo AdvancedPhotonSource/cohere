@@ -70,6 +70,7 @@ autodoc_mock_imports = ['numpy',
                         'GPUtil',
                         'psutil',
                         'tqdm',
-                        'scipy']
+                        'scipy',
+                        'matplotlib']
 
 master_doc = 'index'
