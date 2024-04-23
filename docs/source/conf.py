@@ -67,7 +67,7 @@ autodoc_mock_imports = ['numpy',
                         'tifffile',
                         'tensorflow',
                         'mpi4py',
-                        'gputil',
+                        'GPUtil',
                         'psutil',
                         'tqdm',
                         'scipy']
