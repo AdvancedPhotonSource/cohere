@@ -1,11 +1,11 @@
 .. _formula:
 
 =================
-execution formula
+Execution formula
 =================
 | The "config_rec" file defines parameters used during reconstruction process.
 | The execution flow is defined by algorithm_sequence parameter and triggers.
-| Algorithm_sequence define the algorithms used in iterations. Algorithm is defined for each iteration.
+| Algorithm_sequence defines the algorithms used in iterations. Algorithm is defined for each iteration.
 | Triggers define iterations at which the corresponding triggered operations are active.
 | The triggered operations use applicable parameters that are grouped by the corresponding trigger.
 | If the trigger is not defined then the corresponding operation is not active during the execution.
@@ -23,12 +23,12 @@ Trigger
 Sub-Trigger
 ===========
 | For the following features: shrink wrap, lowpass filter, and phc (phase constrain), the trigger can be defined as a list of sub-triggers. In this case the algorithm_sequence should include the sub-triggers in the sequence, for example: 30*ER.SW0, and the trigger should be defined as a list of sub-triggers.
-| examples:
+| example:
 | [[5, 1, 100], [0, 3], [5]] three sub-triggers are defined and the rules of the trigger apply for sub-trigger with the difference that the span of iterations in sub-trigger is the same as the algorithm it is attached to. In this example 30*ER.SW0, the start iteration is when the ER begins, and last iteration is when the ER ends.
 
-
-- algorithm_sequence:
-| defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi (partial coherence)) must be activated by configuring pc_interval.
+Algorithm Sequence
+==================
+| This parameter defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi (partial coherence)) must be activated by configuring pc_interval and pcdi parameters.
 | Algorithm sequence can include sub-triggers attached to the algorithm, for example 30*ER.SW0.PHC1.
 
 Formula examples
@@ -40,14 +40,14 @@ Formula examples
     algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
 
 config_rec:
-|    shrink_wrap_trigger = [1, 3]
-|    lowpass_trigger = [0, 2, 130]
+| shrink_wrap_trigger = [1, 3]
+| lowpass_trigger = [0, 2, 130]
 
 | In this example the program will run:
 | twice 20 iterations with ER algorithm and modulus and 180 iterations with HIO algorithm and modulus,
 | followed by twice 20 iterations with ER algorithm and partial coherence modulus and 180 iterations with HIO algorithm and partial coherence modulus,
 | followed by 20 iterations with ER algorithm and partial coherence modulus.
-| In addition, based on the triggers configuration, every three iterations starting from first, for the rest of the run, the shrink wrap operation will be applied,
+| In addition, based on the triggers configuration, every three iterations starting from the first, for the rest of the run, the shrink wrap operation will be applied,
 | and every two iterations, starting at the beginning, until iteration 130, the lowpass operation will be applied.
 
 | example2:
@@ -56,8 +56,8 @@ config_rec:
     algorithm_sequence = "20*ER.SW0.PHC0 + 180*HIO.SW1.PHC1 + 20*ER.SW2"
 
 config_rec:
-|    shrink_wrap_trigger = [[1, 2], [0, 3], [0, 4]]
-|    phc_trigger = [[0, 2, 100], [0, 3, 100]]
+| shrink_wrap_trigger = [[1, 2], [0, 3], [0, 4]]
+| phc_trigger = [[0, 2, 100], [0, 3, 100]]
 
 | In this example the program will run:
 | 20 iterations with ER algorithm and modulus. During this 20 iterations the first sub-trigger in shrink_wrap_trigger, defined as [1,2] will be applied, which will start at iteration one and proceed every second iteration. During these iterations first phase constrain sub-trigger from phc_trigger, defined as [0, 2 ,100] will be applied starting at the beginning iteration, repeating every other iteration, and will continue until the 20 ER iterations, even though it was configured for more iterations.
