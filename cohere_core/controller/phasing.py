@@ -102,21 +102,17 @@ class Rec:
                                self.average_operation,
                                self.progress_operation]
 
-        if 'init_guess' not in params:
-            params['init_guess'] = 'random'
-        elif params['init_guess'] == 'AI_guess':
+        params['init_guess'] = params.get('init_guess', 'random')
+        if params['init_guess'] == 'AI_guess':
             if 'AI_threshold' not in params:
                 params['AI_threshold'] = params['shrink_wrap_threshold']
             if 'AI_sigma' not in params:
                 params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
-        if 'reconstructions' not in params:
-            params['reconstructions'] = 1
-        if 'hio_beta' not in params:
-            params['hio_beta'] = 0.9
-        if 'initial_support_area' not in params:
-            params['initial_support_area'] = (.5, .5, .5)
-        if 'twin_trigger' in params and 'twin_halves' not in params:
-            params['twin_halves'] = (0, 0)
+        params['reconstructions'] = params.get('reconstructions', 1)
+        params['hio_beta'] = params.get('hio_beta', 0.9)
+        params['initial_support_area'] = params.get('initial_support_area', (.5, .5, .5))
+        if 'twin_trigger' in params:
+            params['twin_halves'] = params.get('twin_halves', (0, 0))
         if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
             self.is_pcdi = True
         else:
@@ -274,17 +270,17 @@ class Rec:
 
 
     def breed(self):
+        def breed_retry():
+            breed_mode = self.params['ga_breed_modes'][self.gen]
+            threshold = self.params['ga_sw_thresholds'][self.gen]
+            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
+            return self.breeder.breed(self, breed_mode, threshold, sigma)
         try:
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
+            return breed_retry()
         except Exception as e:
+            # retry
             self.breeder = Breeder(self.alpha_dir)
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
+            return breed_retry()
 
 
     def iterate(self):
@@ -556,14 +552,10 @@ class CoupledRec(Rec):
 
         self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peaks_operation]
 
-        if "switch_peak_trigger" not in self.params:
-            self.params["switch_peak_trigger"] = [0, 5]
-        if "mp_max_weight" not in self.params:
-            self.params["mp_max_weight"] = 0.9
-        if "mp_taper" not in self.params:
-            self.params["mp_taper"] = 0.75
-        if "calc_strain" not in self.params:
-            self.params["calc_strain"] = True
+        self.params["switch_peak_trigger"] = self.params.get("switch_peak_trigger", [0, 5])
+        self.params["mp_max_weight"] = self.params.get("mp_max_weight", 0.9)
+        self.params["mp_taper"] = self.params.get("mp_taper", 0.75)
+        self.params["calc_strain"] = self.params.get("calc_strain", True)
 
         self.peak_dirs = peak_dirs
 
@@ -889,7 +881,7 @@ def reconstruction(datafile, **kwargs):
         debug : boolean
             if in debug mode the verifier will not stop the progress, only print message
     """
-    debug = 'debug' in kwargs and kwargs['debug']
+    debug = kwargs.get('debug', False)
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
         print(error_msg)
@@ -901,21 +893,24 @@ def reconstruction(datafile, **kwargs):
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere_core-ui package to run multiple reconstructions and GA. Processing single reconstruction.')
-    if 'processing' in kwargs:
-        pkg = kwargs['processing']
-    else:
-        pkg = 'auto'
+        print('Use cohere_core-ui package to run multiple reconstructions. Processing single reconstruction.')
+    pkg = kwargs.get('processing', 'auto')
     if pkg == 'auto':
         try:
             import cupy as cp
             pkg = 'cp'
         except:
-            pkg = 'np'
+            try:
+                import torch
+                pkg = 'torch'
+            except:
+                pkg = 'np'
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
         devlib = importlib.import_module('cohere_core.lib.nplib').nplib
+    if pkg == 'torch':
+        devlib = importlib.import_module('cohere_core.lib.cplib').torchlib
     else:
         print('supporting cp and np processing')
         return
@@ -929,10 +924,7 @@ def reconstruction(datafile, **kwargs):
     if worker.init_dev(device[0]) < 0:
         return
 
-    if 'continue_dir' in kwargs:
-        continue_dir = kwargs['continue_dir']
-    else:
-        continue_dir = None
+    continue_dir = kwargs.get('continue_dir')
     ret_code = worker.init(continue_dir)
     if ret_code < 0:
         return

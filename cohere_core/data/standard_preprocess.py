@@ -73,8 +73,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         debug : boolean
             It's a command line argument passed as parameter. If True, ignores verifier error.
     """
-    debug = 'debug' in kwargs and kwargs['debug']
-    kwargs.pop("debug", None)
+    debug = kwargs.pop("debug", False)
     er_msg = ver.verify('config_data', kwargs)
     if len(er_msg) > 0:
         # the error message is printed in verifier

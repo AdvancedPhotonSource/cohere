@@ -96,8 +96,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     pars = ut.read_config(conf_file)
 
-    if 'init_guess' not in pars:
-        pars['init_guess'] = 'random'
+    pars['init_guess'] = pars.get('init_guess', 'random')
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':

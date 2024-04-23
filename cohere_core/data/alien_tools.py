@@ -248,26 +248,11 @@ def auto_alien1(data, config, data_dir=None):
         data array with removed aliens
     """
     data_dir = data_dir.replace(os.sep, '/')
-    if 'AA1_size_threshold' in config:
-        size_threshold = config['AA1_size_threshold']
-    else:
-        size_threshold = 0.01
-    if 'AA1_asym_threshold' in config:
-        asym_threshold = config['AA1_asym_threshold']
-    else:
-        asym_threshold = 1.75
-    if 'AA1_min_pts' in config:
-        min_pts = config['AA1_min_pts']
-    else:
-        min_pts = 5
-    if 'AA1_eps' in config:
-        eps = config['AA1_eps']
-    else:
-        eps = 1.1
-    if 'AA1_amp_threshold' in config:
-        threshold = config['AA1_amp_threshold']
-    else:
-        threshold = 6
+    size_threshold = config.get('AA1_size_threshold', 0.01)
+    asym_threshold = config.get('AA1_asym_threshold', 1.75)
+    min_pts = config.get('AA1_min_pts', 5)
+    eps = config.get('AA1_eps', 1.1)
+    threshold = config.get('AA1_amp_threshold', 6)
     if 'AA1_save_arrs' in config:
         save_arrs = config['AA1_save_arrs']
         if save_arrs:
@@ -277,10 +262,7 @@ def auto_alien1(data, config, data_dir=None):
     else:
         save_arrs = False
 
-    if 'AA1_expandcleanedsigma' in config:
-        expandcleanedsig = config['AA1_expandcleanedsigma']
-    else:
-        expandcleanedsig = 0.0
+    expandcleanedsig = config.get('AA1_expandcleanedsigma', 0.0)
 
     cuboid = crop_center(data)
     cuboid = np.where(cuboid >= threshold, cuboid, 0)

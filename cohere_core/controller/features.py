@@ -20,19 +20,13 @@ def set_lib(dlib):
 
 class Pcdi:
     def __init__(self, params, data, dir=None):
-        if 'pc_type' in params:
-            self.type = params['pc_type']
-        else:
-            self.type = "LUCY"
+        self.type = params.get('pc_type', 'LUCY')
         if 'pc_LUCY_iterations' in params:
             self.iterations = params['pc_LUCY_iterations']
         else:
             print('pc_LUCY_iterations parameter not defined')
             raise
-        if 'pc_normalize' in params:
-            self.normalize = params['pc_normalize']
-        else:
-            self.normalize = True
+        self.normalize = params.get('pc_normalize', True)
         if 'pc_LUCY_kernel' in params:
             self.kernel_area = params['pc_LUCY_kernel']
         else:
