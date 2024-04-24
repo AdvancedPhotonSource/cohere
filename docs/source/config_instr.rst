@@ -2,19 +2,20 @@
 config_instr
 ============
 | The "config_instr" file defines parameters related to experiment and instrument used during the experiment, such as detector and diffractometer.
-| The diffractometer and specfile are mandatory parameters for the 34-IDC beamline. The other parameters are obtained from the specfile. They can be overriden when included in this configuration file.
+| The diffractometer and specfile are mandatory parameters for the 34-IDC beamline. The other parameters are obtained from the specfile. They can be overridden when included in this configuration file.
 
 Parameters
 ==========
 - diffractometer:
-| mandatory, name of diffractometer used in experiment.
+| Mandatory, name of diffractometer used in experiment.
+| Must be defined for the beamline.
 | example:
 ::
 
     diffractometer = "34idc"
 
 - specfile:
-| optional (but mandatory for aps_34idc), specfile recorded when the experiment was conducted.
+| Optional (but mandatory for aps_34idc), specfile recorded when the experiment was conducted.
 | example:
 ::
 
@@ -22,7 +23,7 @@ Parameters
 
 Parsed parameters
 =================
-| In a typical scenario at APS 34-idc beamline a spec file is generated during experiment and the parameters listed below are parsed from this file, so the user do not configure them. User may configure the following parameters if spec file is not configured in the main configuration or user wants to override the parsed parameters.
+| In a typical scenario at APS 34-idc beamline a spec file is generated during experiment and the parameters listed below are parsed from this file, so the user do not configure them. User may override the parameters.
 - energy
 | example:
 ::

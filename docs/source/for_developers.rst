@@ -5,14 +5,14 @@ develop
 
 Installation for development
 ============================
-The best practice is to create conda environment allocated for the development.
+The best practice is to create conda environment dedicated for the development.
 
   ::
 
-    conda create -n <dev_env> python=3.x -c conda-forge
+    conda create -y -n <dev_env> -c conda-forge python=3.10 mayavi pyqt scikit-image xrayutilities
     conda activate <dev_env>
 
-| Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such running scripts and example.
+| Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such users scripts and example.
 
   ::
 
@@ -27,7 +27,7 @@ The best practice is to create conda environment allocated for the development.
     git checkout -b <dev_branch>
     pip install -e .
 
-| Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui. During the installation user must interact with dialog to agree to the steps when installing the packages.
+| Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py. The setup.py script modifies paths from relative to absolute in the provided example configuration.
 
   ::
 
@@ -35,37 +35,33 @@ The best practice is to create conda environment allocated for the development.
     git checkout Dev
     git checkout -b <dev_branch>
     python setup.py
-    sh install_pkgs.sh    # for Linux and OS_X
-    install_pkgs.bat      # for Windows
 
 | If planning to use GPUs, install the packages/libraries that you wish to use.
 
   ::
 
-    conda install cupy -c conda-forge # if using cupy library
+    conda install -y cupy=12.2.0 -c conda-forge # if using cupy library
     pip install torch # if using torch
 
 Adding new trigger
 ==================
 The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications/additions need to be done to add a new feature:
-    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name to the self.iter_functions list in the correct order.
+    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name ending with '_operation' to the self.iter_functions list in the correct order.
     - Implement the new trigger function in cohere_core/controller/phasing.py, Rec class.
-    - In cohere_core/controller/op_flow.py add code to add the new trigger row into flow array.
-    - In cohere_core/controller/params.py add code to parse trigger and parameters applicable to the new feature.
-    - In utilities/config_verifier.py add code to verify added parameters
+    - In cohere_core/controller/phasing.py add code to set any new defaults when creating Rec object.
+    - In utilities/config_verifier.py add code to verify added parameters.
 
-Adding new feature for sub-trigger
-==================================
+Adding new sub-trigger
+======================
 If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
-    - In cohere_core/controller/op_flow.py add entry in the sub_triggers, where key is the trigger function name, and value is the feature mnemonics
-    - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same as shrink_wrap_obj, and other features.
+    - In cohere_core/controller/op_flow.py add entry in the sub_triggers dictionary, where key is the arbitrary assigned mnemonics, and value is the trigger name.
+    - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same way as shrink_wrap_obj, and other features.
     - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with *args.
     - in cohere_core/controller/features.py add new feature class.
 
+       | The constructor factory function create should have a new lines to construct the new object.
        | The feature class should be subclass of Feature and
-       | have defined self.key = <feature mnemonic> and
-       | have defined self.trig_name = <trigger name>
-       | should have implemented create_obj function that creates sub-object(s)
+       | should have implemented create_obj function that creates sub-object(s) and
        | should have defined the sub-object(s) class(es). The embedded class contains the apply_trigger function that has the trigger code. Some features can be configured to different types and therefore multiple classes can be defined.
        |
        | The easiest way to implement the feature is to copy one already implemented and modify.
@@ -73,7 +69,7 @@ If the new feature will be used in a context of sub-triggers, in addition to the
 Adding new algorithm
 ====================
 The algorithm sequence defines functions executed during modulus projection and during modulus. Adding new algorithm requires the following steps:
-    - In cohere_core/controller/op_flow.py add entry in the algs dictionary, where key is the mnemonic used in algorithm_sequence, and value is the tuple defining functions, ex: 'ER': ('er', 'modulus')
+    - In cohere_core/controller/op_flow.py add entry in the algs dictionary, where key is the mnemonic used in algorithm_sequence, and value is the tuple defining functions, ex: 'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er')
     - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name to the self.iter_functions list in the correct order.
     - In cohere_core/controller/phasing.py, Rec class add the new algorithm function(s).
 

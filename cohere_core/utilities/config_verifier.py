@@ -13,9 +13,9 @@ Verification of configuration parameters.
 
 import os
 from cohere_core.utilities.config_errors_dict import *
-from cohere_core.controller.op_flow import algs
+import cohere_core.utilities.utils as ut
 
-__author__ = "Barbara Frosik, Dave Cyl"
+__author__ = "Dave Cyl"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['verify']
@@ -39,11 +39,11 @@ def ver_list_int(param_name, param_value):
         True if all elements are int, False otherwise
     """
     if not issubclass(type(param_value), list):
-        print (param_name + ' is not a list')
+        print (f'{param_name} is not a list')
         return False
     for e in param_value:
         if type(e) != int:
-            print (param_name + ' should be list of integer values')
+            print (f'{param_name} should be list of integer values')
             return False
     return True
 
@@ -66,11 +66,11 @@ def ver_list_float(param_name, param_value):
         True if all elements are float, False otherwise
     """
     if not issubclass(type(param_value), list):
-        print (param_name + ' is not a list')
+        print (f'{param_name} is not a list')
         return False
     for e in param_value:
         if type(e) != float:
-            print (param_name + ' should be list of float values')
+            print (f'{param_name} should be list of float values')
             return False
     return True
 
@@ -234,14 +234,16 @@ def ver_config_rec(config_map):
         return '', sum([e[0] for e in seq])
 
 
-    def verify_trigger(trigger, no_iter):
+    def verify_trigger(trigger, no_iter, trigger_name):
+        if type(trigger) != list:
+            return(f'{trigger_name} trigger type should be list')
         if len(trigger) == 0:
-            return ('empty trigger ' + str(trigger))
+            return (f'empty {trigger_name} trigger {str(trigger)}')
         elif trigger[0] >= no_iter:
-            return ('trigger start ' + str(trigger[0]) + ' exceeds number of iterations ' + str(no_iter))
+            return (f'{trigger_name} trigger start {str(trigger[0])} exceeds number of iterations {str(no_iter)}')
         if len(trigger) == 3:
             if trigger[2] >= no_iter:
-                return ('trigger end ' + str(trigger[2]) + ' exceeds number of iterations ' + str(no_iter))
+                return (f'{trigger_name} trigger end {str(trigger[2])} exceeds number of iterations {str(no_iter)}')
         return ''
 
 
@@ -261,7 +263,7 @@ def ver_config_rec(config_map):
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
-        if not os.path.isfile(data_dir + '/data.tif') and not os.path.isfile(data_dir + '/data.npy'):
+        if not os.path.isfile(ut.join(data_dir, 'data.tif')) and not os.path.isfile(ut.join(data_dir, 'data.npy')):
             config_error = 2
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
@@ -326,12 +328,27 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Device'
     if 'device' in config_map:
+        def ver_dev(d):
+            if d == 'all' or ver_list_int('device', device):
+                return ''
+            else:
+                config_error = 0
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print(error_message)
+                return (error_message)
+               
         device = config_map['device']
-        if not ver_list_int('device', device):
-            config_error = 0
-            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-            print(error_message)
-            return (error_message)
+        if issubclass(type(device), dict):
+            for d in device.values():
+                error_message =  ver_dev(d)
+                if len(error_message) > 0:
+                    print(error_message)
+                    return (error_message)
+        else:
+            error_message = ver_dev(device)
+            if len(error_message) > 0:
+                print(error_message)
+                return (error_message)
 
     config_parameter = 'Algorithmsequence'
     if 'algorithm_sequence' in config_map:
@@ -506,8 +523,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Twintrigger'
     if 'twin_trigger' in config_map:
         twin_trigger = config_map['twin_trigger']
-        m = verify_trigger(twin_trigger, iter_no)
+        m = verify_trigger(twin_trigger, iter_no, 'twin')
         if len(m) > 0:
+            print(m)
             return(m)
         if not ver_list_int('twin_trigger', twin_trigger):
             config_error = 0
@@ -527,8 +545,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Shrinkwraptrigger'
     if 'shrink_wrap_trigger' in config_map:
         if '.SW' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no)
+            m = verify_trigger(config_map['shrink_wrap_trigger'], iter_no, 'shrink wrap')
             if len(m) > 0:
+                print(m)
                 return(m)
             if not ver_list_int('shrink_wrap_trigger', config_map['shrink_wrap_trigger']):
                 config_error = 0
@@ -591,53 +610,53 @@ def ver_config_rec(config_map):
                     return (error_message)
 
     config_parameter = 'Phasesupporttrigger'
-    if 'phm_trigger' in config_map:
-        if '.PHM' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['phm_trigger'], iter_no)
-            print(m)
+    if 'phc_trigger' in config_map:
+        if '.PHC' not in config_map['algorithm_sequence']:
+            m = verify_trigger(config_map['phc_trigger'], iter_no, 'phase constrain')
             if len(m) > 0:
+                print(m)
                 return(m)
-            if not ver_list_int('phm_trigger', config_map['phm_trigger']):
+            if not ver_list_int('phc_trigger', config_map['phc_trigger']):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
 
-            config_parameter = 'Phmphasemin'
-            if 'phm_phase_min' in config_map:
-                phm_phase_min = config_map['phm_phase_min']
-                if type(phm_phase_min) != float:
+            config_parameter = 'Phcphasemin'
+            if 'phc_phase_min' in config_map:
+                phc_phase_min = config_map['phc_phase_min']
+                if type(phc_phase_min) != float:
                     config_error = 0
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
 
-            config_parameter = 'Phmphasemax'
-            if 'phm_phase_max' in config_map:
-                phm_phase_max = config_map['phm_phase_max']
-                if type(phm_phase_max) != float:
+            config_parameter = 'Phcphasemax'
+            if 'phc_phase_max' in config_map:
+                phc_phase_max = config_map['phc_phase_max']
+                if type(phc_phase_max) != float:
                     config_error = 0
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
         else:
-            for t in config_map['phm_trigger']:
-                if not ver_list_int('phm_trigger', t):
+            for t in config_map['phc_trigger']:
+                if not ver_list_int('phc_trigger', t):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
-            config_parameter = 'Phmphasemin'
-            if 'phm_phase_min' in config_map:
-                if not ver_list_float('phm_phase_min', config_map['phm_phase_min']):
+            config_parameter = 'Phcphasemin'
+            if 'phc_phase_min' in config_map:
+                if not ver_list_float('phc_phase_min', config_map['phc_phase_min']):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
 
-            config_parameter = 'Phmphasemax'
-            if 'phm_phase_max' in config_map:
-                if not ver_list_float('phm_phase_max', config_map['phm_phase_max']):
+            config_parameter = 'Phcphasemax'
+            if 'phc_phase_max' in config_map:
+                if not ver_list_float('phc_phase_max', config_map['phc_phase_max']):
                     config_error = 1
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
@@ -703,8 +722,9 @@ def ver_config_rec(config_map):
     config_parameter = 'Resolutiontrigger'
     if 'lowpass_filter_trigger' in config_map:
         if '.LPF' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no)
+            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
             if len(m) > 0:
+                print(m)
                 return(m)
             if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
                 config_error = 0
@@ -767,8 +787,9 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Averagetrigger'
     if 'average_trigger' in config_map:
-        m = verify_trigger(config_map['average_trigger'], iter_no)
+        m = verify_trigger(config_map['average_trigger'], iter_no, 'average')
         if len(m) > 0:
+            print(m)
             return(m)
         if not ver_list_int('average_trigger', config_map['average_trigger']):
             config_error = 0
@@ -778,7 +799,7 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Progresstrigger'
     if 'progress_trigger' in config_map:
-        m = verify_trigger(config_map['progress_trigger'], iter_no)
+        m = verify_trigger(config_map['progress_trigger'], iter_no, 'progress')
         if len(m) > 0:
             return(m)
         if not ver_list_int('progress_trigger', config_map['progress_trigger']):
@@ -848,12 +869,7 @@ def ver_config_data(config_map):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
-            return (error_message)
-    else:
-        config_error = 1
-        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-        print(error_message)
-        return (error_message)
+            return ''
 
     config_parameter = 'Alienalg'
     if 'alien_alg' in config_map:
@@ -1329,5 +1345,7 @@ def verify(file_name, conf_map):
         return ver_config_disp(conf_map)
     elif file_name == 'config_instr':
         return ver_config_instr(conf_map)
+    elif file_name == 'config_mp':
+        return ''
     else:
         return ('verifier has no fumction to check config file named', file_name)

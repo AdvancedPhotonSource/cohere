@@ -110,7 +110,6 @@ def analyze_clusters(arr, labels, nz):
     # print("processing labels")
     # loop over the labels (clusters).  label_counts[0] is the unique labels
     for n in range(1, nlabels):
-        #    print("   %i %i      "%(label_counts[0][n],label_counts[1][n]), end='\r')
         # the nth label from the first array of the label_counts tuple
         n_lab = label_counts[0][n]
         # the indicies of the points belonging to label n
@@ -122,8 +121,6 @@ def analyze_clusters(arr, labels, nz):
         cluster_avg[cluspts] = np.sum(arr[cluspts]) / cluspts[0].size
         # compute average asym of each cluster and store in array.
         cluster_avg_asym[cluspts] = np.sum(asymmetry[cluspts]) / cluspts[0].size
-        # print("   %i %i %f %f     "%(label_counts[0][n],label_counts[1][n],np.sum(asymmetry[cluspts]),cluspts[0].size), end='\n')
-    # print("largest clus size", cluster_size.max())
     # compute relative cluster sizes to largest (main) cluster.
     rel_cluster_size = cluster_size / cluster_size.max()
 
@@ -184,7 +181,7 @@ def save_arr(arr, dir, fname):
     """
 
     if dir is not None:
-        full_name = dir + '/' + fname
+        full_name = ut.join(dir, fname)
     else:
         full_name = fname  # save in the current dir
     tif.imsave(full_name, arr.transpose().astype(np.float32))
@@ -251,39 +248,21 @@ def auto_alien1(data, config, data_dir=None):
         data array with removed aliens
     """
     data_dir = data_dir.replace(os.sep, '/')
-    if 'AA1_size_threshold' in config:
-        size_threshold = config['AA1_size_threshold']
-    else:
-        size_threshold = 0.01
-    if 'AA1_asym_threshold' in config:
-        asym_threshold = config['AA1_asym_threshold']
-    else:
-        asym_threshold = 1.75
-    if 'AA1_min_pts' in config:
-        min_pts = config['AA1_min_pts']
-    else:
-        min_pts = 5
-    if 'AA1_eps' in config:
-        eps = config['AA1_eps']
-    else:
-        eps = 1.1
-    if 'AA1_amp_threshold' in config:
-        threshold = config['AA1_amp_threshold']
-    else:
-        threshold = 6
+    size_threshold = config.get('AA1_size_threshold', 0.01)
+    asym_threshold = config.get('AA1_asym_threshold', 1.75)
+    min_pts = config.get('AA1_min_pts', 5)
+    eps = config.get('AA1_eps', 1.1)
+    threshold = config.get('AA1_amp_threshold', 6)
     if 'AA1_save_arrs' in config:
         save_arrs = config['AA1_save_arrs']
         if save_arrs:
-            save_dir = data_dir + '/alien_analysis'
+            save_dir = ut.join(data_dir, 'alien_analysis')
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
     else:
         save_arrs = False
 
-    if 'AA1_expandcleanedsigma' in config:
-        expandcleanedsig = config['AA1_expandcleanedsigma']
-    else:
-        expandcleanedsig = 0.0
+    expandcleanedsig = config.get('AA1_expandcleanedsigma', 0.0)
 
     cuboid = crop_center(data)
     cuboid = np.where(cuboid >= threshold, cuboid, 0)
@@ -323,7 +302,7 @@ def auto_alien1(data, config, data_dir=None):
     if (expandcleanedsig > 0):
         cuboid = np.where(cuboid > 0, 1.0, 0.0)
         sig = [expandcleanedsig, expandcleanedsig, 1.0]
-        cuboid = ut.gauss_conv_fft(cuboid, sig)
+        cuboid = np.gaussian_filter(cuboid, sig)
         no_thresh_cuboid = crop_center(data)
         cuboid = np.where(cuboid > 0.1, no_thresh_cuboid, 0.0)
     return cuboid
@@ -382,7 +361,7 @@ def filter_aliens(data, config_map):
                     return
             data = np.where((mask == 1), data, 0.0)
         else:
-            print('alien file does not exist ', alien_file)
+            print(f'alien file does not exist {alien_file}')
     else:
         print('alien_file parameter not configured')
     return data

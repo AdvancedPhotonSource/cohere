@@ -23,7 +23,7 @@ copyright = '2020, Barbara Frosik, Ross Harder'
 author = 'Barbara Frosik, Ross Harder'
 
 # The full version, including alpha/beta/rc tags
-# release = '2.0'
+release = '4.1-beta1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -62,6 +62,15 @@ html_theme = 'sphinxdoc'
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ['_static']
 
-autodoc_mock_imports = ['tifffile', 'scipy']
+autodoc_mock_imports = ['numpy',
+                        'scikit-learn',
+                        'tifffile',
+                        'tensorflow',
+                        'mpi4py',
+                        'GPUtil',
+                        'psutil',
+                        'tqdm',
+                        'scipy',
+                        'matplotlib']
 
 master_doc = 'index'

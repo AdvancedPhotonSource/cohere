@@ -16,28 +16,47 @@ import numpy as np
 import os
 import logging
 import stat
+import scipy.ndimage as ndi
+import GPUtil
+from functools import reduce
+import subprocess
+import ast
 
 
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c), UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['get_logger',
+__all__ = ['join',
+           'get_logger',
            'read_tif',
            'save_tif',
            'read_config',
-           'get_good_dim',
-           'binning',
-           'get_centered',
-           'get_zero_padded_centered',
-           'adjust_dimensions',
-           'gaussian',
-           'gauss_conv_fft',
+           'write_config',
            'read_results',
+           'save_results',
            'save_metrics',
            'write_plot_errors',
-           'save_results',
-           'arr_property',
+           'get_good_dim',
+           'threshold_by_edge',
+           'select_central_object',
+           'get_central_object_extent',
+           'get_oversample_ratio',
+           'Resize',
+           'binning',
+           'crop_center',
+           'pad_center',
+           'center_max',
+           'adjust_dimensions',
+           'normalize',
+           'get_avail_gpu_runs',
+           'get_one_dev',
+           'get_gpu_use',
+           'estimate_no_proc'
            ]
+
+
+def join(*args):
+    return os.path.join(*args).replace(os.sep, '/')
 
 
 def get_logger(name, ldir=''):
@@ -56,7 +75,7 @@ def get_logger(name, ldir=''):
     """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    log_file = ldir + '/default.log'
+    log_file = join(ldir, 'default.log')
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -79,8 +98,7 @@ def read_tif(filename):
     ndarray
         an array containing the data parsed from the file
     """
-    ar = tf.imread(filename.replace(os.sep, '/')).transpose()
-    return ar
+    return tf.imread(filename.replace(os.sep, '/')).transpose()
 
 
 def save_tif(arr, filename):
@@ -94,7 +112,7 @@ def save_tif(arr, filename):
     filename : str
         tif format file name
     """
-    tf.imsave(filename.replace(os.sep, '/'), arr.transpose().astype(np.float32))
+    tf.imsave(filename.replace(os.sep, '/'), np.abs(arr).transpose().astype(np.float32))
 
 
 def read_config(config):
@@ -111,8 +129,6 @@ def read_config(config):
     dict
         dictionary containing parsed configuration, None if the given file does not exist
     """
-    import ast
-
     config = config.replace(os.sep, '/')
     if not os.path.isfile(config):
         print(config, 'is not a file')
@@ -124,7 +140,7 @@ def read_config(config):
     while line:
         # Ignore comment lines and move along
         line = line.strip()
-        if line.startswith('//') or line.startswith('#'):
+        if line.startswith('/') or line.startswith('#'):
             line = input.readline()
             continue
         elif "=" in line:
@@ -137,6 +153,160 @@ def read_config(config):
         line = input.readline()
     input.close()
     return param_dict
+
+
+def write_config(param_dict, config):
+    """
+    Writes configuration to a file.
+    Parameters
+    ----------
+    param_dict : dict
+        dictionary containing configuration parameters
+    config : str
+        configuration name theparameters will be written into
+    """
+    with open(config.replace(os.sep, '/'), 'w+') as cf:
+        cf.truncate(0)
+        linesep = os.linesep
+        for key, value in param_dict.items():
+            if type(value) == str:
+                value = f'"{value}"'
+            cf.write(f'{key} = {str(value)}{linesep}')
+
+
+def read_results(read_dir):
+    """
+    Reads results and returns array representation.
+
+    Parameters
+    ----------
+    read_dir : str
+        directory to read the results from
+    Returns
+    -------
+    ndarray, ndarray, ndarray (or None)
+        image, support, and coherence arrays
+    """
+    try:
+        imagefile = join(read_dir, 'image.npy')
+        image = np.load(imagefile)
+    except:
+        image = None
+
+    try:
+        supportfile = join(read_dir, 'support.npy')
+        support = np.load(supportfile)
+    except:
+        support = None
+
+    try:
+        cohfile = join(read_dir, 'coherence.npy')
+        coh = np.load(cohfile)
+    except:
+        coh = None
+
+    return image, support, coh
+
+
+def save_results(image, support, coh, errs, save_dir, metric=None):
+    """
+    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy,
+    optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
+
+
+    Parameters
+    ----------
+    image : ndarray
+        reconstructed image array
+
+    support : ndarray
+        support array related to the image
+
+    coh : ndarray
+        coherence array when pcdi feature is active, None otherwise
+
+    errs : ndarray
+        errors "chi" by iterations
+
+    save_dir : str
+        directory to write the files
+
+    metrics : dict
+        dictionary with metric type keys, and metric values
+    """
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    image_file = join(save_dir, 'image')
+    np.save(image_file, image)
+    support_file = join(save_dir, 'support')
+    np.save(support_file, support)
+
+    errs_file = join(save_dir, 'errors')
+    np.save(errs_file, errs)
+    if not coh is None:
+        coh_file = join(save_dir, 'coherence')
+        np.save(coh_file, coh)
+
+    write_plot_errors(save_dir)
+
+    save_metrics(errs, save_dir, metric)
+
+
+def save_metrics(errs, dir, metrics=None):
+    """
+    Saves arrays metrics and errors by iterations in text file.
+
+    Parameters
+    ----------
+    errs : list
+        list of "chi" error by iteration
+
+    dir : str
+        directory to write the file containing array metrics
+
+    metrics : dict
+        dictionary with metric type keys, and metric values
+    """
+    metric_file = join(dir, 'summary')
+    linesep = os.linesep
+    with open(metric_file, 'w+') as mf:
+        if metrics is not None:
+            mf.write(f'metric     result{linesep}')
+            for key in metrics:
+                value = metrics[key]
+                mf.write(f'{key} = {str(value)}{linesep}')
+        mf.write(f'{linesep}errors by iteration{linesep}')
+        for er in errs:
+            mf.write(f'str({er}) ')
+    mf.close()
+
+
+def write_plot_errors(save_dir):
+    """
+    Creates python executable that draw plot of error by iteration. It assumes that the given directory
+    contains "errors.npy" file
+
+    Parameters
+    ----------
+    save_dir : str
+        directory containing errors.npy file
+    """
+    plot_file = join(save_dir, 'plot_errors.py')
+    f = open(plot_file, 'w+')
+    f.write("#! /usr/bin/env python\n")
+    f.write("import matplotlib.pyplot as plt\n")
+    f.write("import numpy as np\n")
+    f.write("import sys\n")
+    f.write("import os\n")
+    f.write("current_dir = sys.path[0]\n")
+    f.write("errs = np.load(current_dir + '/errors.npy').tolist()\n")
+    f.write("errs.pop(0)\n")
+    f.write("plt.plot(errs)\n")
+    f.write("plt.ylabel('errors')\n")
+    f.write("plt.show()")
+    f.close()
+    st = os.stat(plot_file)
+    os.chmod(plot_file, st.st_mode | stat.S_IEXEC)
 
 
 def get_good_dim(dim):
@@ -172,6 +342,103 @@ def get_good_dim(dim):
     while not is_correct(new_dim):
         new_dim += 2
     return new_dim
+
+
+def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
+    """
+    Author: Yudong Yao
+
+    :param fp:
+    :return:
+    """
+    # threshold by left edge value
+    mask = np.ones_like(fp, dtype=bool)
+    mask[tuple([slice(1, None)] * fp.ndim)] = 0
+    zero = 1e-6
+    cut = np.max(fp[mask])
+    binary = np.zeros_like(fp)
+    binary[(np.abs(fp) > zero) & (fp > cut)] = 1
+    return binary
+
+
+def select_central_object(fp: np.ndarray) -> np.ndarray:
+    """
+    :param fp:
+    :return:
+    """
+    # import scipy.ndimage as ndimage
+    zero = 1e-6
+    binary = np.abs(fp)
+    binary[binary > zero] = 1
+    binary[binary <= zero] = 0
+
+    # cluster by connectivity
+    struct = ndi.morphology.generate_binary_structure(fp.ndim, 1).astype("uint8")
+    label, nlabel = ndi.label(binary, structure=struct)
+
+    # select largest cluster
+    select = np.argmax(np.bincount(np.ravel(label))[1:]) + 1
+
+    binary[label != select] = 0
+
+    fp[binary == 0] = 0
+    return fp
+
+
+def get_central_object_extent(fp: np.ndarray) -> list:
+    """
+    :param fp:
+    :return:
+    """
+    fp_cut = threshold_by_edge(np.abs(fp))
+    need = select_central_object(fp_cut)
+
+    # get extend of cluster
+    extent = [np.max(s) + 1 - np.min(s) for s in np.nonzero(need)]
+    return extent
+
+
+def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
+    """
+    :param fp: diffraction pattern
+    :return: oversample ratio in each dimension
+    """
+     # autocorrelation
+    acp = np.fft.fftshift(np.fft.ifftn(np.abs(fp)**2.))
+    aacp = np.abs(acp)
+
+    # get extent
+    blob = get_central_object_extent(aacp)
+
+    # correct for underestimation due to thresholding
+    correction = [0.025, 0.025, 0.0729][:fp.ndim]
+
+    extent = [
+        min(m, s + int(round(f * aacp.shape[i], 1)))
+        for i, (s, f, m) in enumerate(zip(blob, correction, aacp.shape))
+    ]
+
+    # oversample ratio
+    oversample = [
+        2. * s / (e + (1 - s % 2)) for s, e in zip(aacp.shape, extent)
+    ]
+    return np.round(oversample, 3)
+
+
+def Resize(IN, dim):
+    """
+    :param IN:
+    :param dim:
+    :return:
+    """
+    ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
+
+    pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
+    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
+           [pad_value[2], pad_value[2]]]
+    ft_resize = adjust_dimensions(ft, pad)
+    output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
+    return output
 
 
 def binning(array, binsizes):
@@ -229,17 +496,43 @@ def get_centered(arr, center_shift):
     ndarray
         centered array
     """
-    max_coordinates = list(np.unravel_index(np.argmax(arr), arr.shape))
-    max_coordinates = np.add(max_coordinates, center_shift)
+    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
+    return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
+
+
+def crop_center(arr, new_shape):
+    """
+    This function crops the array to the new size, leaving the array in the center.
+    The new_size must be smaller or equal to the original size in each dimension.
+    Parameters
+    ----------
+    arr : ndarray
+        the array to crop
+    new_shape : tuple
+        new size
+    Returns
+    -------
+    cropped : ndarray
+        the cropped array
+    """
     shape = arr.shape
-    centered = arr
-    for i in range(len(max_coordinates)):
-        centered = np.roll(centered, int(shape[i] / 2) - max_coordinates[i], i)
+    principio = []
+    finem = []
+    for i in range(3):
+        principio.append(int((shape[i] - new_shape[i]) / 2))
+        finem.append(principio[i] + new_shape[i])
+    if len(shape) == 1:
+        cropped = arr[principio[0]: finem[0]]
+    elif len(shape) == 2:
+        cropped = arr[principio[0]: finem[0], principio[1]: finem[1]]
+    elif len(shape) == 3:
+        cropped = arr[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]]
+    else:
+        raise NotImplementedError
+    return cropped
 
-    return centered
 
-
-def get_zero_padded_centered(arr, new_shape):
+def pad_center(arr, new_shape):
     """
     This function pads the array with zeros to the new shape with the array in the center.
     Parameters
@@ -254,18 +547,40 @@ def get_zero_padded_centered(arr, new_shape):
         the zero padded centered array
     """
     shape = arr.shape
-    pad = []
-    c_vals = []
-    for i in range(len(new_shape)):
-        pad.append((0, new_shape[i] - shape[i]))
-        c_vals.append((0.0, 0.0))
-    arr = np.lib.pad(arr, (pad), 'constant', constant_values=c_vals)
+    centered = np.zeros(new_shape, arr.dtype)
+    if len(shape) == 1:
+        centered[: shape[0]] = arr
+    elif len(shape) == 2:
+        centered[: shape[0], : shape[1]] = arr
+    elif len(shape) == 3:
+        centered[: shape[0], : shape[1], : shape[2]] = arr
 
-    centered = arr
     for i in range(len(new_shape)):
-        centered = np.roll(centered, int((new_shape[i] - shape[i] + 1) / 2), i)
+        centered = np.roll(centered, (new_shape[i] - shape[i] + 1) // 2, i)
 
     return centered
+
+
+def center_max(arr, center_shift):
+    """
+    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros,
+     the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
+
+    Parameters
+    ----------
+    arr : ndarray
+        the original array to be centered
+
+    center_shift : list
+        a list defining shift of the center
+
+    Returns
+    -------
+    ndarray
+        centered array
+    """
+    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
+    return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
 
 
 def adjust_dimensions(arr, pads):
@@ -388,142 +703,208 @@ def gauss_conv_fft(arr, sigmas):
     return convag
 
 
-def read_results(read_dir):
-    """
-    Reads results and returns array representation.
+def normalize(vec):
+    return vec / np.linalg.norm(vec)
 
+
+def get_one_dev(ids):
+    """
+    Returns GPU ID that is included in the configuration, is on a local node, and has the most available memory.
+
+    :param ids: list or string or dict
+        list of gpu ids, or string 'all' indicating all GPUs included, or dict by hostname
+    :return: int
+        selected GPU ID
+    """
+    import socket
+
+    # if cluster configuration, look only at devices on local machine
+    if issubclass(type(ids), dict):  # a dict with cluster configuration
+        ids = ids[socket.gethostname()]  # configured devices on local host
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    gpus = GPUtil.getGPUs()
+    dev = -1
+    max_mem = 0
+    # select one with the highest availbale memory
+    for gpu in gpus:
+        if ids == 'all' or gpu.id in ids:
+            free_mem = gpu.memoryFree
+            if free_mem > max_mem:
+                dev = gpu.id
+                max_mem = free_mem
+    return dev
+
+
+def get_avail_gpu_runs(devices, run_mem):
+    """
+    Finds how many jobs of run_mem size can run on configured GPUs on local host.
+
+    :param devices: list or string
+        list of GPU IDs or 'all' if configured to use all available GPUs
+    :param run_mem: int
+        size of GPU memory (in MB) needed for one job
+    :return: dict
+        pairs of GPU IDs, number of available jobs
+    """
+    import GPUtil
+
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    gpus = GPUtil.getGPUs()
+    available = {}
+
+    for gpu in gpus:
+        if devices == 'all' or gpu.id in devices:
+            available[gpu.id] = gpu.memoryFree // run_mem
+
+    return available
+
+
+def get_avail_hosts_gpu_runs(devices, run_mem):
+    """
+    This function is called in a cluster configuration case, i.e. devices parameter is configured as dictionary of hostnames and GPU IDs (either list of the IDs or 'all' for all GPUs per host).
+    It starts mpi subprocess that targets each of the configured host. The subprocess returns tuples with hostname and available GPUs. The tuples are converted into dictionary and returned.
+
+    :param devices:
+    :param run_mem:
+    :return:
+    """
+    hosts = ','.join(devices.keys())
+    script = join(os.path.realpath(os.path.dirname(__file__)), 'host_utils.py')
+    command = ['mpiexec', '-n', str(len(devices)), '--host', hosts, 'python', script, str(devices), str(run_mem)]
+    result = subprocess.run(command, stdout=subprocess.PIPE, text=True).stdout
+    mem_map = {}
+    for entry in result.splitlines():
+        host_devs = ast.literal_eval(entry)
+        mem_map[host_devs[0]] = host_devs[1]
+    return mem_map
+
+
+def get_balanced_load(avail_runs, runs):
+    """
+    This function distributes the runs proportionally to the GPUs availability.
+    If number of available runs is less or equal to the requested runs, the input parameter avail_runs becomes load.
+    The function also returns number of available runs.
+
+    :param avail_runs: dict
+        keys are GPU IDs, and values are available runs
+        for cluster configuration the keys are prepended with the hostnames
+    :param runs: int
+        number of requested jobs
+    :return: dict, int
+        a dictionary with the same structure as avail_runs input parameter, but with values indicating runs modified to achieve balanced distribution.
+    """
+    if len(avail_runs) == 0:
+        return {}
+
+    # if total number of available runs is less or equal runs, return the avail_runs,
+    # and total number of available jobs
+    total_available = reduce((lambda x, y: x + y), avail_runs.values())
+    if total_available <= runs:
+        return avail_runs, total_available
+
+    # initialize variables for calculations
+    need_runs = runs
+    available = total_available
+    load = {}
+
+    # add one run from each available
+    for k, v in avail_runs.items():
+        if v > 0:
+            load[k] = 1
+            avail_runs[k] = v - 1
+            need_runs -= 1
+            if need_runs == 0:
+                return load, runs
+            available -= 1
+
+    # use proportionally from available
+    distributed = 0
+    ratio = need_runs / available
+    for k, v in avail_runs.items():
+        if v > 0:
+            share = int(v * ratio)
+            load[k] = load[k] + share
+            avail_runs[k] = v - share
+            distributed += share
+    need_runs -= distributed
+    available -= distributed
+
+    # need to add the few remaining
+    for k, v in avail_runs.items():
+        if v > 0:
+            load[k] = load[k] + 1
+            need_runs -= 1
+            if need_runs == 0:
+                break
+
+    return load, runs
+
+
+def get_gpu_use(devices, no_jobs, job_size):
+    """
+    Determines available GPUs that match configured devices, and selects the optimal distribution of jobs on available devices. If devices is configured as dict (i.e. cluster configuration) then a file "hosts" is created in the running directory. This file contains hosts names and number of jobs to run on that host.
     Parameters
     ----------
-    read_dir : str
-        directory to read the results from
+    devices : list or dict or 'all'
+        Configured parameter. list of GPU ids to use for jobs or 'all' if all GPUs should be used. If cluster configuration, then
+        it is dict with keys being host names.
+    no_jobs : int
+        wanted number of jobs
+    job_size : float
+        a GPU memory requirement to run one job
     Returns
     -------
-    ndarray, ndarray, ndarray (or None)
-        image, support, and coherence arrays
+    picked_devs : list or list of lists(if cluster conf)
+        list of GPU ids that were selected for the jobs
+    available jobs : int
+        number of jobs allocated on all GPUs
+    cluster_conf : boolean
+        True is cluster configuration
     """
-    read_dir = read_dir.replace(os.sep, '/')
-    try:
-        imagefile = read_dir + '/image.npy'
-        image = np.load(imagefile)
-    except:
-        image = None
 
-    try:
-        supportfile = read_dir + '/support.npy'
-        support = np.load(supportfile)
-    except:
-        support = None
+    def unpack_load(load):
+        picked_devs = []
+        for ds in [[k] * int(v) for k, v in load.items()]:
+            picked_devs.extend(ds)
+        return picked_devs
 
-    try:
-        cohfile = read_dir + '/coherence.npy'
-        coh = np.load(cohfile)
-    except:
-        coh = None
+    if type(devices) != dict:  # a configuration for local host
+        hostfile_name = None
+        avail_jobs = get_avail_gpu_runs(devices, job_size)
+        balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
+        picked_devs = unpack_load(balanced_load)
+    else:  # cluster configuration
+        hosts_avail_jobs = get_avail_hosts_gpu_runs(devices, job_size)
+        avail_jobs = {}
+        # collapse the host dict into one dict by adding hostname in front of key (gpu id)
+        for k, v in hosts_avail_jobs.items():
+            host_runs = {(f'{k}_{str(kv)}'): vv for kv, vv in v.items()}
+            avail_jobs.update(host_runs)
+        balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
 
-    return image, support, coh
+        # un-collapse the balanced load by hosts
+        host_balanced_load = {}
+        for k, v in balanced_load.items():
+            idx = k.rfind('_')
+            host = k[:idx]
+            if host not in host_balanced_load:
+                host_balanced_load[host] = {}
+            host_balanced_load[host].update({int(k[idx + 1:]): v})
 
+        # create hosts file and return corresponding picked devices
+        hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
 
-def save_metrics(errs, dir, metrics=None):
-    """
-    Saves arrays metrics and errors by iterations in text file.
+        picked_devs = []
+        hostfile_name = f'hostfile_{os.getpid()}'
+        host_file = open(hostfile_name, mode='w+')
+        linesep = os.linesep
+        for h, ds in hosts_picked_devs:
+            host_file.write(f'{h}:{str(len(ds))}{linesep}')
+            picked_devs.append(ds)
+        host_file.close()
 
-    Parameters
-    ----------
-    errs : list
-        list of "chi" error by iteration
-
-    dir : str
-        directory to write the file containing array metrics
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
-    """
-    dir = dir.replace(os.sep, '/')
-    metric_file = dir + '/summary'
-    with open(metric_file, 'w+') as f:
-        if metrics is not None:
-            f.write('metric     result\n')
-            for key in metrics:
-                value = metrics[key]
-                f.write(key + ' = ' + str(value) + '\n')
-        f.write('\nerrors by iteration\n')
-        for er in errs:
-            f.write(str(er) + ' ')
-    f.close()
-
-
-def write_plot_errors(save_dir):
-    """
-    Creates python executable that draw plot of error by iteration. It assumes that the given directory
-    contains "errors.npy" file
-
-    Parameters
-    ----------
-    save_dir : str
-        directory containing errors.npy file
-    """
-    save_dir = save_dir.replace(os.sep, '/')
-    plot_file = save_dir + '/plot_errors.py'
-    f = open(plot_file, 'w+')
-    f.write("#! /usr/bin/env python\n")
-    f.write("import matplotlib.pyplot as plt\n")
-    f.write("import numpy as np\n")
-    f.write("import sys\n")
-    f.write("import os\n")
-    f.write("current_dir = sys.path[0]\n")
-    f.write("errs = np.load(current_dir + '/errors.npy').tolist()\n")
-    f.write("errs.pop(0)\n")
-    f.write("plt.plot(errs)\n")
-    f.write("plt.ylabel('errors')\n")
-    f.write("plt.show()")
-    f.close()
-    st = os.stat(plot_file)
-    os.chmod(plot_file, st.st_mode | stat.S_IEXEC)
-
-
-def save_results(image, support, coh, errs, save_dir, metric=None):
-    """
-    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy,
-    optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
-
-
-    Parameters
-    ----------
-    image : ndarray
-        reconstructed image array
-
-    support : ndarray
-        support array related to the image
-
-    coh : ndarray
-        coherence array when pcdi feature is active, None otherwise
-
-    errs : ndarray
-        errors "chi" by iterations
-
-    save_dir : str
-        directory to write the files
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
-    """
-    save_dir = save_dir.replace(os.sep, '/')
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    image_file = save_dir + '/image'
-    np.save(image_file, image)
-    support_file = save_dir + '/support'
-    np.save(support_file, support)
-
-    errs_file = save_dir + '/errors'
-    np.save(errs_file, errs)
-    if not coh is None:
-        coh_file = save_dir + '/coherence'
-        np.save(coh_file, coh)
-
-    write_plot_errors(save_dir)
-
-    save_metrics(errs, save_dir, metric)
+    return picked_devs, min(avail_jobs_no, no_jobs), hostfile_name
 
 
 def arr_property(arr):
@@ -536,14 +917,46 @@ def arr_property(arr):
         array to find max
     """
     arr1 = abs(arr)
-    print('norm', np.sum(pow(abs(arr), 2)))
-    max_coordinates = list(np.unravel_index(np.argmax(arr1), arr.shape))
-    print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
+    #print('norm', np.sum(pow(abs(arr), 2)))
+    print('mean across all data', arr1.mean())
+    print('std all data', arr1.std())
+    print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
+    print('std non zeros only', arr1[np.nonzero(arr1)].std())
+    # max_coordinates = list(np.unravel_index(np.argmax(arr1), arr.shape))
+    # print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
 
 
 # https://stackoverflow.com/questions/51503672/decorator-for-timeit-timeit-method/51503837#51503837
 from functools import wraps
 from time import time
+
+
+def estimate_no_proc(arr_size, factor):
+    """
+    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
+    of array.
+    Parameters
+    ----------
+    arr_size : int
+        size of array
+    factor : int
+        an estimate of how much memory is required to process comparing to array size
+    Returns
+    -------
+    int
+        number of processes
+    """
+    from multiprocessing import cpu_count
+    import psutil
+
+    ncpu = cpu_count()
+    freemem = psutil.virtual_memory().available
+    nmem = freemem / (factor * arr_size)
+    # decide what limits, ncpu or nmem
+    if nmem > ncpu:
+        return ncpu
+    else:
+        return int(nmem)
 
 
 def measure(func):

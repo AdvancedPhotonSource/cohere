@@ -51,84 +51,6 @@ class Mymodel:
                                              outputs=model.get_layer('phi').output)
 
 
-def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
-    # threshold by left edge value
-    mask = np.ones_like(fp, dtype=bool)
-    mask[tuple([slice(1, None)] * fp.ndim)] = 0
-    zero = 1e-6
-    cut = np.max(fp[mask])
-    binary = np.zeros_like(fp)
-    binary[(np.abs(fp) > zero) & (fp > cut)] = 1
-    return binary
-
-
-def select_central_object(fp: np.ndarray) -> np.ndarray:
-    import scipy.ndimage as ndimage
-    zero = 1e-6
-    binary = np.abs(fp)
-    binary[binary > zero] = 1
-    binary[binary <= zero] = 0
-
-    # cluster by connectivity
-    struct = ndimage.morphology.generate_binary_structure(fp.ndim,
-                                                          1).astype("uint8")
-    label, nlabel = ndimage.label(binary, structure=struct)
-
-    # select largest cluster
-    select = np.argmax(np.bincount(np.ravel(label))[1:]) + 1
-
-    binary[label != select] = 0
-
-    fp[binary == 0] = 0
-    return fp
-
-
-def get_central_object_extent(fp: np.ndarray) -> list:
-    fp_cut = threshold_by_edge(np.abs(fp))
-    need = select_central_object(fp_cut)
-
-    # get extend of cluster
-    extent = [np.max(s) + 1 - np.min(s) for s in np.nonzero(need)]
-    return extent
-
-
-def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
-    """ get oversample ratio
-		fp = diffraction pattern
-	"""
-    # autocorrelation
-    acp = np.fft.fftshift(np.fft.ifftn(np.abs(fp)**2.))
-    aacp = np.abs(acp)
-
-    # get extent
-    blob = get_central_object_extent(aacp)
-
-    # correct for underestimation due to thresholding
-    correction = [0.025, 0.025, 0.0729][:fp.ndim]
-
-    extent = [
-        min(m, s + int(round(f * aacp.shape[i], 1)))
-        for i, (s, f, m) in enumerate(zip(blob, correction, aacp.shape))
-    ]
-
-    # oversample ratio
-    oversample = [
-        2. * s / (e + (1 - s % 2)) for s, e in zip(aacp.shape, extent)
-    ]
-    return np.round(oversample, 3)
-
-
-def Resize(IN, dim):
-    ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
-
-    pad_value = np.array(dim) // 2 - np.array(ft.shape) // 2
-    pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
-           [pad_value[2], pad_value[2]]]
-    ft_resize = ut.adjust_dimensions(ft, pad)
-    output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
-    return output
-
-
 def match_oversample_diff(
     diff: np.ndarray,
     fr: Union[list, np.ndarray, None] = None,
@@ -144,7 +66,6 @@ def match_oversample_diff(
     # adjustment needed to match oversample ratio
     change = [np.round(f / t).astype('int32') for f, t in zip(fr, to)]
     change = [np.max([1, c]) for c in change]
-
     diff = ut.binning(diff, change)
     # crop diff to match output shape
     shape_arr = np.array(shape)
@@ -293,7 +214,7 @@ def run_AI(data, model_file, dir):
 
     # prepare data to make the oversampling ratio ~3
     wos = 3.0
-    orig_os = get_oversample_ratio(data)
+    orig_os = ut.get_oversample_ratio(data)
     # match oversampling to wos
     wanted_os = [wos, wos, wos]
     # match diff os
@@ -314,7 +235,7 @@ def run_AI(data, model_file, dir):
     pred_obj = preds_amp * np.exp(1j * preds_phi)
 
     # match object size with the input data
-    pred_obj = Resize(pred_obj, inshape)
+    pred_obj = ut.Resize(pred_obj, inshape)
 
     pad_value = np.array(data.shape) // 2 - np.array(pred_obj.shape) // 2
     pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
@@ -352,7 +273,7 @@ def start_AI(pars, datafile, dir):
         print ('no AI_trained_model in config')
         return None
     if not os.path.isfile(pars['AI_trained_model']):
-        print('there is no file', pars['AI_trained_model'])
+        print(f'there is no file {pars["AI_trained_model"]}')
         return None
 
     if datafile.endswith('tif') or datafile.endswith('tiff'):
@@ -372,7 +293,7 @@ def start_AI(pars, datafile, dir):
         return None
 
     # The results will be stored in the directory <experiment_dir>/AI_guess
-    ai_dir = dir + '/results_AI'
+    ai_dir = ut.join(dir, 'results_AI')
     if os.path.exists(ai_dir):
         pass
     else:

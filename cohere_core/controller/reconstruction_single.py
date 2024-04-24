@@ -47,21 +47,32 @@ def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
     else:
         device = dev[0]
     if worker.init_dev(device) < 0:
+        print (f'reconstruction failed, device not initialized to {device}')
         return
 
     ret_code = worker.init(continue_dir)
     if ret_code < 0:
+        print ('reconstruction failed, check algorithm sequence and triggers in configuration')
         return
+
     ret_code = worker.iterate()
-    if ret_code == 0:
-        worker.save_res(save_dir)
+    if ret_code < 0:
+        print ('reconstruction failed during iterations')
+        return
+
+    worker.save_res(save_dir)
+    return
 
 
 def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     Controls single reconstruction.
 
-    This script is typically started with cohere-ui helper functions. The 'init_guess' parameter in the configuration file defines whether it is a random guess, AI algorithm determined, or starting from some saved state. It will set the initial guess accordingly and start phasing process. The results will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir' is not defined.
+    This script is typically started with cohere-ui helper functions. The 'init_guess' parameter in the
+    configuration file defines whether it is a random guess, AI algorithm determined, or starting from
+    some saved state. It will set the initial guess accordingly and start phasing process. The results
+    will be saved in configured 'save_dir' parameter or in 'results_phasing' subdirectory if 'save_dir'
+    is not defined.
 
     Parameters
     ----------
@@ -85,8 +96,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     pars = ut.read_config(conf_file)
 
-    if 'init_guess' not in pars:
-        pars['init_guess'] = 'random'
+    pars['init_guess'] = pars.get('init_guess', 'random')
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':
@@ -102,7 +112,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         save_dir = pars['save_dir']
     else:
         filename = conf_file.split('/')[-1]
-        save_dir = dir + '/' + filename.replace('config_rec', 'results_phasing')
+        save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
 
     p = Process(target=rec_process, args=(lib, pars, datafile, dev,
                                           continue_dir, save_dir))
