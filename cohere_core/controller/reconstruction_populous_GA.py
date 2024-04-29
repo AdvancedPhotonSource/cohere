@@ -44,7 +44,7 @@ class Devices:
 
 
 def set_lib(pkg):
-    global dvclib
+    global devlib
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
