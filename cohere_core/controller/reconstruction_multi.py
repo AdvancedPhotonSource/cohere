@@ -13,9 +13,7 @@ Refer to cohere_core-ui suite for use cases. The reconstruction can be started f
 """
 
 import os
-import sys
 import argparse
-import importlib
 import cohere_core.utilities.utils as ut
 import cohere_core.controller.phasing as calc
 from mpi4py import MPI
@@ -27,18 +25,7 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def set_lib(pkg):
-    global devlib
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    elif pkg == 'torch':
-        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
-    calc.set_lib(devlib)
-
-
-def reconstruction(lib, conf_file, datafile, dir, devices):
+def reconstruction(pkg, conf_file, datafile, dir, devices):
     """
     Controls multiple reconstructions, the reconstructions run concurrently.
 
@@ -50,7 +37,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     Parameters
     ----------
-    lib : str
+    pkg : str
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
@@ -70,7 +57,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
     """
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-
     pars = ut.read_config(conf_file)
 
     if 'save_dir' in pars:
@@ -103,10 +89,8 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 if not os.path.isfile(ut.join(prev_dir, 'image.npy')):
                     prev_dir = None
 
-    set_lib(lib)
-
     # assume for now the size can accommodate the no_recs
-    worker = calc.Rec(pars, datafile)
+    worker = calc.Rec(pars, datafile, pkg)
     ret = worker.init_dev(devices[rank])
     if ret < 0:
         print(f'rank {rank} failed initializing device {devices[rank]}')
@@ -132,7 +116,7 @@ def main():
     import ast
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("lib", help="lib")
+    parser.add_argument("pkg", help="package to use for reconstruction calculations")
     parser.add_argument("conf_file", help="conf_file")
     parser.add_argument("datafile", help="datafile")
     parser.add_argument('dir', help='dir')
@@ -140,7 +124,7 @@ def main():
 
     args = parser.parse_args()
     dev = ast.literal_eval(args.dev)
-    reconstruction(args.lib, args.conf_file, args.datafile, args.dir, dev)
+    reconstruction(args.pkg, args.conf_file, args.datafile, args.dir, dev)
 
 
 if __name__ == "__main__":

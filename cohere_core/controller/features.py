@@ -15,7 +15,6 @@ __all__ = ['Pcdi',
 def set_lib(dlib):
     global devlib
     devlib = dlib
-    dvut.set_lib(devlib)
 
 
 class Pcdi:

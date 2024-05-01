@@ -3,10 +3,11 @@ import cmath
 import cohere_core.utilities.utils as ut
 
 _docformat__ = 'restructuredtext en'
-__all__ = ['set_lib',
+__all__ = ['set_lib_from_pkg',
            'arr_property',
            'pad_around',
            'center_sync',
+           'get_norm',
            'gauss_conv_fft',
            'shrink_wrap',
            'shift_phase',
@@ -30,9 +31,11 @@ __all__ = ['set_lib',
            ]
 
 
-def set_lib(dlib):
+def set_lib_from_pkg(pkg):
     global devlib
-    devlib = dlib
+
+    # get the lib object
+    devlib = ut.set_lib(pkg)
 
 
 def arr_property(arr):
@@ -101,6 +104,10 @@ def center_sync(image, support):
     support =devlib.roll(support, sft)
 
     return image, support
+
+
+def get_norm(arr):
+    return devlib.sum(devlib.square(devlib.absolute(arr)))
 
 
 def gauss_conv_fft(arr, distribution):

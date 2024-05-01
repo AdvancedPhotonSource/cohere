@@ -17,7 +17,7 @@ def run_with_mpi(ga_method, lib, conf_file, datafile, dir, devices, hostfile=Non
     else:
         command = ['mpiexec', '-n', str(len(devices)), '--hostfile', hostfile, 'python', script, lib, conf_file, datafile, dir, str(devices)]
 
-    subprocess.run(command, capture_output=True)
+    subprocess.run(command, capture_output=False)
 
     run_time = time.time() - start_time
     if ga_method is None:

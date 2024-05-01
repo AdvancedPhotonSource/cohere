@@ -13,7 +13,6 @@ Refer to cohere_core-ui suite for use cases. The reconstruction can be started f
 """
 
 import os
-import importlib
 import cohere_core.controller.phasing as calc
 import cohere_core.utilities.utils as ut
 from multiprocessing import Process
@@ -25,19 +24,8 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def set_lib(pkg, ndim=None):
-    global devlib
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    calc.set_lib(devlib)
-
-
-def rec_process(lib, pars, peak_dirs, dev, continue_dir):
-    set_lib(lib)
-
-    worker = calc.CoupledRec(pars, peak_dirs)
+def rec_process(pkg, pars, peak_dirs, dev, continue_dir):
+    worker = calc.CoupledRec(pars, peak_dirs, pkg)
     if worker.init_dev(dev[0]) < 0:
         return
     worker.init(continue_dir)
