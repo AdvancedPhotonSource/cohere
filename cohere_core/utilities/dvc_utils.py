@@ -171,8 +171,7 @@ def shift_phase(arr, val=0):
     ph = devlib.angle(arr)
     support = shrink_wrap(devlib.absolute(arr), .2, .5)  # get just the crystal, i.e very tight support
     avg_ph = devlib.sum(ph * support) / devlib.sum(support)
-    ph = ph - avg_ph + val
-    return ph
+    return arr * devlib.exp(-1j * (avg_ph - val))
 
 
 def zero_phase(arr):
