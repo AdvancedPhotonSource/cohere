@@ -1,7 +1,6 @@
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
 import torch
-from torch.nn.functional import conv1d
 
 import sys
 import math

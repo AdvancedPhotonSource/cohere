@@ -1,7 +1,7 @@
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
-from scipy.ndimage import convolve, gaussian_filter, center_of_mass, shift
-from scipy.signal import correlate
+import scipy.ndimage as ndi
+import scipy.signal as sig
 
 
 class nplib(cohlib):
@@ -64,7 +64,7 @@ class nplib(cohlib):
         return np.roll(arr, sft, axis=axis)
 
     def shift(arr, sft):
-        return shift(arr, sft)
+        return ndi.shift(arr, sft)
 
     def fftshift(arr):
         return np.fft.fftshift(arr)
@@ -79,10 +79,10 @@ class nplib(cohlib):
         return np.fft.ifftn(arr, norm='forward')
 
     def fftconvolve(arr1, kernel):
-        return convolve(arr1, kernel)
+        return ndi.convolve(arr1, kernel)
 
     def correlate(arr1, arr2, mode='same', method='auto'):
-        return correlate(arr1, arr2, mode, method)
+        return sig.correlate(arr1, arr2, mode, method)
 
     def where(cond, x, y):
         return np.where(cond, x, y)
@@ -173,10 +173,10 @@ class nplib(cohlib):
         return grid / grid_total
 
     def gaussian_filter(arr, sigma, **kwargs):
-        return gaussian_filter(arr, sigma)
+        return ndi.gaussian_filter(arr, sigma)
 
     def center_of_mass(inarr):
-        return center_of_mass(np.absolute(inarr))
+        return ndi.center_of_mass(np.absolute(inarr))
 
     def meshgrid(*xi):
         return np.meshgrid(*xi)
@@ -247,10 +247,3 @@ class nplib(cohlib):
 
     def clean_default_mem():
         pass
-
-# a11 = np.array([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
-# a12 = np.array([10.1, 10.2, 10.3, 11.0])
-# print(np.convolve(a11,a12, mode='same'))
-# from scipy.signal import convolve, fftconvolve
-# print(convolve(a11,a12, mode='same'))
-# print(fftconvolve(a11,a12, mode='same'))

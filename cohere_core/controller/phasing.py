@@ -17,6 +17,7 @@ The software can run code utilizing different library, such as numpy and cupy. U
 from pathlib import Path
 import time
 import os
+import sys
 from math import pi
 import random
 import importlib
@@ -35,22 +36,21 @@ import cohere_core.controller.features as ft
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['set_lib',
-           'get_norm',
+__all__ = ['set_lib_from_pkg',
            'reconstruction',
            'Breeder',
            'Rec']
 
 
-def set_lib(dlib):
+def set_lib_from_pkg(pkg):
     global devlib
-    devlib = dlib
-    dvut.set_lib(devlib)
-    ft.set_lib(dlib)
 
-
-def get_norm(arr):
-    return devlib.sum(devlib.square(devlib.absolute(arr)))
+    # get the lib object
+    devlib = ut.set_lib(pkg)
+    # pass the lib object to the features associated with this reconstruction
+    ft.set_lib(devlib)
+    # the utilities are not associated with reconstruction and the initialization of lib is independent
+    dvut.set_lib_from_pkg(pkg)
 
 
 class Breeder:
@@ -82,7 +82,8 @@ class Rec:
 
     """
     __all__ = []
-    def __init__(self, params, data_file):
+    def __init__(self, params, data_file, pkg):
+        set_lib_from_pkg(pkg)
         self.iter_functions = [self.next,
                                self.lowpass_filter_operation,
                                self.reset_resolution,
@@ -255,7 +256,7 @@ class Rec:
 
         if (first_run):
             max_data = devlib.amax(self.data)
-            self.ds_image *= get_norm(self.ds_image) * max_data
+            self.ds_image *= dvut.get_norm(self.ds_image) * max_data
 
             # the line below are for testing to set the initial guess to support
             # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
@@ -373,15 +374,15 @@ class Rec:
         abs_amplitudes = devlib.absolute(self.rs_amplitudes)
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
-        error = get_norm(
-            devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / get_norm(self.iter_data)
+        error = dvut.get_norm(
+            devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / dvut.get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
-        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
-                                      0)) / get_norm(self.iter_data)
+        error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / dvut.get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
@@ -547,8 +548,8 @@ class CoupledRec(Rec):
     __author__ = "Nick Porter"
     __all__ = []
 
-    def __init__(self, params, peak_dirs):
-        super().__init__(params, None)
+    def __init__(self, params, peak_dirs, pkg):
+        super().__init__(params, None, pkg)
 
         self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peaks_operation]
 
@@ -894,33 +895,24 @@ def reconstruction(datafile, **kwargs):
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
         print('Use cohere_core-ui package to run multiple reconstructions. Processing single reconstruction.')
+    device = kwargs.get('device', [-1])
     pkg = kwargs.get('processing', 'auto')
     if pkg == 'auto':
-        try:
-            import cupy as cp
-            pkg = 'cp'
-        except:
+        if device == [-1] or sys.platform == 'darwin':
+            pkg = 'np'
+        else:
             try:
-                import torch
-                pkg = 'torch'
+                import cupy as cp
+                pkg = 'cp'
             except:
-                pkg = 'np'
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    if pkg == 'torch':
-        devlib = importlib.import_module('cohere_core.lib.cplib').torchlib
-    else:
-        print('supporting cp and np processing')
-        return
-    set_lib(devlib, False)
+                try:
+                    import torch
+                    pkg = 'torch'
+                except:
+                    pkg = 'np'
 
-    worker = Rec(kwargs, datafile)
-    if 'device' in kwargs:
-        device = kwargs['device'][0]
-    else:
-        device = [-1]
+    worker = Rec(kwargs, datafile, pkg)
+
     if worker.init_dev(device[0]) < 0:
         return
 

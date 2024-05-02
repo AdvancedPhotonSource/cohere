@@ -3,10 +3,11 @@ import cmath
 import cohere_core.utilities.utils as ut
 
 _docformat__ = 'restructuredtext en'
-__all__ = ['set_lib',
+__all__ = ['set_lib_from_pkg',
            'arr_property',
            'pad_around',
            'center_sync',
+           'get_norm',
            'gauss_conv_fft',
            'shrink_wrap',
            'shift_phase',
@@ -30,9 +31,11 @@ __all__ = ['set_lib',
            ]
 
 
-def set_lib(dlib):
-    global dvclib
-    dvclib = dlib
+def set_lib_from_pkg(pkg):
+    global devlib
+
+    # get the lib object
+    devlib = ut.set_lib(pkg)
 
 
 def arr_property(arr):
@@ -46,19 +49,19 @@ def arr_property(arr):
     """
     import numpy as np
     arr1 = abs(arr)
-    print('norm', dvclib.sum(pow(abs(arr), 2)))
+    print('norm', devlib.sum(pow(abs(arr), 2)))
     print('mean across all data', arr1.mean())
     print('std all data', arr1.std())
-    print('sum',np.sum(arr))
+    print('sum', np.sum(arr))
     # print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
     # print('std non zeros only', arr1[np.nonzero(arr1)].std())
-    max_coordinates = list(dvclib.unravel_index(dvclib.argmax(arr1), arr.shape))
+    max_coordinates = list(devlib.unravel_index(devlib.argmax(arr1), arr.shape))
     print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
 
 
 def pad_around(arr, shape, val=0):
-    padded = dvclib.full(shape, val)
-    dims = dvclib.dims(arr)
+    padded = devlib.full(shape, val)
+    dims = devlib.dims(arr)
     principio = []
     finem = []
     for i in range(len(shape)):
@@ -91,27 +94,31 @@ def center_sync(image, support):
 
     # set center phase to zero, use as a reference
     phi0 = math.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
-                   image.flatten().real[int(image.flatten().shape[0] / 2)])
+                      image.flatten().real[int(image.flatten().shape[0] / 2)])
     image = image * cmath.exp(-1j * phi0)
 
-    com = dvclib.center_of_mass(dvclib.astype(support, dtype='int32'))
+    com = devlib.center_of_mass(devlib.astype(support, dtype='int32'))
     # place center of mass in the center
-    sft = [shape[i] / 2.0 - com[i] + .5  for i in range(len(shape))]
-    image = dvclib.roll(image, sft)
-    support =dvclib.roll(support, sft)
+    sft = [shape[i] / 2.0 - com[i] + .5 for i in range(len(shape))]
+    image = devlib.roll(image, sft)
+    support = devlib.roll(support, sft)
 
     return image, support
 
 
+def get_norm(arr):
+    return devlib.sum(devlib.square(devlib.absolute(arr)))
+
+
 def gauss_conv_fft(arr, distribution):
-    dims = dvclib.dims(arr)
-    arr_sum = dvclib.sum(arr)
-    arr_f = dvclib.ifftshift(dvclib.fft(dvclib.ifftshift(arr)))
+    dims = devlib.dims(arr)
+    arr_sum = devlib.sum(arr)
+    arr_f = devlib.ifftshift(devlib.fft(devlib.ifftshift(arr)))
     convag = arr_f * distribution
-    convag = dvclib.ifftshift(dvclib.ifft(dvclib.ifftshift(convag)))
-    convag = dvclib.real(convag)
-    convag = dvclib.where(convag > 0, convag, 0.0)
-    correction = arr_sum / dvclib.sum(convag)
+    convag = devlib.ifftshift(devlib.ifft(devlib.ifftshift(convag)))
+    convag = devlib.real(convag)
+    convag = devlib.where(convag > 0, convag, 0.0)
+    correction = arr_sum / devlib.sum(convag)
     convag *= correction
     return convag
 
@@ -136,11 +143,11 @@ def shrink_wrap(arr, threshold, sigma):
     support : ndarray
         support array
     """
-    filter = dvclib.gaussian_filter(dvclib.absolute(arr), sigma)
-    max_filter = dvclib.amax(filter)
+    filter = devlib.gaussian_filter(devlib.absolute(arr), sigma)
+    max_filter = devlib.amax(filter)
     adj_threshold = max_filter * threshold
-    support = dvclib.full(dvclib.dims(filter), 1)
-    support = dvclib.where(filter >= adj_threshold, support, 0)
+    support = devlib.full(devlib.dims(filter), 1)
+    support = devlib.where(filter >= adj_threshold, support, 0)
     return support
 
 
@@ -161,11 +168,10 @@ def shift_phase(arr, val=0):
     ndarray
         input array with adjusted phase
     """
-    ph = dvclib.angle(arr)
-    support = shrink_wrap(dvclib.absolute(arr), .2, .5)  # get just the crystal, i.e very tight support
-    avg_ph = dvclib.sum(ph * support) / dvclib.sum(support)
-    ph = ph - avg_ph + val
-    return ph
+    ph = devlib.angle(arr)
+    support = shrink_wrap(devlib.absolute(arr), .2, .5)  # get just the crystal, i.e very tight support
+    avg_ph = devlib.sum(ph * support) / devlib.sum(support)
+    return arr * devlib.exp(-1j * (avg_ph - val))
 
 
 def zero_phase(arr):
@@ -186,7 +192,7 @@ def zero_phase(arr):
         input array with adjusted phase
     """
     ph = shift_phase(arr, 0)
-    return dvclib.absolute(arr) * dvclib.exp(1j * ph)
+    return devlib.absolute(arr) * devlib.exp(1j * ph)
 
 
 def conj_reflect(arr):
@@ -201,8 +207,8 @@ def conj_reflect(arr):
     ndarray
         conjugate reflection array
     """
-    F = dvclib.ifftshift(dvclib.fft(dvclib.fftshift(arr)))
-    return dvclib.ifftshift(dvclib.ifft(dvclib.fftshift(dvclib.conj(F))))
+    F = devlib.ifftshift(devlib.fft(devlib.fftshift(arr)))
+    return devlib.ifftshift(devlib.ifft(devlib.fftshift(devlib.conj(F))))
 
 
 def cross_correlation(a, b):
@@ -219,10 +225,10 @@ def cross_correlation(a, b):
     ndarray
         cross correlation array
     """
-    A = dvclib.ifftshift(dvclib.fft(dvclib.fftshift(conj_reflect(a))))
-    B = dvclib.ifftshift(dvclib.fft(dvclib.fftshift(b)))
+    A = devlib.ifftshift(devlib.fft(devlib.fftshift(conj_reflect(a))))
+    B = devlib.ifftshift(devlib.fft(devlib.fftshift(b)))
     CC = A * B
-    return dvclib.ifftshift(dvclib.ifft(dvclib.fftshift(CC)))
+    return devlib.ifftshift(devlib.ifft(devlib.fftshift(CC)))
 
 
 def check_get_conj_reflect(arr1, arr2):
@@ -244,7 +250,7 @@ def check_get_conj_reflect(arr1, arr2):
     support2 = shrink_wrap(abs(arr2), .1, .1)
     cc1 = cross_correlation(support1, shrink_wrap(conj_reflect(arr2), .1, .1))
     cc2 = cross_correlation(support1, support2)
-    if dvclib.amax(cc1) > dvclib.amax(cc2):
+    if devlib.amax(cc1) > devlib.amax(cc2):
         return conj_reflect(arr2)
     else:
         return arr2
@@ -270,12 +276,12 @@ def get_metric(image, errs, metric_type):
     if metric_type == 'chi':
         eval = errs[-1]
     elif metric_type == 'sharpness':
-        eval = dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
+        eval = devlib.sum(devlib.square(devlib.square(devlib.absolute(image))))
     elif metric_type == 'summed_phase':
         ph = shift_phase(image, 0)
-        eval = dvclib.sum(abs(ph))
+        eval = devlib.sum(abs(ph))
     elif metric_type == 'area':
-        eval = dvclib.sum(shrink_wrap(image, .2, .5))
+        eval = devlib.sum(shrink_wrap(image, .2, .5))
 
     if type(eval) != float:
         eval = eval.item()
@@ -301,19 +307,19 @@ def all_metrics(image, errs):
     if type(eval) != float:
         eval = eval.item()
     metrics['chi'] = eval
-    eval = dvclib.sum(dvclib.square(dvclib.square(dvclib.absolute(image))))
+    eval = devlib.sum(devlib.square(devlib.square(devlib.absolute(image))))
     if type(eval) != float:
         eval = eval.item()
     metrics['sharpness'] = eval
-    eval = dvclib.sum(abs(shift_phase(image, 0)))
+    eval = devlib.sum(abs(shift_phase(image, 0)))
     if type(eval) != float:
         eval = eval.item()
     metrics['summed_phase'] = eval
-    eval = dvclib.sum(shrink_wrap(image, .2, .5))
+    eval = devlib.sum(shrink_wrap(image, .2, .5))
     if type(eval) != float:
         eval = eval.item()
     metrics['area'] = eval
-    
+
     return metrics
 
 
@@ -339,7 +345,7 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
         upsampled array
     """
     # arr is 2D
-    [nr, nc] = dvclib.dims(arr)
+    [nr, nc] = devlib.dims(arr)
     if nor < 0:
         nor = nr
     if noc < 0:
@@ -347,23 +353,23 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
 
     # Compute kernels and obtain DFT by matrix products
     yl = list(range(-int(math.floor(nc / 2)), nc - int(math.floor(nc / 2))))
-    y = dvclib.ifftshift(dvclib.array(yl)) * (-2j * math.pi / (nc * usfac))
+    y = devlib.ifftshift(devlib.array(yl)) * (-2j * math.pi / (nc * usfac))
     xl = list(range(-coff, noc - coff))
-    x = dvclib.array(xl)
-    yt = dvclib.tile(y, (len(xl), 1))
-    xt = dvclib.tile(x, (len(yl), 1))
-    kernc = dvclib.exp(yt.T * xt)
+    x = devlib.array(xl)
+    yt = devlib.tile(y, (len(xl), 1))
+    xt = devlib.tile(x, (len(yl), 1))
+    kernc = devlib.exp(yt.T * xt)
 
     yl = list(range(-roff, nor - roff))
-    y = dvclib.array(yl)
+    y = devlib.array(yl)
     xl = list(range(-int(math.floor(nr / 2)), nr - int(math.floor(nr / 2))))
-    x = dvclib.ifftshift(dvclib.array(xl))
-    yt = dvclib.tile(y, (len(xl), 1))
-    xt = dvclib.tile(x, (len(yl), 1))
-    kernr = dvclib.exp(yt * xt.T * (-2j * math.pi / (nr * usfac)))
+    x = devlib.ifftshift(devlib.array(xl))
+    yt = devlib.tile(y, (len(xl), 1))
+    xt = devlib.tile(x, (len(yl), 1))
+    kernr = devlib.exp(yt * xt.T * (-2j * math.pi / (nr * usfac)))
 
     # return as device array
-    return dvclib.dot(dvclib.dot(kernr.T, arr), kernc)
+    return devlib.dot(devlib.dot(kernr.T, arr), kernc)
 
 
 def dftregistration(ref_arr, arr, usfac=2):
@@ -392,11 +398,11 @@ def dftregistration(ref_arr, arr, usfac=2):
     # Embed Fourier data in a 2x larger array
     shape = ref_arr.shape
     large_shape = tuple(2 * x for x in ref_arr.shape)
-    c_c = pad_around(dvclib.fftshift(ref_arr) * dvclib.conj(dvclib.fftshift(arr)), large_shape, val=0j)
+    c_c = pad_around(devlib.fftshift(ref_arr) * devlib.conj(devlib.fftshift(arr)), large_shape, val=0j)
 
     # Compute crosscorrelation and locate the peak
-    c_c = dvclib.ifft(dvclib.ifftshift(c_c))
-    max_coord = dvclib.unravel_index(dvclib.argmax(c_c), dvclib.dims(c_c))
+    c_c = devlib.ifft(devlib.ifftshift(c_c))
+    max_coord = devlib.unravel_index(devlib.argmax(c_c), devlib.dims(c_c))
 
     if max_coord[0] > shape[0]:
         row_shift = max_coord[0] - large_shape[0]
@@ -414,15 +420,16 @@ def dftregistration(ref_arr, arr, usfac=2):
     if usfac > 2:
         # DFT computation
         # Initial shift estimate in upsampled grid
-        row_shift = dvclib.round(row_shift * usfac) / usfac
-        col_shift = dvclib.round(col_shift * usfac) / usfac
-        dftshift = dvclib.fix(dvclib.ceil(usfac * 1.5) / 2)  # Center of output array at dftshift
+        row_shift = devlib.round(row_shift * usfac) / usfac
+        col_shift = devlib.round(col_shift * usfac) / usfac
+        dftshift = devlib.fix(devlib.ceil(usfac * 1.5) / 2)  # Center of output array at dftshift
         # Matrix multiply DFT around the current shift estimate
-        c_c = dvclib.conj(dftups(arr * dvclib.conj(ref_arr), int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
-                             int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))) / \
+        c_c = devlib.conj(
+            dftups(arr * devlib.conj(ref_arr), int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
+                   int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))) / \
               (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ^ 2)
         # Locate maximum and map back to original pixel grid
-        max_coord = dvclib.unravel_index(dvclib.argmax(c_c), dvclib.dims(c_c))
+        max_coord = devlib.unravel_index(devlib.argmax(c_c), devlib.dims(c_c))
         [rloc, cloc] = max_coord
 
         rloc = rloc - dftshift
@@ -449,9 +456,9 @@ def register_3d_reconstruction(ref_arr, arr):
     shift_2, shift_1, shift_0 : float, float
         pixel shifts between images
     """
-    r_shift_2, c_shift_2 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 2)), dvclib.fft(dvclib.sum(arr, 2)), 4)
-    r_shift_1, c_shift_1 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 1)), dvclib.fft(dvclib.sum(arr, 1)), 4)
-    r_shift_0, c_shift_0 = dftregistration(dvclib.fft(dvclib.sum(ref_arr, 0)), dvclib.fft(dvclib.sum(arr, 0)), 4)
+    r_shift_2, c_shift_2 = dftregistration(devlib.fft(devlib.sum(ref_arr, 2)), devlib.fft(devlib.sum(arr, 2)), 4)
+    r_shift_1, c_shift_1 = dftregistration(devlib.fft(devlib.sum(ref_arr, 1)), devlib.fft(devlib.sum(arr, 1)), 4)
+    r_shift_0, c_shift_0 = dftregistration(devlib.fft(devlib.sum(ref_arr, 0)), devlib.fft(devlib.sum(arr, 0)), 4)
 
     shift_2 = sum([r_shift_2, r_shift_1]) * 0.5
     shift_1 = sum([c_shift_2, r_shift_0]) * 0.5
@@ -477,16 +484,19 @@ def sub_pixel_shift(arr, row_shift, col_shift, z_shift):
     ndarray
         shifted array
     """
-    buf2ft = dvclib.fft(arr)
+    buf2ft = devlib.fft(arr)
     shape = arr.shape
-    Nr = dvclib.ifftshift(dvclib.array(list(range(-int(math.floor(shape[0] / 2)), shape[0] - int(math.floor(shape[0] / 2))))))
-    Nc = dvclib.ifftshift(dvclib.array(list(range(-int(math.floor(shape[1] / 2)), shape[1] - int(math.floor(shape[1] / 2))))))
-    Nz = dvclib.ifftshift(dvclib.array(list(range(-int(math.floor(shape[2] / 2)), shape[2] - int(math.floor(shape[2] / 2))))))
-    [Nc, Nr, Nz] = dvclib.meshgrid(Nc, Nr, Nz)
+    Nr = devlib.ifftshift(
+        devlib.array(list(range(-int(math.floor(shape[0] / 2)), shape[0] - int(math.floor(shape[0] / 2))))))
+    Nc = devlib.ifftshift(
+        devlib.array(list(range(-int(math.floor(shape[1] / 2)), shape[1] - int(math.floor(shape[1] / 2))))))
+    Nz = devlib.ifftshift(
+        devlib.array(list(range(-int(math.floor(shape[2] / 2)), shape[2] - int(math.floor(shape[2] / 2))))))
+    [Nc, Nr, Nz] = devlib.meshgrid(Nc, Nr, Nz)
     mg = 1j * 2 * math.pi * (-row_shift * Nr / shape[0] - col_shift * Nc / shape[1] - z_shift * Nz / shape[2])
     # return as array on device
-    Greg = buf2ft * dvclib.exp(mg)
-    return dvclib.ifft(Greg)
+    Greg = buf2ft * devlib.exp(mg)
+    return devlib.ifft(Greg)
 
 
 def align_arrays_subpixel(ref_arr, arr):
@@ -530,11 +540,11 @@ def remove_ramp(arr, ups=1):
     shape = arr.shape
     new_shape = [dim * ups for dim in shape]
     padded = ut.pad_center(arr, new_shape)
-    padded_f = dvclib.fftshift(dvclib.fft(dvclib.ifftshift(padded)))
-    com = dvclib.center_of_mass(dvclib.square(dvclib.absolute(padded_f)))
+    padded_f = devlib.fftshift(devlib.fft(devlib.ifftshift(padded)))
+    com = devlib.center_of_mass(devlib.square(devlib.absolute(padded_f)))
     sft = [new_shape[i] / 2.0 - com[i] + .5 for i in range(len(shape))]
     sub_pixel_shifted = sub_pixel_shift(padded_f, *sft)
-    ramp_removed_padded = dvclib.fftshift(dvclib.ifft(dvclib.fftshift(sub_pixel_shifted)))
+    ramp_removed_padded = devlib.fftshift(devlib.ifft(devlib.fftshift(sub_pixel_shifted)))
     ramp_removed = ut.crop_center(ramp_removed_padded, arr.shape)
 
     return ramp_removed
@@ -558,7 +568,7 @@ def fast_shift(arr, shifty, fill_val=0):
     ndarray, shifted array
     """
     dims = arr.shape
-    result = dvclib.full(dims, 1.0)
+    result = devlib.full(dims, 1.0)
     result *= fill_val
     result_slices = []
     arr_slices = []
@@ -592,16 +602,16 @@ def align_arrays_pixel(ref, arr):
     -------
     ndarray : aligned array
     """
-    CC = dvclib.correlate(ref, arr, mode='same', method='fft')
+    CC = devlib.correlate(ref, arr, mode='same', method='fft')
     err = correlation_err(ref, arr, CC)
-    CC_shifted = dvclib.ifftshift(CC)
-    shape = dvclib.array(CC_shifted.shape)
-    amp = dvclib.absolute(CC_shifted)
-    shift = dvclib.unravel_index(amp.argmax(), shape)
-    if dvclib.sum(shift) == 0:
+    CC_shifted = devlib.ifftshift(CC)
+    shape = devlib.array(CC_shifted.shape)
+    amp = devlib.absolute(CC_shifted)
+    shift = devlib.unravel_index(amp.argmax(), shape)
+    if devlib.sum(shift) == 0:
         return [arr, err]
-    intshift = dvclib.array(shift)
-    pixelshift = dvclib.where(intshift >= shape / 2, intshift - shape, intshift)
+    intshift = devlib.array(shift)
+    pixelshift = devlib.where(intshift >= shape / 2, intshift - shape, intshift)
     shifted_arr = fast_shift(arr, pixelshift)
     return [shifted_arr, err]
 
@@ -624,12 +634,12 @@ def correlation_err(refarr, arr, CC=None):
     float, correlation error
     """
     if CC is None:
-        CC = dvclib.correlate(refarr, arr, mode='same', method='fft')
+        CC = devlib.correlate(refarr, arr, mode='same', method='fft')
     CCmax = CC.max()
-    rfzero = dvclib.sum(dvclib.absolute(refarr) ** 2)
-    rgzero = dvclib.sum(dvclib.absolute(arr) ** 2)
-    e = abs(1 - CCmax * dvclib.conj(CCmax) / (rfzero * rgzero)) ** 0.5
-    return  e
+    rfzero = devlib.sum(devlib.absolute(refarr) ** 2)
+    rgzero = devlib.sum(devlib.absolute(arr) ** 2)
+    e = abs(1 - CCmax * devlib.conj(CCmax) / (rfzero * rgzero)) ** 0.5
+    return e
 
 
 def zero_phase_cc(arr1, arr2):
@@ -650,10 +660,10 @@ def zero_phase_cc(arr1, arr2):
         input array with adjusted phase
     """
     # will set array1 avg phase to array2
-    c_c = dvclib.conj(arr1) * arr2
-    c_c_tot = dvclib.sum(c_c)
-    ph = dvclib.angle(c_c_tot)
-    arr = arr1 * dvclib.exp(1j * ph)
+    c_c = devlib.conj(arr1) * arr2
+    c_c_tot = devlib.sum(c_c)
+    ph = devlib.angle(c_c_tot)
+    arr = arr1 * devlib.exp(1j * ph)
     return arr
 
 
@@ -672,8 +682,8 @@ def breed(breed_mode, alpha_dir, image):
 
     """
     # load alpha from alpha dir
-    alpha = dvclib.load(ut.join(alpha_dir, 'image.npy'))
-    if dvclib.array_equal(image, alpha):
+    alpha = devlib.load(ut.join(alpha_dir, 'image.npy'))
+    if devlib.array_equal(image, alpha):
         # it is alpha, no breeding
         return zero_phase(image)
     alpha = zero_phase(alpha)
@@ -684,44 +694,45 @@ def breed(breed_mode, alpha_dir, image):
     alpha = check_get_conj_reflect(beta, alpha)
     alpha = align_arrays_subpixel(beta, alpha)
     alpha = zero_phase(alpha)
-    ph_alpha = dvclib.angle(alpha)
+    ph_alpha = devlib.angle(alpha)
     beta = zero_phase_cc(beta, alpha)
-    ph_beta = dvclib.angle(beta)
+    ph_beta = devlib.angle(beta)
     if breed_mode == 'sqrt_ab':
-        beta = dvclib.sqrt(dvclib.absolute(alpha) * dvclib.absolute(beta)) * dvclib.exp(0.5j * (ph_beta + ph_alpha))
+        beta = devlib.sqrt(devlib.absolute(alpha) * devlib.absolute(beta)) * devlib.exp(0.5j * (ph_beta + ph_alpha))
 
     elif breed_mode == 'pixel_switch':
-        cond = dvclib.random(beta.shape)
-        beta = dvclib.where((cond > 0.5), beta, alpha)
+        cond = devlib.random(beta.shape)
+        beta = devlib.where((cond > 0.5), beta, alpha)
 
     elif breed_mode == 'b_pa':
-        beta = dvclib.absolute(beta) * dvclib.exp(1j * ph_alpha)
+        beta = devlib.absolute(beta) * devlib.exp(1j * ph_alpha)
 
     elif breed_mode == '2ab_a_b':
         beta = 2 * (beta * alpha) / (beta + alpha)
 
     elif breed_mode == '2a_b_pa':
-        beta = (2 * dvclib.absolute(alpha) - dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = (2 * devlib.absolute(alpha) - devlib.absolute(beta)) * devlib.exp(1j * ph_alpha)
 
     elif breed_mode == 'sqrt_ab_pa':
-        beta = dvclib.sqrt(dvclib.absolute(alpha) * dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = devlib.sqrt(devlib.absolute(alpha) * devlib.absolute(beta)) * devlib.exp(1j * ph_alpha)
 
     elif breed_mode == 'sqrt_ab_recip':
-        temp1 = dvclib.fftshift(dvclib.fft(dvclib.fftshift(beta)))
-        temp2 = dvclib.fftshift(dvclib.fft(dvclib.fftshift(alpha)))
-        temp = dvclib.sqrt(dvclib.absolute(temp1) * dvclib.absolute(temp2)) * dvclib.exp(.5j * dvclib.angle(temp1)) * dvclib.exp(.5j * dvclib.angle(temp2))
-        beta = dvclib.fftshift(dvclib.ifft(dvclib.fftshift(temp)))
+        temp1 = devlib.fftshift(devlib.fft(devlib.fftshift(beta)))
+        temp2 = devlib.fftshift(devlib.fft(devlib.fftshift(alpha)))
+        temp = devlib.sqrt(devlib.absolute(temp1) * devlib.absolute(temp2)) * devlib.exp(
+            .5j * devlib.angle(temp1)) * devlib.exp(.5j * devlib.angle(temp2))
+        beta = devlib.fftshift(devlib.ifft(devlib.fftshift(temp)))
 
     elif breed_mode == 'max_ab':
-        beta = dvclib.maximum(dvclib.absolute(alpha), dvclib.absolute(beta)) * dvclib.exp(.5j * (ph_beta + ph_alpha))
+        beta = devlib.maximum(devlib.absolute(alpha), devlib.absolute(beta)) * devlib.exp(.5j * (ph_beta + ph_alpha))
 
     elif breed_mode == 'max_ab_pa':
-        beta = dvclib.maximum(dvclib.absolute(alpha), dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = devlib.maximum(devlib.absolute(alpha), devlib.absolute(beta)) * devlib.exp(1j * ph_alpha)
 
     elif breed_mode == 'avg_ab':
         beta = 0.5 * (alpha + beta)
 
     elif breed_mode == 'avg_ab_pa':
-        beta = 0.5 * (dvclib.absolute(alpha) + dvclib.absolute(beta)) * dvclib.exp(1j * ph_alpha)
+        beta = 0.5 * (devlib.absolute(alpha) + devlib.absolute(beta)) * devlib.exp(1j * ph_alpha)
 
     return beta
