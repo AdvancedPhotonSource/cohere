@@ -23,7 +23,7 @@ copyright = '2020, Barbara Frosik, Ross Harder'
 author = 'Barbara Frosik, Ross Harder'
 
 # The full version, including alpha/beta/rc tags
-release = '4.1-beta1'
+release = '4.1'
 
 
 # -- General configuration ---------------------------------------------------
