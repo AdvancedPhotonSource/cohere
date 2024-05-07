@@ -15,7 +15,7 @@ It is highly recommended to install the cohere_core package in conda environment
 | Create and activate the environment.
 Run the commands below::
 
-    conda create -y -n <env_name> -c conda-forge python=3.10
+    conda create -y -n <env_name> -c conda-forge python=3.10 mpi4py=3.1.5
     conda activate <env_name>
 then run the cohere installation command::
 
