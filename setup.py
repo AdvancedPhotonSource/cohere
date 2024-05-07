@@ -11,7 +11,6 @@ setuptools.setup(
                         'scikit-learn',
                         'tifffile',
                         'tensorflow',
-                        'mpi4py-mpich',
                         'gputil',
                         'psutil',
                         'tqdm'
