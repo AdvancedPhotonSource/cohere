@@ -10,7 +10,7 @@ setuptools.setup(
       install_requires=['numpy',
                         'scikit-learn',
                         'tifffile',
-                        'tensorflow',
+                        'tensorflow-cpu==2.13',
                         'gputil',
                         'psutil',
                         'tqdm'
