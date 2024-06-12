@@ -203,6 +203,7 @@ class Rec:
 
     def init(self, dir=None, alpha_dir=None, gen=None):
         def create_feat_objects(params, feats):
+            # FIXME why is this a function? It obscures where these objects are defined and is only called once.
             if 'shrink_wrap_trigger' in params:
                 self.shrink_wrap_obj = ft.ShrinkWrap(params, feats)
             if 'phm_trigger' in params:
@@ -513,7 +514,11 @@ class Peak:
     def __init__(self, peak_dir):
         geometry = ut.read_config(f"{peak_dir}/geometry")
         self.hkl = geometry["peak_hkl"]
-        self.norm = np.linalg.norm(self.hkl)
+        self.order = max([abs(x) for x in self.hkl])
+        self.weight = 1.0
+        self.conf_hist = []
+        self.conf_iter = []
+        self.weight_iter = 0
         print(f"Loading peak {self.hkl}")
 
         # Geometry parameters
@@ -555,6 +560,7 @@ class Peak:
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
         self.size = geometry["final_size"]
         self.rs_lab_to_det = np.array(geometry["rmatrix"]) / geometry["rs_voxel_size"]
+        # self.rs_lab_to_det = np.identity(3)  # FIXME
         self.rs_det_to_lab = np.linalg.inv(self.rs_lab_to_det)
         self.ds_lab_to_det = self.rs_det_to_lab.T
         self.ds_det_to_lab = self.rs_lab_to_det.T
@@ -567,6 +573,12 @@ class Peak:
         self.full_data = pad_to_cube(self.full_data, self.full_size)
         self.data = pad_to_cube(self.full_data, self.size)
 
+        # Uncomment when phasing non-centered data
+        # ind = devlib.center_of_mass(self.full_data)
+        # shift_dist = (self.size // 2) - devlib.round(devlib.array(ind))
+        # shift_dist = devlib.to_numpy(shift_dist).tolist()
+        # self.full_data = devlib.roll(self.full_data, shift_dist, axis=(0, 1, 2))
+
         # Resample the diffraction patterns into the lab reference frame.
         self.res_data = resample(self.full_data, self.rs_det_to_lab, self.size)
         tf.imwrite((Path(peak_dir) / "phasing_data/data_resampled.tif").as_posix(), devlib.to_numpy(self.res_data))
@@ -576,6 +588,15 @@ class Peak:
         self.full_data = devlib.fftshift(self.full_data)
         self.data = devlib.fftshift(self.data)
         self.res_data = devlib.fftshift(self.res_data)
+        self.total = devlib.sum(self.res_data)
+        self.max_lk = devlib.sum(self.res_data * (devlib.log(self.res_data - 1)))
+
+    def normalize(self, norm):
+        factor = norm / self.total
+        self.full_data *= factor
+        self.data *= factor
+        self.res_data *= factor
+        self.total = devlib.sum(self.res_data)
 
 
 class CoupledRec(Rec):
@@ -630,6 +651,13 @@ class CoupledRec(Rec):
 
         # Allows for a control peak to be left out of the reconstruction for comparison
         all_peaks = [Peak(d) for d in self.peak_dirs]
+        norm = max([p.total for p in all_peaks])
+        for p in all_peaks:
+            p.normalize(norm)
+        # for pk in all_peaks:
+        #     plt.figure()
+        #     plt.imshow(np.log(devlib.fftshift(pk.res_data)[90].get() + 1))
+        # plt.show()
         if "control_peak" in self.params:
             control_peak = self.params["control_peak"]
             self.peak_objs = [p for p in all_peaks if p.hkl != control_peak]
@@ -643,6 +671,7 @@ class CoupledRec(Rec):
             self.peak_objs = all_peaks
             self.ctrl_peak = None
             self.ctrl_error = None
+        self.peak_confidence = [1.0 for _ in self.peak_objs]
 
         # Fast resampling means using the resampled data to reconstruct the object in a single common basis
         # When this is set to False, the reconstruction will need to be resampled each time the peak is switched
@@ -668,47 +697,53 @@ class CoupledRec(Rec):
 
         # Define the shared image
         self.rho_image = devlib.absolute(self.ds_image)
-        self.u_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([1, 1, 1])
+        self.u_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([0, 0, 0])
 
         # Define the multipeak projection weighting and tapering
         self.proj_weight = devlib.array([self.params["mp_weight_init"] for _ in range(self.iter_no)])
         for i, w in zip(self.params["mp_weight_trig"], self.params["mp_weight_vals"]):
             self.proj_weight[i:] = w
+        self.peak_threshold = devlib.array([self.params["peak_threshold_init"] for _ in range(self.iter_no)])
+        for i, w in zip(self.params["peak_threshold_trig"], self.params["peak_threshold_vals"]):
+            self.peak_threshold[i:] = w
+        self.peak_weights = []
+        self.iter_weights = []
+        self.adapt_iter = 200
         return 0
 
     def save_res(self, save_dir):
         from array import array
-        # J = self.calc_jacobian()
-        # s_xx = J[:,:,:,0,0][:,:,:,None]
-        # s_yy = J[:,:,:,1,1][:,:,:,None]
-        # s_zz = J[:,:,:,2,2][:,:,:,None]
-        # s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)[:,:,:,None]
-        # s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)[:,:,:,None]
-        # s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)[:,:,:,None]
-        #
-        sup = self.support_obj.get_support()
-        rho = self.rho_image * sup
-        u_x = self.u_image[:, :, :, 0] * sup
-        u_y = self.u_image[:, :, :, 1] * sup
-        u_z = self.u_image[:, :, :, 2] * sup
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        tight_support = devlib.binary_erosion(self.support_obj.support)
+        self.rho_image = self.rho_image * tight_support
+        self.u_image = self.u_image * tight_support[:, :, :, None]
+        # for i in range(3):
+        #     self.u_image[:, :, :, i] = devlib.median_filter(self.u_image[:, :, :, i], 3)
+        self.shift_to_center()
+
+        crop = self.dims[0] / 4
+        sup = self.support_obj.get_support()[crop:-crop, crop:-crop, crop:-crop]
+        rho = self.rho_image[crop:-crop, crop:-crop, crop:-crop] * sup
+        u_x = self.u_image[crop:-crop, crop:-crop, crop:-crop, 0] * sup
+        u_y = self.u_image[crop:-crop, crop:-crop, crop:-crop, 1] * sup
+        u_z = self.u_image[crop:-crop, crop:-crop, crop:-crop, 2] * sup
 
         if self.params["calc_strain"]:
-            J = self.calc_jacobian()
+            J = self.calc_jacobian()[crop:-crop, crop:-crop, crop:-crop]
             s_xx = J[:,:,:,0,0]
             s_yy = J[:,:,:,1,1]
             s_zz = J[:,:,:,2,2]
             s_xy = ((J[:,:,:,0,1] + J[:,:,:,1,0]) / 2)
             s_yz = ((J[:,:,:,1,2] + J[:,:,:,2,1]) / 2)
             s_zx = ((J[:,:,:,2,0] + J[:,:,:,0,2]) / 2)
-            final_rec = devlib.stack((rho, u_x, u_y, u_z, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup))
         else:
-            s_00 = devlib.zeros(sup.shape)
-            final_rec = devlib.stack((rho, u_x, u_y, u_z, s_00, s_00, s_00, s_00, s_00, s_00, sup))
+            s_xx = s_yy = s_zz = s_xy = s_yz = s_zx = devlib.zeros(sup.shape)
 
+        final_rec = devlib.stack((rho, u_x, u_y, u_z, s_xx, s_yy, s_zz, s_xy, s_yz, s_zx, sup))
+
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
         devlib.save(save_dir + "/reconstruction", final_rec)
-        devlib.save(save_dir + "/image", devlib.stack((rho, u_x, u_y, u_z)))
+        devlib.save(save_dir + "/image_nostrain", devlib.stack((rho, u_x, u_y, u_z)))
         devlib.save(save_dir + "/shared_density", rho)
         devlib.save(save_dir + "/shared_u1", u_x)
         devlib.save(save_dir + "/shared_u2", u_y)
@@ -716,15 +751,17 @@ class CoupledRec(Rec):
         devlib.save(save_dir + '/support', sup)
 
         errs = array('f', self.errs)
-
         with open(ut.join(save_dir, 'errors.txt'), 'w+') as err_f:
             err_f.write('\n'.join(map(str, errs)))
-
         devlib.save(ut.join(save_dir, 'errors'), errs)
 
         metric = dvut.all_metrics(self.ds_image, self.errs)
         with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
+
+        for pk in self.peak_objs:
+            np.savetxt(f"{save_dir}/conf_hist_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_hist)
+            np.savetxt(f"{save_dir}/conf_iter_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_iter)
 
         if self.ctrl_error is not None:
             ctrl_error = np.array(self.ctrl_error)
@@ -742,12 +779,17 @@ class CoupledRec(Rec):
 
         self.to_working_image()
 
-        # Iterate a few times to settle
-        for _ in range(25):
-            self.to_reciprocal_space()
-            self.modulus()
-            self.to_direct_space()
-            self.er()
+        # # Iterate a few times to settle
+        # for _ in range(15):
+        #     self.to_reciprocal_space()
+        #     self.modulus()
+        #     self.to_direct_space()
+        #     self.hio()
+        # for _ in range(20):
+        #     self.to_reciprocal_space()
+        #     self.modulus()
+        #     self.to_direct_space()
+        #     self.er()
 
         # Calculate the continuous phase gradient using Hofmann's method
         # (https://doi.org/10.1103/PhysRevMaterials.4.013801)
@@ -760,7 +802,6 @@ class CoupledRec(Rec):
             stack = devlib.array(stack)
             index = devlib.argmin(stack**2, axis=0)
             gradient.append(devlib.take_along_axis(stack, index[None, :, :, :], axis=0).squeeze(axis=0))
-
         return gradient
 
     def calc_jacobian(self):
@@ -779,6 +820,8 @@ class CoupledRec(Rec):
         print("Calculating strain...")
         for i, j, k in tqdm.tqdm(ind):
             jacobian[i, j, k] = devlib.lstsq(G, grad_phi[i, j, k])[0]
+        # print("Reintegrating Jacobian")
+        # self.u_image = devlib.integrate_jacobian(jacobian, self.params["ds_voxel_size"])
         return jacobian
 
     def iterate(self):
@@ -793,34 +836,66 @@ class CoupledRec(Rec):
         try:
             for f in self.flow:
                 f()
-                if f.__name__ == "next" and self.params["live_view"]:
+                if f.__name__ == "next" and self.params["live_view"] and self.iter % 5 == 0:
+                    # p_weights = [pk.weight for pk in self.peak_objs]
+                    # print(np.round(p_weights / np.sum(p_weights), 3))
                     plt.suptitle(
                         f"iteration: {self.iter}\n"
                         f"peak: {self.peak_objs[self.pk].hkl}\n"
-                        f"beta: {self.proj_weight[self.iter]}"
+                        f"global weight: {self.proj_weight[self.iter]}\n"
+                        f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
+                        f"confidence threshold: {self.peak_threshold[self.iter]}\n"
                     )
-                    for func, row in zip([devlib.absolute, devlib.angle], axs):
+                    for func, row, clim in zip([devlib.absolute, devlib.angle], axs, [None, None]):
                         for ax in row:
                             ax.clear()
                             ax.set_xticks(())
                             ax.set_yticks(())
                         row[0].set_ylabel(f"{func.__name__}")
                         row[0].set_title("XY-plane")
-                        row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
+                        row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), clim=clim)
                         row[1].set_title("XZ-plane")
-                        row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
+                        row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), clim=clim)
                         row[2].set_title("YZ-plane")
-                        row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get())
+                        row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get(), clim=clim)
                     plt.draw()
-                    plt.pause(0.1)
+                    # plt.savefig(f"/home/beams/CXDUSER/34idc-work/2022/cohere_dev_JNP/cohere-scripts/simulation/live_views/iter_{self.iter:04}.png")
+                    plt.pause(0.2)
         except Exception as error:
             print(error)
+            # raise error
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
 
         if self.params["live_view"]:
             plt.show()
+        # else:
+        #     fig, axs = plt.subplots(2, 3, figsize=(12, 9), sharex="all", sharey="all", layout="constrained")
+        #     plt.suptitle(
+        #         f"iteration: {self.iter}\n"
+        #         f"peak: {self.peak_objs[self.pk].hkl}\n"
+        #         f"global wt: {self.proj_weight[self.iter]}\n"
+        #         f"peak wt: {self.peak_objs[self.pk].weight}"
+        #     )
+        #     for func, row in zip([devlib.absolute, devlib.angle], axs):
+        #         for ax in row:
+        #             ax.clear()
+        #             ax.set_xticks(())
+        #             ax.set_yticks(())
+        #         row[0].set_ylabel(f"{func.__name__}")
+        #         row[0].set_title("XY-plane")
+        #         row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
+        #         row[1].set_title("XZ-plane")
+        #         row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
+        #         row[2].set_title("YZ-plane")
+        #         row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get())
+        #     plt.figure()
+        #     wts = np.transpose(self.peak_weights)
+        #     for i, wt in enumerate(wts):
+        #         plt.plot(self.iter_weights, wt, label=f"{self.peak_objs[i].hkl}")
+        #     plt.legend()
+        #     plt.show()
 
         if devlib.hasnan(self.ds_image):
             print('reconstruction resulted in NaN')
@@ -836,13 +911,29 @@ class CoupledRec(Rec):
         return 0
 
     def switch_peaks(self):
+        if self.params["adaptive_weights"]:
+            self.calc_confidence()
+
         self.to_shared_image()
         self.get_control_error()
-        self.pk = random.choice([x for x in range(self.num_peaks) if x not in (self.pk,)])
+
+        if self.params["adaptive_weights"] and self.iter >= self.adapt_iter:
+            print("Adapting weights")
+            self.adapt_weights()
+            self.adapt_iter += 200
+
+        # Use the peak weights as probabilities for projecting to that peak.
+        p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
+        p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
+        self.peak_weights.append(p_weights / np.sum(p_weights))
+        self.iter_weights.append(self.iter)
+        self.pk = random.choices([x for x in range(self.num_peaks)], p_weights)[0]
+
         if self.fast_resample:
             self.iter_data = self.peak_objs[self.pk].res_data
         else:
             self.iter_data = self.peak_objs[self.pk].data
+
         self.to_working_image()
 
     def to_shared_image(self):
@@ -856,18 +947,22 @@ class CoupledRec(Rec):
                                                     self.dims[0], plot=True)
                 self.support_obj.make_binary()
 
-        beta = self.proj_weight[self.iter]
         pk = self.peak_objs[self.pk]
 
-        self.rho_image = (1-beta) * self.rho_image + beta * devlib.absolute(self.ds_image) * pk.norm
+        wt_rho = pk.weight * self.proj_weight[self.iter]
+        wt_u = pk.weight * self.proj_weight[self.iter]
+
+        self.rho_image = (1-wt_rho) * self.rho_image + wt_rho * devlib.absolute(self.ds_image)
 
         old_u = (devlib.dot(self.u_image, pk.g_vec) / pk.gdotg)[:, :, :, None] * pk.g_vec
         new_u = (devlib.angle(self.ds_image) / pk.gdotg)[:, :, :, None] * pk.g_vec
-        self.u_image = self.u_image + beta * (new_u - old_u)
+        self.u_image = self.u_image + wt_u * (new_u - old_u)
 
         if self.er_iter:
-            self.rho_image = self.rho_image * self.support_obj.support
-            self.u_image = self.u_image * self.support_obj.support[:, :, :, None]
+            tight_support = devlib.binary_erosion(self.support_obj.support)
+            # self.rho_image = devlib.median_filter(self.rho_image, 3)
+            self.rho_image = self.rho_image * tight_support
+            self.u_image = self.u_image * tight_support[:, :, :, None]
             self.shift_to_center()
 
         ctr = self.dims[0] / 2
@@ -875,18 +970,101 @@ class CoupledRec(Rec):
 
     def to_working_image(self):
         pk = self.peak_objs[self.pk]
-        self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec)) / pk.norm
+        self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
         if not self.fast_resample:
             self.ds_image = resample(self.ds_image, pk.ds_lab_to_det, self.dims[0])
             self.support_obj.support = resample(self.support_obj.support, pk.ds_lab_to_det, self.dims[0])
             self.support_obj.make_binary()
+
+    def calc_confidence(self):
+        pk = self.peak_objs[self.pk]
+        rho = devlib.absolute(self.ds_image)
+        cond = self.support_obj.get_support() != 0
+        hist = devlib.histogram2d(self.rho_image[cond], rho[cond], log=False)
+        # conf = 1 / devlib.calc_ehd(hist).get()
+        conf = devlib.calc_nmi(hist).get() - 1
+        # error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+        # #                               0)) / get_norm(self.iter_data)
+        # conf = 1 / (get_norm(self.rho_image[cond] - rho[cond]) / get_norm(self.rho_image[cond])).get()
+        pk.conf_hist.append(conf)
+        pk.conf_iter.append(self.iter)
+        # pk.conf_hist.append(devlib.calc_nmi(hist).get() - 1)
+
+    def adapt_weights(self):
+        # [p.conf_iter > p.weight_iter]
+        confidences = [
+            sorted(p.conf_hist)[len(p.conf_hist) // 2]
+            if len(p.conf_hist) > 0 else -1
+            for p in self.peak_objs
+        ]
+        for pk, confidence in zip(self.peak_objs, confidences):
+            if confidence == -1:
+                continue
+            pk.weight = (confidence / max(confidences)) ** 2
+        print(f"New weights: [0     1     2     3     4   ]")
+        print(f"             {[round(p.weight, 2) for p in self.peak_objs]}")
+
+    def to_reciprocal_space(self):
+        self.rs_amplitudes = devlib.ifft(self.ds_image)
+
+    def to_direct_space(self):
+        self.ds_image_raw = devlib.fft(self.rs_amplitudes)
+        # if self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
+        #     rho = self.rho_image / self.peak_objs[self.pk].norm
+        #     self.ds_image_raw = rho * devlib.exp(1j * devlib.angle(self.ds_image_raw))
+
+    def modulus(self):
+        ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
+        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / get_norm(self.iter_data)
+        self.errs.append(error)
+        self.rs_amplitudes *= ratio
+
+    def er(self):
+        self.er_iter = True
+        # back_prop = devlib.fft(self.rs_amplitudes)
+        # w = self.peak_objs[self.pk].weight
+        # rho = self.rho_image / self.peak_objs[self.pk].norm
+        # self.ds_image_raw = w * devlib.absolute(back_prop) + (1-w) * rho * devlib.exp(1j * devlib.angle(back_prop))
+
+        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
+
+    def hio(self):
+        self.er_iter = False
+        combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
+        support = self.support_obj.get_support()
+        self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
+
+    def shrink_wrap_trigger(self):
+        if self.er_iter or self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
+            return
+        args = (self.ds_image,)
+        self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
+        # support = self.support_obj.support
+        # new_support = self.shrink_wrap_obj.apply_trigger(*args)
+        #
+        # fix_0 = support + new_support < 0.5
+        # fix_1 = support + new_support > 1.5
+        # dist = devlib.absolute(devlib.sum(support) - devlib.sum(new_support)) ** (1 / 3)
+        # threshold = self.peak_objs[self.pk].weight
+        # if devlib.sum(support) - devlib.sum(new_support) > 0:
+        #     threshold = 1-threshold
+        # sizes = np.flip(2 * np.fix(np.geomspace(1, dist.get(), 5)) + 1)
+        # intermediate = devlib.copy(support)
+        # for size in tqdm.tqdm(sizes):
+        #     intermediate = devlib.uniform_filter(intermediate, size)
+        #     intermediate[fix_1] = 1
+        #     intermediate[fix_0] = 0
+        # support = support * 0
+        # support[intermediate > threshold] = 1.0
+
 
     def get_control_error(self):
         pk = self.peak_objs[self.pk]
         if self.ctrl_peak is None:
             return
         phi = devlib.dot(self.u_image, pk.g_vec)
-        rho = self.rho_image / pk.norm
+        rho = self.rho_image
         img = devlib.absolute(devlib.ifft(rho * devlib.exp(1j * phi)))
 
         lin_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=False)
@@ -902,7 +1080,7 @@ class CoupledRec(Rec):
     def progress_trigger(self):
         ornt = self.peak_objs[self.pk].hkl
         prg = f'|  iter {self.iter:>4}  ' \
-              f'|  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
+              f'|  peak {self.pk}  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
               f'|  err {self.errs[-1]:0.6f}  ' \
               f'|  sup {devlib.sum(self.support_obj.get_support()):>8}  '
         if self.ctrl_error is not None:
