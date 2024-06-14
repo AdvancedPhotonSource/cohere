@@ -878,14 +878,14 @@ def reconstruction(datafile, **kwargs):
             defines when to apply averaging. Negative start means it is offset from the last iteration.
         progress_trigger : list of int
             defines when to print info on the console. The info includes current iteration and error.
-        debug : boolean
-            if in debug mode the verifier will not stop the progress, only print message
+        no_verify : boolean
+            if in no_verify mode the verifier will not stop the progress, only print message
     """
-    debug = kwargs.get('debug', False)
+    no_verify = kwargs.get('no_verify', False)
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
         print(error_msg)
-        if not debug:
+        if not no_verify:
             return
 
     if not os.path.isfile(datafile):

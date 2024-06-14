@@ -70,21 +70,21 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
         do_auto_binning : boolean
             Optional, mandatory if auto_data is True. is True the auto binning wil be done, and not otherwise.
-        debug : boolean
-            It's a command line argument passed as parameter. If True, ignores verifier error.
+        no_verify : boolean
+            If True, ignores verifier error.
     """
-    debug = kwargs.pop("debug", False)
+    no_verify = kwargs.pop("no_verify", False)
     er_msg = ver.verify('config_data', kwargs)
     if len(er_msg) > 0:
         # the error message is printed in verifier
-        if not debug:
+        if not no_verify:
             return
 
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     data = ut.read_tif(beamline_full_datafile_name)
-    if debug:
-        print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
+    # if no_verify:
+    #     print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
 
     prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
@@ -99,7 +99,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     if auto:
         # the formula for auto threshold was found empirically, may be
         # modified in the future if more tests are done
-        auto_threshold_value = 0.141 * data[np.nonzero(data)].mean() - 3.062
+        auto_threshold_value = 0.141 * data[np.nonzero(data)].mean().item() - 3.062
         intensity_threshold = auto_threshold_value
         print(f'auto intensity threshold: {intensity_threshold}')
     elif 'intensity_threshold' in kwargs:
@@ -148,17 +148,17 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     except FileNotFoundError:
         pass
 
-    if auto and kwargs['do_auto_binning']:
-        # prepare data to make the oversampling ratio ~3
-        wos = 3.0
-        orig_os = ut.get_oversample_ratio(data)
-        # match oversampling to wos
-        wanted_os = [wos, wos, wos]
-        change = [np.round(f / t).astype('int32') for f, t in zip(orig_os, wanted_os)]
-        bins = [int(max([1, c])) for c in change]
-        print(f'auto binning size: {bins}')
-        data = ut.binning(data, bins)
-    elif 'binning' in kwargs:
+    # if auto and kwargs['do_auto_binning']:
+    #     # prepare data to make the oversampling ratio ~3
+    #     wos = 3.0
+    #     orig_os = ut.get_oversample_ratio(data)
+    #     # match oversampling to wos
+    #     wanted_os = [wos, wos, wos]
+    #     change = [np.round(f / t).astype('int32') for f, t in zip(orig_os, wanted_os)]
+    #     bins = [int(max([1, c])) for c in change]
+    #     print(f'auto binning size: {bins}')
+    #     data = ut.binning(data, bins)
+    if 'binning' in kwargs:
         binsizes = kwargs['binning']
         try:
             bins = []
@@ -168,6 +168,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             for _ in range(filler):
                 bins.append(1)
             data = ut.binning(data, bins)
+            kwargs['binning'] = bins
         except:
             print('check "binning" configuration')
 
@@ -178,6 +179,5 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
 
     # if auto save new config
     if auto:
-        kwargs['binning'] = bins
         kwargs['intensity_threshold'] = intensity_threshold
     return kwargs
