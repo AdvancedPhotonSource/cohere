@@ -3,10 +3,6 @@ import os
 import cohere_core.utilities.utils as ut
 import math
 from typing import Union
-
-# tensorflow will use cpu
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# import tensorflow for trained model
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Model, load_model
@@ -57,7 +53,7 @@ def match_oversample_diff(
     to: Union[list, np.ndarray, None] = None,
     shape: Union[list, np.ndarray, None] = [64, 64, 64],
 ):
-    """ resize diff to match oversample ratios 
+    """ resize diff to match oversample ratios
         diff = diffraction pattern
         fr = from oversample ratio
         to = to oversample ratio
@@ -166,7 +162,7 @@ def ff_propagation(data):
     '''
     diffraction. Assume same x and y lengthss and uniform sampling
         data:        source plane field
-        
+
     '''
     diff = _fourier_transform(data)
 
@@ -242,10 +238,7 @@ def run_AI(data, model_file, dir):
            [pad_value[2], pad_value[2]]]
     guess = ut.adjust_dimensions(pred_obj, pad)
 
-    np.save(dir + '/image.npy', guess)
-
-    if "CUDA_VISIBLE_DEVICES" in os.environ:
-        del os.environ["CUDA_VISIBLE_DEVICES"]
+    np.save(ut.join(dir, 'image.npy'), guess)
 
 
 def start_AI(pars, datafile, dir):

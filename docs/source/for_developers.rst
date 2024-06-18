@@ -9,7 +9,7 @@ The best practice is to create conda environment dedicated for the development.
 
   ::
 
-    conda create -y -n <dev_env> -c conda-forge python=3.10 mayavi pyqt scikit-image xrayutilities
+    conda create -y -n <dev_env> -c conda-forge python=3.10 mpi4py=3.1.5 mayavi pyqt scikit-image xrayutilities
     conda activate <dev_env>
 
 | Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such users scripts and example.
