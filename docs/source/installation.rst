@@ -39,7 +39,7 @@ This will install the latest development. It might be not 100 percent tested. Th
 
 Create environment, activate it and clone cohere repository. It contains the cohere-ui submodule. Run the following commands::
 
-    conda create --name <env_name> -c conda-forge python=3.10 mayavi pyqt scikit-image xrayutilities
+    conda create --name <env_name> -c conda-forge python=3.10 mpi4py=3.1.5 mayavi pyqt scikit-image xrayutilities
     conda activate <env_name>
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
