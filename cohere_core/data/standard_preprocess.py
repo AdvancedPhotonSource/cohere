@@ -82,7 +82,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
 
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
-    data = ut.read_tif(beamline_full_datafile_name)
+    beam_data = ut.read_tif(beamline_full_datafile_name)
     # if no_verify:
     #     print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
 
@@ -94,12 +94,12 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         data_dir = prep_data_dir.replace(os.sep, '/').replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
-        data = at.remove_aliens(data, kwargs, data_dir)
+        data = at.remove_aliens(beam_data, kwargs, data_dir)
 
     if auto:
         # the formula for auto threshold was found empirically, may be
         # modified in the future if more tests are done
-        auto_threshold_value = 0.141 * data[np.nonzero(data)].mean().item() - 3.062
+        auto_threshold_value = 0.141 * beam_data[np.nonzero(beam_data)].mean().item() - 3.062
         intensity_threshold = auto_threshold_value
         print(f'auto intensity threshold: {intensity_threshold}')
     elif 'intensity_threshold' in kwargs:
