@@ -95,6 +95,8 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
 
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(beam_data, kwargs, data_dir)
+    else:
+        data = beam_data
 
     if auto:
         # the formula for auto threshold was found empirically, may be
