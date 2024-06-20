@@ -588,15 +588,29 @@ class Peak:
         self.full_data = devlib.fftshift(self.full_data)
         self.data = devlib.fftshift(self.data)
         self.res_data = devlib.fftshift(self.res_data)
-        self.total = devlib.sum(self.res_data)
-        self.max_lk = devlib.sum(self.res_data * (devlib.log(self.res_data - 1)))
+        self.total = devlib.sum(self.res_data**2)
+        self.max_lk = devlib.sum(devlib.xlogy(self.res_data**2, self.res_data**2) - self.res_data**2)
 
     def normalize(self, norm):
         factor = norm / self.total
-        self.full_data *= factor
-        self.data *= factor
-        self.res_data *= factor
-        self.total = devlib.sum(self.res_data)
+        self.full_data *= devlib.sqrt(factor)
+        self.data *= devlib.sqrt(factor)
+        self.res_data *= devlib.sqrt(factor)
+        self.total = devlib.sum(self.res_data**2)
+        self.max_lk = devlib.mean(devlib.xlogy(self.res_data**2, self.res_data**2) - self.res_data**2)
+
+    def unlikelihood(self, proj):
+        """Returns the difference between the maximum and current log-likelihood"""
+        proj = devlib.absolute(proj)**2
+        lk = devlib.mean(devlib.xlogy(self.res_data**2, proj) - proj)
+        return self.max_lk - lk
+
+    def chi_square(self, proj):
+        error = devlib.where((self.res_data != 0), (devlib.absolute(proj) - self.res_data), 0)
+        return get_norm(error) / get_norm(self.res_data)
+
+    def get_error(self, proj):
+        pass
 
 
 class CoupledRec(Rec):
@@ -960,7 +974,7 @@ class CoupledRec(Rec):
 
         if self.er_iter:
             tight_support = devlib.binary_erosion(self.support_obj.support)
-            # self.rho_image = devlib.median_filter(self.rho_image, 3)
+            self.rho_image = devlib.median_filter(self.rho_image, 3)
             self.rho_image = self.rho_image * tight_support
             self.u_image = self.u_image * tight_support[:, :, :, None]
             self.shift_to_center()
