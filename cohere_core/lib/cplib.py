@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
+import cupyx.scipy.special as sp
 
 
 class cplib(cohlib):
@@ -45,6 +46,9 @@ class cplib(cohlib):
 
     def hasnan(arr):
         return cp.any(cp.isnan(arr))
+
+    def nan_to_num(arr, **kwargs):
+        return cp.nan_to_num(arr, **kwargs)
 
     def copy(arr):
         return cp.copy(arr)
@@ -264,6 +268,14 @@ class cplib(cohlib):
 
     def log(arr):
         return cp.log(arr)
+
+    def xlogy(x, y=None):
+        if y is None:
+            y = x
+        return sp.xlogy(x, y)
+
+    def mean(arr):
+        return cp.mean(arr)
 
     def calc_ehd(hgram):
         n = hgram.shape[0] * 1j
