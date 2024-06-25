@@ -12,7 +12,6 @@ This module controls a single reconstruction process.
 Refer to cohere_core-ui suite for use cases. The reconstruction can be started from GUI or using command line scripts, see :ref:`use`.
 """
 
-import importlib
 import cohere_core.controller.phasing as calc
 import cohere_core.utilities.utils as ut
 from multiprocessing import Process
@@ -24,20 +23,8 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def set_lib(pkg):
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    elif pkg == 'torch':
-        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
-    calc.set_lib(devlib)
-
-
-def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
-    set_lib(lib)
-
-    worker = calc.Rec(pars, datafile)
+def rec_process(pkg, pars, datafile, dev, continue_dir, save_dir):
+    worker = calc.Rec(pars, datafile, pkg)
 
     if dev is None:
         if 'device' in pars:
@@ -47,17 +34,24 @@ def rec_process(lib, pars, datafile, dev, continue_dir, save_dir):
     else:
         device = dev[0]
     if worker.init_dev(device) < 0:
+        print (f'reconstruction failed, device not initialized to {device}')
         return
 
     ret_code = worker.init(continue_dir)
     if ret_code < 0:
+        print ('reconstruction failed, check algorithm sequence and triggers in configuration')
         return
+
     ret_code = worker.iterate()
-    if ret_code == 0:
-        worker.save_res(save_dir)
+    if ret_code < 0:
+        print ('reconstruction failed during iterations')
+        return
+
+    worker.save_res(save_dir)
+    return
 
 
-def reconstruction(lib, conf_file, datafile, dir, dev=None):
+def reconstruction(pkg, conf_file, datafile, dir, dev=None):
     """
     Controls single reconstruction.
 
@@ -69,7 +63,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
 
     Parameters
     ----------
-    lib : str
+    pkg : str
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
@@ -89,8 +83,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
     """
     pars = ut.read_config(conf_file)
 
-    if 'init_guess' not in pars:
-        pars['init_guess'] = 'random'
+    pars['init_guess'] = pars.get('init_guess', 'random')
     if pars['init_guess'] == 'continue':
         continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':
@@ -108,7 +101,7 @@ def reconstruction(lib, conf_file, datafile, dir, dev=None):
         filename = conf_file.split('/')[-1]
         save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    p = Process(target=rec_process, args=(lib, pars, datafile, dev,
+    p = Process(target=rec_process, args=(pkg, pars, datafile, dev,
                                           continue_dir, save_dir))
     p.start()
     p.join()

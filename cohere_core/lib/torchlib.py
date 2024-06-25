@@ -1,9 +1,13 @@
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
 import torch
+
 import sys
+import math
+
 
 class torchlib(cohlib):
+    device = "cpu"
     # Interface
     def array(obj):
         return torch.Tensor(obj, device=torchlib.device)
@@ -64,7 +68,11 @@ class torchlib(cohlib):
         return arr.dtype
 
     def astype(arr, dtype):
-        return arr.astype(dtype=dtype)
+        # this is kind of nasty, it does not understand 'int', so need to convert for the cases
+        # that will be used
+        if dtype == 'int32':
+            dtype = torch.int32
+        return arr.type(dtype=dtype)
 
     def size(arr):
         return torch.numel(arr)
@@ -129,19 +137,21 @@ class torchlib(cohlib):
         except Exception as e:
             print('not supported error: ' + repr(e))
 
-    def fftconvolve(arr1, arr2):
-        shape1 = arr1.size()
-        shape2 = arr2.size()
-        pad1 = tuple([d//2 for d in shape2 for _ in (0, 1)])
-        pad2 = tuple([d//2 for d in shape1 for _ in (0, 1)])
-        parr1 = torch.nn.functional.pad(arr1, pad1)
-        parr2 = torch.nn.functional.pad(arr2, pad2)
-        conv = torch.fft.ifftn(torch.fft.fftn(parr1) * torch.fft.fftn(parr2))
-
-        for i in range(len(shape2)):
-            splitted = torch.split(conv, [shape2[i] //2, shape1[i], shape2[i] //2], dim=i)
-            conv = splitted[1]
-        return conv
+    def fftconvolve(arr1, kernel):
+        print('not supported yet in torch, use different library')
+        raise
+        # # kernel shape can be smaller than arr1 shape in each dim
+        # sh1 = list(arr1.size())
+        # sh2 = list(kernel.size())
+        # if sh1 != sh2:
+        #     # the pad is added from last dim to first
+        #     sh1.reverse()
+        #     sh2.reverse()
+        #     pad = [((sh1[i]-sh2[i])//2, sh1[i] - sh2[i] - (sh1[i]-sh2[i])//2) for i in range(len(sh1))]
+        #     pad = tuple(sum(pad, ()))
+        #     kernel = torch.nn.functional.pad(kernel, pad)
+        # conv = torch.fft.ifftn(torch.fft.fftn(arr1) * torch.fft.fftn(kernel))
+        # return conv
 
     def where(cond, x, y):
         return torch.where(cond, x, y)
@@ -213,33 +223,44 @@ class torchlib(cohlib):
         return torch.squeeze(arr)
 
     def gaussian(dims, sigma, **kwargs):
-        def gaussian1(dim, sigma):
+        def gaussian1(dim, sig):
             x = torch.arange(dim, device=torchlib.device) - dim // 2
             if dim % 2 == 0:
                 x = x + 0.5
-            gauss = torch.exp(-(x ** 2.0) / (2 * sigma ** 2))
+            gauss = torch.exp(-(x ** 2.0) / (2 * sig ** 2))
             return gauss / gauss.sum()
 
         if isinstance(sigma, int) or isinstance(sigma, float):
-            sigma = [sigma] * len(dims)
-        if len(sigma) < len(dims):
-            print ('gaussian_filter: sigma should be float or a list with float for each dimension')
+            sigmas = [sigma] * len(dims)
+        else: # assuming a list of values
+            sigmas = sigma
 
-        gaussian = gaussian1(dims[0], sigma[0])
-        for i in range(1, len(dims)):
-            gaussian = gaussian * gaussian1(dims[i], sigma[i])
+        sigmas = [dims[i] / (2.0 * math.pi * sigmas[i]) for i in range(len(dims))]
+
+        last_axis = len(dims) - 1
+        last_dim = dims[-1]
+        gaussian = gaussian1(dims[last_axis], sigmas[last_axis]).repeat(*dims[:-1], 1)
+        for i in range(int(len(dims)) - 1):
+            tdims = dims[:-1]
+            tdims[i] = last_dim
+            temp = gaussian1(dims[i], sigmas[i])
+            temp = temp.repeat(*tdims, 1)
+            temp = torch.swapaxes(temp, i, last_axis)
+            gaussian *= temp
         return gaussian / gaussian.sum()
 
     def gaussian_filter(arr, sigma, **kwargs):
         # will not work on M1 until the fft fuctions are supported
-        dims = arr.size()
-        dist = torchlib.gaussian(dims, 1/sigma)
+        normalizer = torch.sum(arr)
+        dims = list(arr.shape)
+        dist = torchlib.gaussian(dims, 1 / sigma)
         arr_f = torch.fft.ifftshift(torch.fft.fftn(torch.fft.ifftshift(arr)))
         filter = arr_f * dist
         filter = torch.fft.ifftshift(torch.fft.ifftn(torch.fft.ifftshift(filter)))
         filter = torch.real(filter)
         filter = torch.where(filter >= 0, filter, 0.0)
-        return filter
+        corr = normalizer/torch.sum(filter)
+        return filter * corr
 
     def center_of_mass(arr):
         normalizer = torch.sum(arr)
@@ -318,6 +339,7 @@ class torchlib(cohlib):
 
     def clean_default_mem():
         pass
+
 
 # a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
 # a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])

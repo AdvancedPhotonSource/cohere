@@ -21,6 +21,7 @@ import GPUtil
 from functools import reduce
 import subprocess
 import ast
+import importlib
 
 
 __author__ = "Barbara Frosik"
@@ -51,7 +52,8 @@ __all__ = ['join',
            'get_avail_gpu_runs',
            'get_one_dev',
            'get_gpu_use',
-           'arr_property',
+           'estimate_no_proc',
+           'set_lib',
            'estimate_no_proc'
            ]
 
@@ -364,8 +366,6 @@ def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
 
 def select_central_object(fp: np.ndarray) -> np.ndarray:
     """
-    Author: Yudong Yao
-
     :param fp:
     :return:
     """
@@ -390,8 +390,6 @@ def select_central_object(fp: np.ndarray) -> np.ndarray:
 
 def get_central_object_extent(fp: np.ndarray) -> list:
     """
-    Author: Yudong Yao
-
     :param fp:
     :return:
     """
@@ -405,8 +403,6 @@ def get_central_object_extent(fp: np.ndarray) -> list:
 
 def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
     """
-    Author: Yudong Yao
-
     :param fp: diffraction pattern
     :return: oversample ratio in each dimension
     """
@@ -434,8 +430,6 @@ def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
 
 def Resize(IN, dim):
     """
-    Author: Yudong Yao
-
     :param IN:
     :param dim:
     :return:
@@ -779,15 +773,13 @@ def get_avail_hosts_gpu_runs(devices, run_mem):
     :return:
     """
     hosts = ','.join(devices.keys())
-    script = '/host_utils.py'
-    script = os.path.realpath(os.path.dirname(__file__)).replace(os.sep, '/') + script
+    script = join(os.path.realpath(os.path.dirname(__file__)), 'host_utils.py')
     command = ['mpiexec', '-n', str(len(devices)), '--host', hosts, 'python', script, str(devices), str(run_mem)]
-    result = subprocess.run(command, stdout=subprocess.PIPE)
-    mem = result.stdout.decode("utf-8").strip()
+    result = subprocess.run(command, stdout=subprocess.PIPE, text=True).stdout
     mem_map = {}
-    for line in mem.splitlines():
-        entry = line.split(" ", 1)
-        mem_map[entry[0]] = ast.literal_eval(entry[1])
+    for entry in result.splitlines():
+        host_devs = ast.literal_eval(entry)
+        mem_map[host_devs[0]] = host_devs[1]
     return mem_map
 
 
@@ -886,7 +878,6 @@ def get_gpu_use(devices, no_jobs, job_size):
         balanced_load, avail_jobs_no = get_balanced_load(avail_jobs, no_jobs)
         picked_devs = unpack_load(balanced_load)
     else:  # cluster configuration
-        cluster_conf = True
         hosts_avail_jobs = get_avail_hosts_gpu_runs(devices, job_size)
         avail_jobs = {}
         # collapse the host dict into one dict by adding hostname in front of key (gpu id)
@@ -907,12 +898,12 @@ def get_gpu_use(devices, no_jobs, job_size):
         # create hosts file and return corresponding picked devices
         hosts_picked_devs = [(k, unpack_load(v)) for k, v in host_balanced_load.items()]
 
-        hostfile_name = 'hosts'
         picked_devs = []
+        hostfile_name = f'hostfile_{os.getpid()}'
         host_file = open(hostfile_name, mode='w+')
         linesep = os.linesep
         for h, ds in hosts_picked_devs:
-            host_file.write(f'{h}: {str(len(ds))}{linesep}')
+            host_file.write(f'{h}:{str(len(ds))}{linesep}')
             picked_devs.append(ds)
         host_file.close()
 
@@ -941,34 +932,6 @@ def arr_property(arr):
 # https://stackoverflow.com/questions/51503672/decorator-for-timeit-timeit-method/51503837#51503837
 from functools import wraps
 from time import time
-
-
-def estimate_no_proc(arr_size, factor):
-    """
-    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
-    of array.
-    Parameters
-    ----------
-    arr_size : int
-        size of array
-    factor : int
-        an estimate of how much memory is required to process comparing to array size
-    Returns
-    -------
-    int
-        number of processes
-    """
-    from multiprocessing import cpu_count
-    import psutil
-
-    ncpu = cpu_count()
-    freemem = psutil.virtual_memory().available
-    nmem = freemem / (factor * arr_size)
-    # decide what limits, ncpu or nmem
-    if nmem > ncpu:
-        return ncpu
-    else:
-        return int(nmem)
 
 
 def measure(func):

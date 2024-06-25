@@ -18,7 +18,6 @@ import cohere_core.utilities.utils as ut
 import cohere_core.utilities.ga_utils as gaut
 from multiprocessing import Queue
 import shutil
-import importlib
 import cohere_core.controller.phasing as calc
 from multiprocessing.pool import ThreadPool as Pool
 from multiprocessing import Process
@@ -43,51 +42,32 @@ class Devices:
         self.index = self.index + 1
 
 
-def set_lib(pkg):
-    global dvclib
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    elif pkg == 'torch':
-        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
-    calc.set_lib(devlib)
-
-
 def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
     """
     This function runs a single reconstruction process.
 
-    Parameters
-    ----------
-    proc : str
-        string defining library, supported 'np' and 'cp'
-
-    pars : Object
-        Params object containing parsed configuration
-
-    data : numpy array
-        data array
-
-    req_metric : str
-        defines metric that will be used if GA is utilized
-
-    dirs : list
-        tuple of two elements: directory that contain results of previous run or None, and directory where the
-        results of this processing will be saved
-
-    Returns
-    -------
-    metric : float
-        a calculated characteristic of the image array defined by the metric
+    :param metric_type: str
+        defines metric that will be used for ranking
+    :param gen: int
+        current generation
+    :param alpha_dir: str
+        directory where result of alpha will be placed
+    :param rec_attrs: dict
+        parameters applicable to reconstruction
+    :return: list of two elements
+        metric for the result of reconstruction, save_dir of the results
     """
     worker, prev_dir, save_dir = rec_attrs
     thr = threading.current_thread()
     if worker.init_dev(thr.gpu) < 0:
+        print(f'reconstruction failed, device not initialized to {thr.gpu}')
         metric = None
     else:
         ret_code = worker.init(prev_dir, alpha_dir, gen)
-        if ret_code == 0:
+        if ret_code < 0:
+            print('reconstruction failed, check algorithm sequence and triggers in configuration')
+            metric = None
+        else:
             if gen is not None and gen > 0:
                 worker.breed()
 
@@ -95,60 +75,48 @@ def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
             if ret_code == 0:
                 worker.save_res(save_dir)
                 metric = worker.get_metric(metric_type)
-        if ret_code < 0:    # bad reconstruction
-            metric = None
+            else:    # bad reconstruction
+                print('reconstruction failed during iterations')
+                metric = None
 
     return [metric, save_dir]
 
 
-def multi_rec(save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, alpha_dir=None, q=None):
+def multi_rec(pkg, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, alpha_dir=None, q=None):
     """
     This function controls the multiple reconstructions.
 
-    Parameters
-    ----------
-    lib : str
+    :param pkg: str
         library acronym to use for reconstruction. Supported:
         np - to use numpy
         cp - to use cupy
-
-    save_dir : str
+    :param save_dir: str
         a directory where the subdirectories will be created to save all the results for multiple reconstructions
-
-    devices : list
+    :param devices: list
         list of GPUs available for this reconstructions
-
-    no_recs : int
+    :param no_recs: int
         number of reconstructions
-
-    pars : dict
+    :param pars: dict
         parameters for reconstruction
-
-    datafie : str
+    :param datafile: str
         name of file containing data for reconstruction
-
-    previous_dirs : list
+    :param prev_dirs: list
         directories that hols results of previous reconstructions if it is continuation or None(s)
-
-    metric_type : str
+    :param metric_type: str
         a metric defining algorithm by which to evaluate the quality of reconstructed array
-
-    gen : int
-        which generation is the reconstruction for
-
-    q : queue
+    :param gen: int
+        current generation
+    :param alpha_dir:
+    :param q: queue
         if provided the results will be queued
-
-    Returns
-    -------
-    None
+    :return:
     """
     results = []
 
     def collect_result(result):
         results.append(result)
 
-    workers = [calc.Rec(pars, datafile) for _ in range(no_recs)]
+    workers = [calc.Rec(pars, datafile, pkg) for _ in range(no_recs)]
     dev_obj = Devices(devices)
     iterable = []
     save_dirs = []
@@ -165,7 +133,10 @@ def multi_rec(save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type
         pool.terminate()
 
     if q is not None:
-        q.put(results[0])
+        if len(results) == 0:
+            q.put('failed')
+        else:
+            q.put(results[0])
 
 
 def order_dirs(tracing, dirs, evals, metric_type):
@@ -243,7 +214,7 @@ def cull(lst, no_left):
         return lst[0:no_left]
 
 
-def reconstruction(lib, conf_file, datafile, dir, devices):
+def reconstruction(pkg, conf_file, datafile, dir, devices):
     """
     Controls reconstruction that employs genetic algorith (GA).
 
@@ -257,7 +228,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     Parameters
     ----------
-    lib : str
+    pkg : str
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
@@ -304,8 +275,6 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         if ai_dir is None:
             return
 
-    set_lib(lib)
-
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
     else:
@@ -333,11 +302,15 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         gen_save_dir = ut.join(save_dir, f'g_{str(g)}')
         metric_type = pars['ga_metrics'][g]
         reconstructions = len(prev_dirs)
-        p = Process(target=multi_rec, args=(gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, alpha_dir, q))
+        p = Process(target=multi_rec, args=(pkg, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, alpha_dir, q))
         p.start()
         p.join()
 
         results = q.get()
+        if results == 'failed':
+            print('reconstruction failed')
+            return
+
         evals = []
         temp_dirs = []
         for r in results:
@@ -354,7 +327,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         prev_dirs = current_dirs
 
         # compare current alpha and previous. If previous is better, set it as alpha.
-        # no need toset alpha  for last generation
+        # no need to set alpha  for last generation
         if (g == 0
                 or
                 best_metrics[metric_type] >= alpha_metrics[metric_type] and

@@ -17,6 +17,7 @@ The software can run code utilizing different library, such as numpy and cupy. U
 from pathlib import Path
 import time
 import os
+import sys
 from math import pi
 import random
 import importlib
@@ -35,54 +36,21 @@ import cohere_core.controller.features as ft
 __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
-__all__ = ['set_lib',
-           'get_norm',
+__all__ = ['set_lib_from_pkg',
            'reconstruction',
-           'Support',
            'Breeder',
            'Rec']
 
 
-def set_lib(dlib):
+def set_lib_from_pkg(pkg):
     global devlib
-    devlib = dlib
-    dvut.set_lib(devlib)
-    ft.set_lib(dlib)
 
-
-def get_norm(arr):
-    return devlib.sum(devlib.square(devlib.absolute(arr)))
-
-
-class Support:
-    """
-    Support class is a state holder for the support array. It initializes the support at creation time.
-    Features that modify support: shrink wrap, phase modifier, lowpass filter.
-    """
-    def __init__(self, params, dims, dir=None):
-        # create or get initial support
-        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
-            initial_support_area = params['initial_support_area']
-            init_support = []
-            for i in range(len(initial_support_area)):
-                if type(initial_support_area[0]) == int:
-                    init_support.append(initial_support_area[i])
-                else:
-                    init_support.append(int(initial_support_area[i] * dims[i]))
-            center = devlib.full(init_support, 1)
-            self.support = dvut.pad_around(center, dims, 0)
-        else:
-            self.support = devlib.load(ut.join(dir, 'support.npy'))
-
-    def get_support(self):
-        return self.support
-
-    def flip(self):
-        self.support = devlib.flip(self.support)
-
-    def make_binary(self):
-        self.support = devlib.absolute(self.support)
-        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
+    # get the lib object
+    devlib = ut.set_lib(pkg)
+    # pass the lib object to the features associated with this reconstruction
+    ft.set_lib(devlib)
+    # the utilities are not associated with reconstruction and the initialization of lib is independent
+    dvut.set_lib_from_pkg(pkg)
 
 
 class Breeder:
@@ -93,7 +61,7 @@ class Breeder:
         if breed_mode != 'none':
             try:
                 phaser.ds_image = dvut.breed(breed_mode, self.alpha_dir, phaser.ds_image)
-                phaser.support_obj.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
+                phaser.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
             except:
                 print('exception during breeding')
                 return -1
@@ -114,41 +82,38 @@ class Rec:
 
     """
     __all__ = []
-    def __init__(self, params, data_file):
+    def __init__(self, params, data_file, pkg):
+        set_lib_from_pkg(pkg)
         self.iter_functions = [self.next,
-                          self.lowpass_filter_trigger,
-                          self.reset_resolution,
-                          self.shrink_wrap_trigger,
-                          self.phm_trigger,
-                          self.to_reciprocal_space,
-                          self.new_func_trigger,
-                          self.pc_trigger,
-                          self.pc_modulus,
-                          self.modulus,
-                          self.set_prev_pc_trigger,
-                          self.to_direct_space,
-                          self.er,
-                          self.hio,
-                          self.new_alg,
-                          self.twin_trigger,
-                          self.average_trigger,
-                          self.progress_trigger]
+                               self.lowpass_filter_operation,
+                               self.reset_resolution,
+                               self.shrink_wrap_operation,
+                               self.phc_operation,
+                               self.to_reciprocal_space,
+                               self.new_func_operation,
+                               self.pc_operation,
+                               self.pc_modulus,
+                               self.modulus,
+                               self.set_prev_pc,
+                               self.to_direct_space,
+                               self.er,
+                               self.hio,
+                               self.new_alg,
+                               self.twin_operation,
+                               self.average_operation,
+                               self.progress_operation]
 
-        if 'init_guess' not in params:
-            params['init_guess'] = 'random'
-        elif params['init_guess'] == 'AI_guess':
+        params['init_guess'] = params.get('init_guess', 'random')
+        if params['init_guess'] == 'AI_guess':
             if 'AI_threshold' not in params:
                 params['AI_threshold'] = params['shrink_wrap_threshold']
             if 'AI_sigma' not in params:
                 params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
-        if 'reconstructions' not in params:
-            params['reconstructions'] = 1
-        if 'hio_beta' not in params:
-            params['hio_beta'] = 0.9
-        if 'initial_support_area' not in params:
-            params['initial_support_area'] = (.5, .5, .5)
-        if 'twin_trigger' in params and 'twin_halves' not in params:
-            params['twin_halves'] = (0, 0)
+        params['reconstructions'] = params.get('reconstructions', 1)
+        params['hio_beta'] = params.get('hio_beta', 0.9)
+        params['initial_support_area'] = params.get('initial_support_area', (.5, .5, .5))
+        if 'twin_trigger' in params:
+            params['twin_halves'] = params.get('twin_halves', (0, 0))
         if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
             self.is_pcdi = True
         else:
@@ -202,14 +167,24 @@ class Rec:
 
 
     def init(self, dir=None, alpha_dir=None, gen=None):
-        def create_feat_objects(params, feats):
+        def create_feat_objects(params, trig_op_info):
             # FIXME why is this a function? It obscures where these objects are defined and is only called once.
             if 'shrink_wrap_trigger' in params:
-                self.shrink_wrap_obj = ft.ShrinkWrap(params, feats)
-            if 'phm_trigger' in params:
-                self.phm_obj = ft.PhaseMod(params, feats)
+                self.shrink_wrap_obj = ft.create('shrink_wrap', params, trig_op_info)
+                if self.shrink_wrap_obj is None:
+                    print('failed to create shrink wrap object')
+                    return False
+            if 'phc_trigger' in params:
+                self.phc_obj = ft.create('phc', params, trig_op_info)
+                if self.phc_obj is None:
+                    print('failed to create phase constrain object')
+                    return False
             if 'lowpass_filter_trigger' in params:
-                self.lowpass_filter_obj = ft.LowPassFilter(params, feats)
+                self.lowpass_filter_obj = ft.create('lowpass_filter', params, trig_op_info)
+                if self.lowpass_filter_obj is None:
+                    print('failed to create lowpass filter object')
+                    return False
+            return True
 
         if self.ds_image is not None:
             first_run = False
@@ -220,9 +195,17 @@ class Rec:
             self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
             first_run = False
 
+        # When running GA the lowpass filter, phc, and twin triggers should be active only during first
+        # generation. The code below inactivates the triggers in subsequent generations.
+        # This will be removed in the future when each generation will have own configuration.
+        if not first_run:
+            self.params.pop('lowpass_filter_trigger', None)
+            self.params.pop('phc_trigger', None)
+            self.params.pop('twin_trigger', None)
+
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
-        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen, first_run)
+        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen)
         if flow is None:
             return -1
 
@@ -230,7 +213,7 @@ class Rec:
         (op_no, self.iter_no) = flow.shape
         for i in range(self.iter_no):
             for j in range(op_no):
-                if flow[j, i] == 1:
+                if flow[j, i] > 0:
                     self.flow.append(self.iter_functions[j])
 
         self.aver = None
@@ -239,11 +222,21 @@ class Rec:
         self.gen = gen
         self.prev_dir = dir
         self.alpha_dir = alpha_dir
-        self.support_obj = Support(self.params, self.dims, dir)
+
+        # create or get initial support
+        if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
+            init_support = [int(self.params['initial_support_area'][i] * self.dims[i]) for i in range(len(self.dims))]
+            center = devlib.full(init_support, 1)
+            self.support = dvut.pad_around(center, self.dims, 0)
+        else:
+            self.support = devlib.load(ut.join(dir, 'support.npy'))
+
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
         # create the object even if the feature inactive, it will be empty
-        create_feat_objects(self.params, feats)
+        # If successful, it will return True, otherwise False
+        if not create_feat_objects(self.params, feats):
+            return -1
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -263,26 +256,12 @@ class Rec:
 
         if (first_run):
             max_data = devlib.amax(self.data)
-            self.ds_image *= get_norm(self.ds_image) * max_data
+            self.ds_image *= dvut.get_norm(self.ds_image) * max_data
 
             # the line below are for testing to set the initial guess to support
             # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
 
-            self.ds_image *= self.support_obj.get_support()
-        return 0
-
-
-    def breed1(self):
-        breed_mode = self.params['ga_breed_modes'][self.gen]
-        if breed_mode != 'none':
-            try:
-                self.ds_image = dvut.breed(breed_mode, self.alpha_dir, self.ds_image)
-                self.support_obj.params = dvut.shrink_wrap(self.ds_image, self.params['ga_sw_thresholds'][self.gen],
-                                                           self.params['ga_sw_gauss_sigmas'][self.gen])
-            except:
-                print('exception during breeding')
-                return -1
-
+            self.ds_image *= self.support
         return 0
 
 
@@ -292,17 +271,17 @@ class Rec:
 
 
     def breed(self):
+        def breed_retry():
+            breed_mode = self.params['ga_breed_modes'][self.gen]
+            threshold = self.params['ga_sw_thresholds'][self.gen]
+            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
+            return self.breeder.breed(self, breed_mode, threshold, sigma)
         try:
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
+            return breed_retry()
         except Exception as e:
+            # retry
             self.breeder = Breeder(self.alpha_dir)
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
+            return breed_retry()
 
 
     def iterate(self):
@@ -332,7 +311,7 @@ class Rec:
 
     def save_res(self, save_dir, only_image=False):
         # center image's center_of_mass and sync support
-        self.ds_image, self.support_obj.support = dvut.center_sync(self.ds_image, self.support_obj.support)
+        self.ds_image, self.support = dvut.center_sync(self.ds_image, self.support)
 
         from array import array
 
@@ -344,7 +323,7 @@ class Rec:
         if only_image:
             return 0
 
-        devlib.save(ut.join(save_dir, 'support'), self.support_obj.get_support())
+        devlib.save(ut.join(save_dir, 'support'), self.support)
         if self.is_pc:
             devlib.save(ut.join(save_dir, 'coherence'), self.pc_obj.kernel)
         errs = array('f', self.errs)
@@ -366,48 +345,48 @@ class Rec:
     def next(self):
         self.iter = self.iter + 1
 
-    def lowpass_filter_trigger(self):
+    def lowpass_filter_operation(self):
         args = (self.data, self.iter, self.ds_image)
-        (self.iter_data, self.support_obj.support) = self.lowpass_filter_obj.apply_trigger(*args)
+        (self.iter_data, self.support) = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
 
-    def shrink_wrap_trigger(self):
+    def shrink_wrap_operation(self):
         args = (self.ds_image,)
-        self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
+        self.support = self.shrink_wrap_obj.apply_trigger(*args)
 
-    def phm_trigger(self):
+    def phc_operation(self):
         args = (self.ds_image,)
-        self.support_obj.support *= self.phm_obj.apply_trigger(*args)
+        self.support *= self.phc_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
 
-    def new_func_trigger(self):
+    def new_func_operation(self):
         self.params['new_param'] = 1
         print(f'in new_func_trigger, new_param {self.params["new_param"]}')
 
-    def pc_trigger(self):
+    def pc_operation(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
 
     def pc_modulus(self):
         abs_amplitudes = devlib.absolute(self.rs_amplitudes)
         converged = self.pc_obj.apply_partial_coherence(abs_amplitudes)
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
-        error = get_norm(
-            devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / get_norm(self.iter_data)
+        error = dvut.get_norm(
+            devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / dvut.get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
-        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
-                                      0)) / get_norm(self.iter_data)
+        error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / dvut.get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
-    def set_prev_pc_trigger(self):
+    def set_prev_pc(self):
         self.pc_obj.set_previous(devlib.absolute(self.rs_amplitudes))
 
     def to_direct_space(self):
@@ -415,18 +394,17 @@ class Rec:
 
     def er(self):
         self.er_iter = True
-        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
+        self.ds_image = self.ds_image_raw * self.support
 
     def hio(self):
         self.er_iter = False
         combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
-        support = self.support_obj.get_support()
-        self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
+        self.ds_image = devlib.where((self.support > 0), self.ds_image_raw, combined_image)
 
     def new_alg(self):
-        self.ds_image = 2.0 * (self.ds_image_raw * self.support_obj.get_support()) - self.ds_image_raw
+        self.ds_image = 2.0 * (self.ds_image_raw * self.support) - self.ds_image_raw
 
-    def twin_trigger(self):
+    def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
         # com = devlib.center_of_mass(devlib.absolute(self.ds_image))
         # sft = [int(self.dims[i] / 2 - com[i]) for i in range(len(self.dims))]
@@ -443,7 +421,7 @@ class Rec:
         else:
             self.ds_image[:, : half_y, :] = 0
 
-    def average_trigger(self):
+    def average_operation(self):
         if self.aver is None:
             self.aver = devlib.to_numpy(devlib.absolute(self.ds_image))
             self.aver_iter = 1
@@ -451,13 +429,16 @@ class Rec:
             self.aver = self.aver + devlib.to_numpy(devlib.absolute(self.ds_image))
             self.aver_iter += 1
 
-    def progress_trigger(self):
+    def progress_operation(self):
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def get_ratio(self, divident, divisor):
-        divisor = devlib.where((divisor != 0.0), divisor, 1.0)
-        ratio = divident / divisor
+        ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
         return ratio
+    
+    def make_binary(self):
+        self.support = devlib.absolute(self.support)
+        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
 
 
 def resample(data, matrix, size=None, plot=False):
@@ -635,19 +616,15 @@ class CoupledRec(Rec):
     __author__ = "Nick Porter"
     __all__ = []
 
-    def __init__(self, params, peak_dirs):
-        super().__init__(params, None)
+    def __init__(self, params, peak_dirs, pkg):
+        super().__init__(params, None, pkg)
 
-        self.iter_functions = self.iter_functions + [self.switch_resampling, self.switch_peaks]
+        self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peaks_operation]
 
-        if "switch_peak_trigger" not in self.params:
-            self.params["switch_peak_trigger"] = [0, 5]
-        if "mp_max_weight" not in self.params:
-            self.params["mp_max_weight"] = 0.9
-        if "mp_taper" not in self.params:
-            self.params["mp_taper"] = 0.75
-        if "calc_strain" not in self.params:
-            self.params["calc_strain"] = True
+        self.params["switch_peak_trigger"] = self.params.get("switch_peak_trigger", [0, 5])
+        self.params["mp_max_weight"] = self.params.get("mp_max_weight", 0.9)
+        self.params["mp_taper"] = self.params.get("mp_taper", 0.75)
+        self.params["calc_strain"] = self.params.get("calc_strain", True)
 
         self.peak_dirs = peak_dirs
 
@@ -827,15 +804,13 @@ class CoupledRec(Rec):
         grad_phi = devlib.array(grad_phi)
         G = devlib.array([peak.g_vec for peak in self.peak_objs])
         grad_phi = devlib.moveaxis(devlib.moveaxis(grad_phi, 0, -1), 0, -1)
-        cond = devlib.where(self.support_obj.get_support(), True, False)
+        cond = devlib.where(self.support, True, False)
         final_shape = (grad_phi.shape[0], grad_phi.shape[1], grad_phi.shape[2], 3, 3)
         ind = devlib.moveaxis(devlib.indices(cond.shape), 0, -1).reshape((-1, 3))[cond.ravel()].get()
         jacobian = devlib.zeros(final_shape)
         print("Calculating strain...")
         for i, j, k in tqdm.tqdm(ind):
             jacobian[i, j, k] = devlib.lstsq(G, grad_phi[i, j, k])[0]
-        # print("Reintegrating Jacobian")
-        # self.u_image = devlib.integrate_jacobian(jacobian, self.params["ds_voxel_size"])
         return jacobian
 
     def iterate(self):
@@ -924,10 +899,7 @@ class CoupledRec(Rec):
 
         return 0
 
-    def switch_peaks(self):
-        if self.params["adaptive_weights"]:
-            self.calc_confidence()
-
+    def switch_peaks_operation(self):
         self.to_shared_image()
         self.get_control_error()
 
@@ -957,9 +929,9 @@ class CoupledRec(Rec):
             else:
                 self.shift_to_center()
                 self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_det_to_lab, self.dims[0])
-                self.support_obj.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_det_to_lab,
+                self.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_det_to_lab,
                                                     self.dims[0], plot=True)
-                self.support_obj.make_binary()
+                self.make_binary()
 
         pk = self.peak_objs[self.pk]
 
@@ -973,7 +945,7 @@ class CoupledRec(Rec):
         self.u_image = self.u_image + wt_u * (new_u - old_u)
 
         if self.er_iter:
-            tight_support = devlib.binary_erosion(self.support_obj.support)
+            tight_support = devlib.binary_erosion(self.support)
             self.rho_image = devlib.median_filter(self.rho_image, 3)
             self.rho_image = self.rho_image * tight_support
             self.u_image = self.u_image * tight_support[:, :, :, None]
@@ -1049,29 +1021,10 @@ class CoupledRec(Rec):
         support = self.support_obj.get_support()
         self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
 
-    def shrink_wrap_trigger(self):
+    def shrink_wrap_operation(self):
         if self.er_iter or self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
             return
-        args = (self.ds_image,)
-        self.support_obj.support = self.shrink_wrap_obj.apply_trigger(*args)
-        # support = self.support_obj.support
-        # new_support = self.shrink_wrap_obj.apply_trigger(*args)
-        #
-        # fix_0 = support + new_support < 0.5
-        # fix_1 = support + new_support > 1.5
-        # dist = devlib.absolute(devlib.sum(support) - devlib.sum(new_support)) ** (1 / 3)
-        # threshold = self.peak_objs[self.pk].weight
-        # if devlib.sum(support) - devlib.sum(new_support) > 0:
-        #     threshold = 1-threshold
-        # sizes = np.flip(2 * np.fix(np.geomspace(1, dist.get(), 5)) + 1)
-        # intermediate = devlib.copy(support)
-        # for size in tqdm.tqdm(sizes):
-        #     intermediate = devlib.uniform_filter(intermediate, size)
-        #     intermediate[fix_1] = 1
-        #     intermediate[fix_0] = 0
-        # support = support * 0
-        # support[intermediate > threshold] = 1.0
-
+        super().shrink_wrap_operation()
 
     def get_control_error(self):
         pk = self.peak_objs[self.pk]
@@ -1091,7 +1044,7 @@ class CoupledRec(Rec):
 
         self.ctrl_error.append([nmi, lnmi, ehd, lehd])
 
-    def progress_trigger(self):
+    def progress_operation(self):
         ornt = self.peak_objs[self.pk].hkl
         prg = f'|  iter {self.iter:>4}  ' \
               f'|  peak {self.pk}  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
@@ -1104,7 +1057,7 @@ class CoupledRec(Rec):
             prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
         print(prg)
 
-    def switch_resampling(self):
+    def switch_resampling_operation(self):
         self.fast_resample = False
 
     def get_density(self):
@@ -1116,7 +1069,7 @@ class CoupledRec(Rec):
     def flip(self):
         self.rho_image = devlib.flip(self.rho_image, axis=(0, 1, 2))
         self.u_image = -1 * devlib.flip(self.u_image, axis=(0, 1, 2))
-        self.support_obj.flip()
+        self.support = devlib.flip(self.support, axis=(0, 1, 2))
 
     def shift_to_center(self):
         ind = devlib.center_of_mass(self.rho_image)
@@ -1169,11 +1122,11 @@ def reconstruction(datafile, **kwargs):
             used to calculate the Gaussian filter
         initial_support_area : list
             If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support will be set to 1s to this dimensions centered.
-        phm_trigger : list
+        phc_trigger : list
             defines when to update support array using the parameters below by applaying phase constrain.
-        phm_phase_min : float
+        phc_phase_min : float
             point with phase below this value will be removed from support area
-        phm_phase_max : float
+        phc_phase_max : float
             point with phase over this value will be removed from support area
         pc_interval : int
             defines iteration interval to update coherence.
@@ -1193,14 +1146,14 @@ def reconstruction(datafile, **kwargs):
             defines when to apply averaging. Negative start means it is offset from the last iteration.
         progress_trigger : list of int
             defines when to print info on the console. The info includes current iteration and error.
-        debug : boolean
-            if in debug mode the verifier will not stop the progress, only print message
+        no_verify : boolean
+            if in no_verify mode the verifier will not stop the progress, only print message
     """
-    debug = 'debug' in kwargs and kwargs['debug']
+    no_verify = kwargs.get('no_verify', False)
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
         print(error_msg)
-        if not debug:
+        if not no_verify:
             return
 
     if not os.path.isfile(datafile):
@@ -1208,38 +1161,29 @@ def reconstruction(datafile, **kwargs):
         return
 
     if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere_core-ui package to run multiple reconstructions and GA. Processing single reconstruction.')
-    if 'processing' in kwargs:
-        pkg = kwargs['processing']
-    else:
-        pkg = 'auto'
+        print('Use cohere_core-ui package to run multiple reconstructions. Processing single reconstruction.')
+    device = kwargs.get('device', [-1])
+    pkg = kwargs.get('processing', 'auto')
     if pkg == 'auto':
-        try:
-            import cupy as cp
-            pkg = 'cp'
-        except:
+        if device == [-1] or sys.platform == 'darwin':
             pkg = 'np'
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    else:
-        print('supporting cp and np processing')
-        return
-    set_lib(devlib, False)
+        else:
+            try:
+                import cupy as cp
+                pkg = 'cp'
+            except:
+                try:
+                    import torch
+                    pkg = 'torch'
+                except:
+                    pkg = 'np'
 
-    worker = Rec(kwargs, datafile)
-    if 'device' in kwargs:
-        device = kwargs['device'][0]
-    else:
-        device = [-1]
+    worker = Rec(kwargs, datafile, pkg)
+
     if worker.init_dev(device[0]) < 0:
         return
 
-    if 'continue_dir' in kwargs:
-        continue_dir = kwargs['continue_dir']
-    else:
-        continue_dir = None
+    continue_dir = kwargs.get('continue_dir')
     ret_code = worker.init(continue_dir)
     if ret_code < 0:
         return

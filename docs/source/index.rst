@@ -8,7 +8,7 @@ Welcome to cohere documentation!
    about
    installation
    how_to_use
-   define_formula
+   define_alg_seq
    api_standard_preprocess
    api_phasing
    api_utils

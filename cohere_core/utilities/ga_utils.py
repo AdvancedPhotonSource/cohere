@@ -6,8 +6,7 @@ class Tracing:
         self.init_dirs = []
         self.report_tracing = []
 
-        if 'init_guess' not in pars:
-            pars['init_guess'] = 'random'
+        pars['init_guess'] = pars.get('init_guess', 'random')
         if pars['init_guess'] == 'continue':
             continue_dir = pars['continue_dir']
             for sub in os.listdir(continue_dir):
@@ -101,14 +100,9 @@ class Tracing:
 
 
 def set_ga_defaults(pars):
-    if 'reconstructions' not in pars:
-        pars['reconstructions'] = 1
-
-    if 'ga_generations' not in pars:
-        pars['ga_generations'] = 1
-
-    if 'init_guess' not in pars:
-        pars['init_guess'] = 'random'
+    pars['reconstructions'] = pars.get('reconstructions', 1)
+    pars['ga_generations'] = pars.get('ga_generations', 1)
+    pars['init_guess'] = pars.get('init_guess', 'random')
 
     # check if pc feature is on
     if 'pc' in pars['algorithm_sequence'] and 'pc_interval' in pars:
@@ -116,8 +110,7 @@ def set_ga_defaults(pars):
             pars['ga_gen_pc_start'] = 0
             pars['ga_gen_pc_start'] = min(pars['ga_gen_pc_start'], pars['ga_generations']-1)
 
-    if 'ga_fast' not in pars:
-        pars['ga_fast'] = False
+    pars['ga_fast'] = pars.get('ga_fast', False)
 
     if 'ga_metrics' not in pars:
         metrics = ['chi'] * pars['ga_generations']
@@ -146,10 +139,7 @@ def set_ga_defaults(pars):
         ga_reconstructions.append(reconstructions)
     pars['ga_reconstructions'] = ga_reconstructions
 
-    if 'shrink_wrap_threshold' in pars:
-        sw_threshold = pars['shrink_wrap_threshold']
-    else:
-        sw_threshold = .1
+    sw_threshold = .1
     if 'ga_sw_thresholds' in pars:
         ga_sw_thresholds = pars['ga_sw_thresholds']
         if len(ga_sw_thresholds) == 1:
@@ -160,10 +150,7 @@ def set_ga_defaults(pars):
         ga_sw_thresholds = [sw_threshold] * pars['ga_generations']
     pars['ga_sw_thresholds'] = ga_sw_thresholds
 
-    if 'sw_gauss_sigma' in pars:
-        sw_gauss_sigma = pars['sw_gauss_sigma']
-    else:
-        sw_gauss_sigma = .1
+    sw_gauss_sigma = 1.0
     if 'ga_sw_gauss_sigmas' in pars:
         ga_sw_gauss_sigmas = pars['ga_sw_gauss_sigmas']
         if len(ga_sw_gauss_sigmas) == 1:
@@ -190,8 +177,7 @@ def set_ga_defaults(pars):
         pars['low_resolution_generations'] = 0
 
     if pars['low_resolution_generations'] > 0:
-        if 'low_resolution_alg' not in pars:
-            pars['low_resolution_alg'] = 'GAUSS'
+        pars['low_resolution_alg'] = pars.get('low_resolution_alg', 'GAUSS')
 
     return pars
 

@@ -16,7 +16,6 @@ import numpy as np
 import os
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.ga_utils as gaut
-import importlib
 import cohere_core.controller.phasing as calc
 from mpi4py import MPI
 import datetime
@@ -26,17 +25,6 @@ __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
-
-
-def set_lib(pkg):
-    global devlib
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    elif pkg == 'torch':
-        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
-    calc.set_lib(devlib)
 
 
 def order_ranks(tracing, proc_metrics, metric_type):
@@ -93,7 +81,7 @@ def write_log(rank: int, msg: str) -> None:
         log_f.write(f'{datetime.datetime.now()} | {msg}\n')
 
 
-def reconstruction(lib, conf_file, datafile, dir, devices):
+def reconstruction(pkg, conf_file, datafile, dir, devices):
     """
     Controls reconstruction that employs genetic algorith (GA).
 
@@ -107,7 +95,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     Parameters
     ----------
-    lib : str
+    pkg : str
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
@@ -160,10 +148,11 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
     if 'ga_cullings' in pars:
         cull_sum = sum(pars['ga_cullings'])
+        if reconstructions - cull_sum < 2:
+            print("At least two reconstructions should be left after culling. Number of starting reconstructions is", reconstructions, "but ga_cullings adds to", cull_sum)
+            return
 
-    set_lib(lib)
-
-    worker = calc.Rec(pars, datafile)
+    worker = calc.Rec(pars, datafile, pkg)
     if rank == 0:
         active_ranks = list(np.linspace(0, size-1, num=size, dtype=int))
         tracing = gaut.Tracing(reconstructions, pars, dir)
@@ -171,11 +160,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         tracing.set_map(tracing_map)
 
     active = True
+    success = True
     for g in range(pars['ga_generations']):
         was_active = active
         if g == 0:
             ret = worker.init_dev(devices[rank])
             if ret < 0:
+                print(f'rank {rank} failed initializing device {devices[rank]}')
                 active = False
             if active:
                 if pars['init_guess'] == 'AI_guess' and rank == 0:
@@ -189,11 +180,13 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
                 else:
                     ret = worker.init(None, alpha_dir, g)
                 if ret < 0:
-                    active = False
+                    print('failed init, check config')
+                    break
         else:
             if active:
                 ret = worker.init(None, alpha_dir, g)
                 if ret < 0:
+                    print(f'rank {rank} reconstruction failed, check algorithm sequence and triggers in configuration')
                     active = False
 
             if active:
@@ -207,6 +200,7 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
         if active:
             ret = worker.iterate()
             if ret < 0:
+                print(f'reconstruction for rank {rank} failed during iterations')
                 active = False
 
         if active:
@@ -287,14 +281,12 @@ def reconstruction(lib, conf_file, datafile, dir, devices):
 
         if not active:
             worker = None
-            devlib.clean_default_mem()
+            # devlib.clean_default_mem()
 
         comm.Barrier()
 
-    if rank == 0:
+    if rank == 0 and success:
         tracing.save(save_dir)
-
-    print('finished GA')
 
 
 def main():
