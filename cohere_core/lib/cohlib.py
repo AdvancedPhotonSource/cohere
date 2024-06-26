@@ -210,7 +210,7 @@ class cohlib(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def fftconvolve(arr1, kernel):
+    def fftconvolve(arr1, arr2):
         pass
 
     @abc.abstractmethod
@@ -384,6 +384,10 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def concatenate(tup, axis=0):
+        pass
+
+    @abc.abstractmethod
+    def stack(tup):
         pass
 
     @abc.abstractmethod

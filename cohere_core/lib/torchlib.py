@@ -316,6 +316,9 @@ class torchlib(cohlib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
+    def stack(tup):
+        raise NotImplementedError
+
     def amin(arr):
         raise NotImplementedError
 
@@ -336,3 +339,12 @@ class torchlib(cohlib):
 
     def clean_default_mem():
         pass
+
+
+# a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
+# a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])
+# conv = torchlib.fftconvolve(a1,a2)
+# print('torch conv', conv)
+# print(conv.real)
+# print(torch.abs(conv))
+# print(torch.nn.functional.conv1d(a1,a2))

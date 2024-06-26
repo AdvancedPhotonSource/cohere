@@ -1,9 +1,9 @@
 from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
-import cupyx.scipy.ndimage
 import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
+import cupyx.scipy.special as sp
 
 
 class cplib(cohlib):
@@ -12,6 +12,9 @@ class cplib(cohlib):
 
     def dot(arr1, arr2):
         return cp.dot(arr1, arr2)
+
+    def cross(arr1, arr2):
+        return cp.cross(arr1, arr2)
 
     def set_device(dev_id):
         if dev_id != -1:
@@ -43,6 +46,9 @@ class cplib(cohlib):
 
     def hasnan(arr):
         return cp.any(cp.isnan(arr))
+
+    def nan_to_num(arr, **kwargs):
+        return cp.nan_to_num(arr, **kwargs)
 
     def copy(arr):
         return cp.copy(arr)
@@ -78,9 +84,9 @@ class cplib(cohlib):
     def ifft(arr, norm='forward'):
         return cp.fft.ifftn(arr, norm=norm)
 
-    def fftconvolve(arr1, kernel):
-        from cupyx.scipy import signal
-        return signal.fftconvolve(arr1, kernel, mode='same')
+    def fftconvolve(arr1, arr2):
+        return sc.convolve(arr1, arr2)
+        # return cupyx.scipy.signal.convolve(arr1, arr2, mode='same')
 
     def correlate(arr1, arr2, mode='same', method='fft'):
         from cupyx.scipy.signal import correlate
@@ -170,6 +176,15 @@ class cplib(cohlib):
     def gaussian_filter(arr, sigma, **kwargs):
         return sc.gaussian_filter(arr, sigma)
 
+    def median_filter(arr, size, **kwargs):
+        return sc.median_filter(arr, size)
+
+    def uniform_filter(arr, size, **kwargs):
+        return sc.uniform_filter(arr, size)
+
+    def binary_erosion(arr, **kwargs):
+        return sc.binary_erosion(arr, iterations=1)
+
     def center_of_mass(inarr):
         t = sc.center_of_mass(cp.absolute(inarr))
         return t
@@ -191,6 +206,9 @@ class cplib(cohlib):
 
     def linspace(start, stop, num):
         return cp.linspace(start, stop, num)
+
+    def geomspace(start, stop, num):
+        return cp.geomspace(start, stop, num)
 
     def clip(arr, min, max=None):
         return cp.clip(arr, min, max)
@@ -222,11 +240,14 @@ class cplib(cohlib):
     def concatenate(tup, axis=0):
         return cp.concatenate(tup, axis)
 
+    def stack(tup):
+        return cp.stack(tup)
+
     def amin(arr):
         return cp.amin(arr)
 
     def affine_transform(arr, matrix, order=3, offset=0):
-        return cupyx.scipy.ndimage.affine_transform(arr, matrix, order=order, offset=offset, prefilter=True)
+        return sc.affine_transform(arr, matrix, order=order, offset=offset, prefilter=True)
 
     def pad(arr, padding):
         return cp.pad(arr, padding)
@@ -234,7 +255,7 @@ class cplib(cohlib):
     def histogram2d(meas, rec, n_bins=100, log=False):
         norm = cp.max(meas) / cp.max(rec)
         if log:
-            bins = cp.logspace(cp.log10(1), cp.log10(cp.max(meas)), n_bins+1)
+            bins = cp.logspace(cp.log10(cp.min(meas[meas!=0])), cp.log10(cp.max(meas)), n_bins+1)
         else:
             bins = n_bins
         return cp.histogram2d(cp.ravel(meas), cp.ravel(norm*rec), bins)[0]
@@ -245,11 +266,29 @@ class cplib(cohlib):
         h01 = stats.entropy(np.reshape(hgram, -1))
         return (h0 + h1) / h01
 
+    def log(arr):
+        return cp.log(arr)
+
+    def xlogy(x, y=None):
+        if y is None:
+            y = x
+        return sp.xlogy(x, y)
+
+    def mean(arr):
+        return cp.mean(arr)
+
     def calc_ehd(hgram):
         n = hgram.shape[0] * 1j
         x, y = cp.mgrid[0:1:n, 0:1:n]
         return cp.sum(hgram * cp.abs(x - y)) / cp.sum(hgram)
 
-    def clean_default_mem():
+    def integrate_jacobian(jacobian, dx=1):
+        nx, ny, nz, _, _ = jacobian.shape
+        u = cp.zeros((nx, ny, nz, 3))
+        for ax in range(3):
+            u = u + dx * cp.cumsum(jacobian[:, :, :, ax, :], axis=ax)
+        return u
+
+    def clean_default_mem(self):
         cp._default_memory_pool.free_all_blocks()
         cp._default_pinned_memory_pool.free_all_blocks()

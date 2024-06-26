@@ -361,6 +361,9 @@ class aflib3(aflib):
     def concatenate(tup, axis=0):
         raise NotImplementedError
 
+    def stack(tup):
+        raise NotImplementedError
+
     def amin(arr):
         raise NotImplementedError
 

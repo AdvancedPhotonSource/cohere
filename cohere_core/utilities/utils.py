@@ -53,7 +53,8 @@ __all__ = ['join',
            'get_one_dev',
            'get_gpu_use',
            'estimate_no_proc',
-           'set_lib'
+           'set_lib',
+           'estimate_no_proc'
            ]
 
 
@@ -932,48 +933,6 @@ def arr_property(arr):
 from functools import wraps
 from time import time
 
-
-def estimate_no_proc(arr_size, factor):
-    """
-    Estimates number of processes the prep can be run on. Determined by number of available cpus and size
-    of array.
-    Parameters
-    ----------
-    arr_size : int
-        size of array
-    factor : int
-        an estimate of how much memory is required to process comparing to array size
-    Returns
-    -------
-    int
-        number of processes
-    """
-    from multiprocessing import cpu_count
-    import psutil
-
-    ncpu = cpu_count()
-    freemem = psutil.virtual_memory().available
-    nmem = freemem / (factor * arr_size)
-    # decide what limits, ncpu or nmem
-    if nmem > ncpu:
-        return ncpu
-    else:
-        return int(nmem)
-
-
-def set_lib(pkg):
-    global devlib
-
-    if pkg == 'cp':
-        devlib = importlib.import_module('cohere_core.lib.cplib').cplib
-    elif pkg == 'np':
-        devlib = importlib.import_module('cohere_core.lib.nplib').nplib
-    elif pkg == 'torch':
-        devlib = importlib.import_module('cohere_core.lib.torchlib').torchlib
-    else:
-        devlib = None
-
-    return devlib
 
 def measure(func):
     @wraps(func)

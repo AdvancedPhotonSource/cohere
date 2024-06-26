@@ -227,6 +227,9 @@ class nplib(cohlib):
     def concatenate(tup, axis=0):
         return np.concatenate(tup, axis)
 
+    def stack(tup):
+        return np.stack(tup)
+
     def amin(arr):
         return np.amin(arr)
 
