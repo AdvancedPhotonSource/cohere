@@ -24,6 +24,7 @@ The best practice is to create conda environment dedicated for the development.
 
     cd cohere
     git checkout Dev
+    #To create your own branch of Dev for your own development create and checkout a new branch as follows.
     git checkout -b <dev_branch>
     pip install -e .
 
@@ -33,6 +34,7 @@ The best practice is to create conda environment dedicated for the development.
 
     cd cohere-ui
     git checkout Dev
+    #To create your own branch of Dev for your own development create and checkout a new branch as follows.
     git checkout -b <dev_branch>
     python setup.py
 
