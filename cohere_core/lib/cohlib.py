@@ -134,286 +134,357 @@ class cohlib(metaclass=abc.ABCMeta):
                 NotImplemented)
 
     @abc.abstractmethod
+    @staticmethod
     def array(obj):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def dot(arr1, arr2):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def set_device(dev_id):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def set_backend(proc):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def to_numpy(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def save(filename, arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def load(filename):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def from_numpy(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def dtype(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def astype(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def size(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def hasnan(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def copy(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def roll(arr, sft, axis):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def shift(arr, sft):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def fftshift(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def ifftshift(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def fft(arr, norm='forward'):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def ifft(arr, norm='forward'):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def fftconvolve(arr1, arr2):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def where(cond, x, y):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def dims(arr):
         # get array dimensions
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def absolute(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def square(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def sqrt(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def sum(arr, axis=None):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def real(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def imag(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def amax(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def argmax(arr, axis=None):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def unravel_index(indices, shape):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def maximum(arr1, arr2):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def ceil(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def fix(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def round(val):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def random(shape, **kwargs):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def full(shape, fill_value, **kwargs):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def print(arr, **kwargs):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def angle(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def flip(arr, axis):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def tile(arr, rep):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def expand_dims(arr, axis):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def squeeze(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def gaussian(dims, sigma, **kwargs):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def center_of_mass(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def meshgrid(*xi):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def exp(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def conj(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def array_equal(arr1, arr2):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def cos(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def linspace(start, stop, num):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def diff(arr, axis=None, prepend=0):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def clip(arr, min, max=None):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def gradient(arr, dx=1):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def argmin(arr, axis=None):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def take_along_axis(a, indices, axis):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def moveaxis(arr, source, dest):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def lstsq(A, B):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def zeros(shape):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def indices(dims):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def concatenate(tup, axis=0):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def stack(tup):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def amin(arr):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def affine_transform(arr, matrix, order=3, offset=0):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def pad(arr, padding):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def histogram2d(meas, rec, n_bins=100, log=False):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def calc_nmi(hgram):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def calc_ehd(hgram):
         pass
 
     @abc.abstractmethod
+    @staticmethod
     def clean_default_mem():
         pass
