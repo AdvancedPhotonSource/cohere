@@ -15,7 +15,7 @@ It is highly recommended to install the cohere_core package in conda environment
 | Create and activate the environment.
 Run the commands below::
 
-    conda create -y -n <env_name> -c conda-forge python=3.10 mpi4py=3.1.5
+    conda create -n <env_name> -c conda-forge python=3.10 mpi4py=3.1.5
     conda activate <env_name>
 then run the cohere installation command::
 
@@ -25,10 +25,10 @@ User has to install the preferred library.
 
 If using cupy library::
 
-    conda -y install cupy=12.2.0 -c conda-forge
+    conda install cupy=12.2.0 -c conda-forge
 If torch is preferred, install with command::
 
-    conda -y install -c conda-forge torch
+    conda install -c conda-forge torch
 The cohere-core package does not install python packages used by user's scripts in cohere-ui package. If planning to use the scripts Refer to :ref:`use` page, section "Installing Scripts".
 
 Note: The cupy installation on Windows may result in incompatible libraries, which makes the environment unusable. Run the repack.bat script from cohere-ui package and try running again.
@@ -51,7 +51,7 @@ Create environment, activate it and clone cohere repository. It contains the coh
 For Windows make sure that numpy version is 1.23.5. The commands above will create conda environment and activate it, clone the packages, get the Dev branch, install, initialize.
 | If using cupy library::
 
-    conda -y install cupy=12.2.0 -c conda-forge
+    conda install cupy=12.2.0 -c conda-forge
 | If using torch library::
 
     pip install torch
