@@ -102,6 +102,8 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         # the formula for auto threshold was found empirically, may be
         # modified in the future if more tests are done
         auto_threshold_value = 0.141 * beam_data[np.nonzero(beam_data)].mean().item() - 3.062
+        if auto_threshold_value < 2.0:
+            auto_threshold_value = 2.0
         intensity_threshold = auto_threshold_value
         print(f'auto intensity threshold: {intensity_threshold}')
     elif 'intensity_threshold' in kwargs:
