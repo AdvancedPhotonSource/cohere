@@ -588,7 +588,7 @@ class Peak:
 
     def chi_square(self, proj):
         error = devlib.where((self.res_data != 0), (devlib.absolute(proj) - self.res_data), 0)
-        return get_norm(error) / get_norm(self.res_data)
+        return dvut.get_norm(error) / dvut.get_norm(self.res_data)
 
     def get_error(self, proj):
         pass
@@ -619,7 +619,7 @@ class CoupledRec(Rec):
     def __init__(self, params, peak_dirs, pkg):
         super().__init__(params, None, pkg)
 
-        self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peaks_operation]
+        self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peak_operation]
 
         self.params["switch_peak_trigger"] = self.params.get("switch_peak_trigger", [0, 5])
         self.params["mp_max_weight"] = self.params.get("mp_max_weight", 0.9)
@@ -704,7 +704,7 @@ class CoupledRec(Rec):
 
     def save_res(self, save_dir):
         from array import array
-        tight_support = devlib.binary_erosion(self.support_obj.support)
+        tight_support = devlib.binary_erosion(self.support)
         self.rho_image = self.rho_image * tight_support
         self.u_image = self.u_image * tight_support[:, :, :, None]
         # for i in range(3):
@@ -712,7 +712,7 @@ class CoupledRec(Rec):
         self.shift_to_center()
 
         crop = self.dims[0] / 4
-        sup = self.support_obj.get_support()[crop:-crop, crop:-crop, crop:-crop]
+        sup = self.support[crop:-crop, crop:-crop, crop:-crop]
         rho = self.rho_image[crop:-crop, crop:-crop, crop:-crop] * sup
         u_x = self.u_image[crop:-crop, crop:-crop, crop:-crop, 0] * sup
         u_y = self.u_image[crop:-crop, crop:-crop, crop:-crop, 1] * sup
@@ -899,7 +899,7 @@ class CoupledRec(Rec):
 
         return 0
 
-    def switch_peaks_operation(self):
+    def switch_peak_operation(self):
         self.to_shared_image()
         self.get_control_error()
 
@@ -929,7 +929,7 @@ class CoupledRec(Rec):
             else:
                 self.shift_to_center()
                 self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_det_to_lab, self.dims[0])
-                self.support = resample(self.support_obj.support, self.peak_objs[self.pk].ds_det_to_lab,
+                self.support = resample(self.support, self.peak_objs[self.pk].ds_det_to_lab,
                                                     self.dims[0], plot=True)
                 self.make_binary()
 
@@ -959,13 +959,13 @@ class CoupledRec(Rec):
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
         if not self.fast_resample:
             self.ds_image = resample(self.ds_image, pk.ds_lab_to_det, self.dims[0])
-            self.support_obj.support = resample(self.support_obj.support, pk.ds_lab_to_det, self.dims[0])
-            self.support_obj.make_binary()
+            self.support = resample(self.support, pk.ds_lab_to_det, self.dims[0])
+            self.make_binary()
 
     def calc_confidence(self):
         pk = self.peak_objs[self.pk]
         rho = devlib.absolute(self.ds_image)
-        cond = self.support_obj.get_support() != 0
+        cond = self.support > 0
         hist = devlib.histogram2d(self.rho_image[cond], rho[cond], log=False)
         # conf = 1 / devlib.calc_ehd(hist).get()
         conf = devlib.calc_nmi(hist).get() - 1
@@ -1001,8 +1001,8 @@ class CoupledRec(Rec):
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
-        error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
-                                      0)) / get_norm(self.iter_data)
+        error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / dvut.get_norm(self.iter_data)
         self.errs.append(error)
         self.rs_amplitudes *= ratio
 
@@ -1013,12 +1013,12 @@ class CoupledRec(Rec):
         # rho = self.rho_image / self.peak_objs[self.pk].norm
         # self.ds_image_raw = w * devlib.absolute(back_prop) + (1-w) * rho * devlib.exp(1j * devlib.angle(back_prop))
 
-        self.ds_image = self.ds_image_raw * self.support_obj.get_support()
+        self.ds_image = self.ds_image_raw * self.support
 
     def hio(self):
         self.er_iter = False
         combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
-        support = self.support_obj.get_support()
+        support = self.support
         self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
 
     def shrink_wrap_operation(self):
@@ -1049,7 +1049,7 @@ class CoupledRec(Rec):
         prg = f'|  iter {self.iter:>4}  ' \
               f'|  peak {self.pk}  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
               f'|  err {self.errs[-1]:0.6f}  ' \
-              f'|  sup {devlib.sum(self.support_obj.get_support()):>8}  '
+              f'|  sup {devlib.sum(self.support):>8}  '
         if self.ctrl_error is not None:
             prg += f"|  NMI {self.ctrl_error[-1][0]:0.6f}  "
             prg += f"|  LNMI {self.ctrl_error[-1][1]:0.6f}  "
@@ -1078,7 +1078,7 @@ class CoupledRec(Rec):
         self.rho_image = devlib.roll(self.rho_image, shift_dist, axis=(0, 1, 2))
         self.u_image = devlib.roll(self.u_image, shift_dist, axis=(0, 1, 2))
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=(0, 1, 2))
-        self.support_obj.support = devlib.roll(self.support_obj.support, shift_dist, axis=(0, 1, 2))
+        self.support = devlib.roll(self.support, shift_dist, axis=(0, 1, 2))
 
 
 def reconstruction(datafile, **kwargs):
