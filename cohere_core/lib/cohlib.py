@@ -133,358 +133,358 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.clean_default_mem) or
                 NotImplemented)
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def array(obj):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def dot(arr1, arr2):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def set_device(dev_id):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def set_backend(proc):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def to_numpy(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def save(filename, arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def load(filename):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def from_numpy(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def dtype(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def astype(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def size(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def hasnan(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def copy(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def roll(arr, sft, axis):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def shift(arr, sft):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def fftshift(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def ifftshift(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def fft(arr, norm='forward'):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def ifft(arr, norm='forward'):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def fftconvolve(arr1, arr2):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def where(cond, x, y):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def dims(arr):
         # get array dimensions
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def absolute(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def square(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def sqrt(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def sum(arr, axis=None):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def real(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def imag(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def amax(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def argmax(arr, axis=None):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def unravel_index(indices, shape):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def maximum(arr1, arr2):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def ceil(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def fix(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def round(val):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def random(shape, **kwargs):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def full(shape, fill_value, **kwargs):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def print(arr, **kwargs):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def angle(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def flip(arr, axis):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def tile(arr, rep):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def expand_dims(arr, axis):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def squeeze(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def gaussian_filter(arr, sigma, **kwargs):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def gaussian(dims, sigma, **kwargs):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def center_of_mass(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def meshgrid(*xi):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def exp(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def conj(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def array_equal(arr1, arr2):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def cos(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def linspace(start, stop, num):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def diff(arr, axis=None, prepend=0):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def clip(arr, min, max=None):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def gradient(arr, dx=1):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def argmin(arr, axis=None):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def take_along_axis(a, indices, axis):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def moveaxis(arr, source, dest):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def lstsq(A, B):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def zeros(shape):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def indices(dims):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def concatenate(tup, axis=0):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def stack(tup):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def amin(arr):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def affine_transform(arr, matrix, order=3, offset=0):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def pad(arr, padding):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def histogram2d(meas, rec, n_bins=100, log=False):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def calc_nmi(hgram):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def calc_ehd(hgram):
         pass
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def clean_default_mem():
         pass
