@@ -966,15 +966,10 @@ class CoupledRec(Rec):
         pk = self.peak_objs[self.pk]
         rho = devlib.absolute(self.ds_image)
         cond = self.support > 0
-        hist = devlib.histogram2d(self.rho_image[cond], rho[cond], log=False)
-        # conf = 1 / devlib.calc_ehd(hist).get()
-        conf = devlib.calc_nmi(hist).get() - 1
-        # error = get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
-        # #                               0)) / get_norm(self.iter_data)
-        # conf = 1 / (get_norm(self.rho_image[cond] - rho[cond]) / get_norm(self.rho_image[cond])).get()
+        # conf = 1 / dvut.calc_ehd(self.rho_image[cond], rho[cond], log=False).get()
+        conf = dvut.calc_nmi(self.rho_image[cond], rho[cond], log=False).get() - 1
         pk.conf_hist.append(conf)
         pk.conf_iter.append(self.iter)
-        # pk.conf_hist.append(devlib.calc_nmi(hist).get() - 1)
 
     def adapt_weights(self):
         # [p.conf_iter > p.weight_iter]
@@ -1035,12 +1030,12 @@ class CoupledRec(Rec):
         img = devlib.absolute(devlib.ifft(rho * devlib.exp(1j * phi)))
 
         lin_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=False)
-        nmi = devlib.calc_nmi(lin_hist).get()
-        ehd = devlib.calc_ehd(lin_hist).get()
+        nmi = dvut.calc_nmi(lin_hist).get()
+        ehd = dvut.calc_ehd(lin_hist).get()
 
         log_hist = devlib.histogram2d(self.ctrl_peak.res_data, img, log=True)
-        lnmi = devlib.calc_nmi(log_hist).get()
-        lehd = devlib.calc_ehd(log_hist).get()
+        lnmi = dvut.calc_nmi(log_hist).get()
+        lehd = dvut.calc_ehd(log_hist).get()
 
         self.ctrl_error.append([nmi, lnmi, ehd, lehd])
 
