@@ -7,6 +7,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.array) and
                 hasattr(subclass, 'dot') and
                 callable(subclass.dot) and
+                hasattr(subclass, 'cross') and
+                callable(subclass.cross) and
                 hasattr(subclass, 'set_device') and
                 callable(subclass.set_device) and
                 hasattr(subclass, 'set_backend') and
@@ -30,8 +32,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'copy') and
                 callable(subclass.copy) and
                 hasattr(subclass, 'roll') and
-                callable(subclass.shift) and
-                hasattr(subclass, 'roll') and
+                callable(subclass.roll) and
+                hasattr(subclass, 'shift') and
                 callable(subclass.shift) and
                 hasattr(subclass, 'fftshift') and
                 callable(subclass.fftshift) and
@@ -63,10 +65,16 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.imag) and
                 hasattr(subclass, 'amax') and
                 callable(subclass.amax) and
+                hasattr(subclass, 'amin') and
+                callable(subclass.amin) and
                 hasattr(subclass, 'argmax') and
                 callable(subclass.argmax) and
+                hasattr(subclass, 'argmin') and
+                callable(subclass.argmin) and
                 hasattr(subclass, 'unravel_index') and
                 callable(subclass.unravel_index) and
+                hasattr(subclass, 'ravel') and
+                callable(subclass.ravel) and
                 hasattr(subclass, 'maximum') and
                 callable(subclass.maximum) and
                 hasattr(subclass, 'ceil') and
@@ -109,12 +117,12 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.cos) and
                 hasattr(subclass, 'linspace') and
                 callable(subclass.linspace) and
+                hasattr(subclass, 'geomspace') and
+                callable(subclass.geomspace) and
                 hasattr(subclass, 'clip') and
                 callable(subclass.clip) and
                 hasattr(subclass, 'gradient') and
                 callable(subclass.gradient) and
-                hasattr(subclass, 'argmin') and
-                callable(subclass.argmin) and
                 hasattr(subclass, 'take_along_axis') and
                 callable(subclass.take_along_axis) and
                 hasattr(subclass, 'moveaxis') and
@@ -129,7 +137,33 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.diff) and
                 hasattr(subclass, 'concatenate') and
                 callable(subclass.concatenate) and
-                callable(subclass, 'clean_default_mem') and
+                hasattr(subclass, 'nan_to_num') and
+                callable(subclass.nan_to_num) and
+                hasattr(subclass, 'entropy') and
+                callable(subclass.entropy) and
+                hasattr(subclass, 'median_filter') and
+                callable(subclass.median_filter) and
+                hasattr(subclass, 'uniform_filter') and
+                callable(subclass.uniform_filter) and
+                hasattr(subclass, 'binary_erosion') and
+                callable(subclass.binary_erosion) and
+                hasattr(subclass, 'stack') and
+                callable(subclass.stack) and
+                hasattr(subclass, 'affine_transform') and
+                callable(subclass.affine_transform) and
+                hasattr(subclass, 'pad') and
+                callable(subclass.pad) and
+                hasattr(subclass, 'histogram2d') and
+                callable(subclass.histogram2d) and
+                hasattr(subclass, 'log') and
+                callable(subclass.log) and
+                hasattr(subclass, 'log10') and
+                callable(subclass.log10) and
+                hasattr(subclass, 'xlogy') and
+                callable(subclass.xlogy) and
+                hasattr(subclass, 'mean') and
+                callable(subclass.mean) and
+                hasattr(subclass, 'clean_default_mem') and
                 callable(subclass.clean_default_mem) or
                 NotImplemented)
 
@@ -141,6 +175,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def dot(arr1, arr2):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def cross(arr1, arr2):
         pass
 
     @staticmethod
@@ -191,6 +230,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def hasnan(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def nan_to_num(arr):
         pass
 
     @staticmethod
@@ -296,6 +340,11 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
+    def ravel(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
     def maximum(arr1, arr2):
         pass
 
@@ -356,7 +405,27 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
+    def entropy(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
     def gaussian_filter(arr, sigma, **kwargs):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def median_filter(arr, size, **kwargs):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def uniform_filter(arr, size, **kwargs):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def binary_erosion(arr, **kwargs):
         pass
 
     @staticmethod
@@ -397,6 +466,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def linspace(start, stop, num):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def geomspace(start, stop, num):
         pass
 
     @staticmethod
@@ -471,17 +545,27 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def histogram2d(meas, rec, n_bins=100, log=False):
+    def histogram2d(arr1, arr2, bins):
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def calc_nmi(hgram):
+    def log(arr):
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def calc_ehd(hgram):
+    def log10(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def xlogy(arr, y=None):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def mean(arr):
         pass
 
     @staticmethod
