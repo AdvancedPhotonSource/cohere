@@ -4,6 +4,7 @@ import numpy as np
 import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
 import cupyx.scipy.special as sp
+import cupyx.scipy.signal as sig
 
 
 class cplib(cohlib):
@@ -107,14 +108,12 @@ class cplib(cohlib):
         return cp.fft.ifftn(arr, norm=norm)
 
     @staticmethod
-    def fftconvolve(arr1, arr2):
-        return sc.convolve(arr1, arr2)
-        # return cupyx.scipy.signal.convolve(arr1, arr2, mode='same')
+    def fftconvolve(arr1, kernel):
+        return sig.fftconvolve(arr1, kernel, mode='same')
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
-        from cupyx.scipy.signal import correlate
-        return correlate(arr1, arr2, mode, method)
+        return sig.correlate(arr1, arr2, mode, method)
 
     @staticmethod
     def where(cond, x, y):
