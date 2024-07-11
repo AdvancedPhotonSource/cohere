@@ -18,6 +18,10 @@ class torchlib(cohlib):
         return torch.dot(arr1, arr2)
 
     @staticmethod
+    def cross(arr1, arr2):
+        raise NotImplementedError
+
+    @staticmethod
     def set_device(dev_id):
         if dev_id == -1 or sys.platform == 'darwin':
             torch.device("cpu")
@@ -93,6 +97,10 @@ class torchlib(cohlib):
         return torch.any(torch.isnan(arr))
 
     @staticmethod
+    def nan_to_num(arr):
+        raise NotImplementedError
+
+    @staticmethod
     def copy(arr):
         return arr.clone()
 
@@ -104,7 +112,7 @@ class torchlib(cohlib):
         return arr
 
     @staticmethod
-    def roll(arr, sft):
+    def roll(arr, sft, axis):
         sft = [int(s) for s in sft]
         dims = tuple([i for i in range(len(sft))])
         try:
@@ -175,6 +183,10 @@ class torchlib(cohlib):
         # return conv
 
     @staticmethod
+    def correlate(arr1, arr2, mode='same', method='fft'):
+        raise NotImplementedError
+
+    @staticmethod
     def where(cond, x, y):
         return torch.where(cond, x, y)
 
@@ -218,6 +230,10 @@ class torchlib(cohlib):
     @staticmethod
     def unravel_index(indices, shape):
         return np.unravel_index(indices.detach().cpu().numpy(), shape)
+
+    @staticmethod
+    def ravel(arr):
+        raise NotImplementedError
 
     @staticmethod
     def maximum(arr1, arr2):
@@ -294,6 +310,10 @@ class torchlib(cohlib):
         return gaussian / gaussian.sum()
 
     @staticmethod
+    def entropy(arr):
+        raise NotImplementedError
+
+    @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
         # will not work on M1 until the fft fuctions are supported
         normalizer = torch.sum(arr)
@@ -306,6 +326,18 @@ class torchlib(cohlib):
         filter = torch.where(filter >= 0, filter, 0.0)
         corr = normalizer/torch.sum(filter)
         return filter * corr
+
+    @staticmethod
+    def median_filter(arr, size, **kwargs):
+        raise NotImplementedError
+
+    @staticmethod
+    def uniform_filter(arr, size, **kwargs):
+        raise NotImplementedError
+
+    @staticmethod
+    def binary_erosion(arr, **kwargs):
+        raise NotImplementedError
 
     @staticmethod
     def center_of_mass(arr):
@@ -334,8 +366,16 @@ class torchlib(cohlib):
         return torch.cos(arr)
 
     @staticmethod
+    def array_equal(arr1, arr2):
+        raise NotImplementedError
+
+    @staticmethod
     def linspace(start, stop, num):
         return torch.linspace(start, stop, num)
+
+    @staticmethod
+    def geomspace(start, stop, num):
+        raise NotImplementedError
 
     @staticmethod
     def clip(arr, min, max=None):
@@ -378,6 +418,10 @@ class torchlib(cohlib):
         raise NotImplementedError
 
     @staticmethod
+    def stack(tup):
+        raise NotImplementedError
+
+    @staticmethod
     def amin(arr):
         raise NotImplementedError
 
@@ -394,13 +438,32 @@ class torchlib(cohlib):
         raise NotImplementedError
 
     @staticmethod
-    def calc_nmi(hgram):
+    def log(arr):
         raise NotImplementedError
 
     @staticmethod
-    def calc_ehd(hgram):
+    def log10(arr):
         raise NotImplementedError
+
+    @staticmethod
+    def xlogy(arr, y=None):
+        raise NotImplementedError
+
+    @staticmethod
+    def mean(arr):
+        raise NotImplementedError
+
+
 
     @staticmethod
     def clean_default_mem():
         pass
+
+
+# a1 = torch.Tensor([0.1, 0.2, 0.3, 1.0, 1.2, 1.3])
+# a2 = torch.Tensor([10.1, 10.2, 10.3, 11.0])
+# conv = torchlib.fftconvolve(a1,a2)
+# print('torch conv', conv)
+# print(conv.real)
+# print(torch.abs(conv))
+# print(torch.nn.functional.conv1d(a1,a2))

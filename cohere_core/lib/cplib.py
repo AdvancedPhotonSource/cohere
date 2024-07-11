@@ -1,9 +1,10 @@
 from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
-import cupyx.scipy.ndimage
 import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
+import cupyx.scipy.special as sp
+import cupyx.scipy.signal as sig
 
 
 class cplib(cohlib):
@@ -14,6 +15,10 @@ class cplib(cohlib):
     @staticmethod
     def dot(arr1, arr2):
         return cp.dot(arr1, arr2)
+
+    @staticmethod
+    def cross(arr1, arr2):
+        return cp.cross(arr1, arr2)
 
     @staticmethod
     def set_device(dev_id):
@@ -55,6 +60,10 @@ class cplib(cohlib):
     @staticmethod
     def hasnan(arr):
         return cp.any(cp.isnan(arr))
+
+    @staticmethod
+    def nan_to_num(arr, **kwargs):
+        return cp.nan_to_num(arr, **kwargs)
 
     @staticmethod
     def copy(arr):
@@ -100,13 +109,11 @@ class cplib(cohlib):
 
     @staticmethod
     def fftconvolve(arr1, kernel):
-        from cupyx.scipy import signal
-        return signal.fftconvolve(arr1, kernel, mode='same')
+        return sig.fftconvolve(arr1, kernel, mode='same')
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
-        from cupyx.scipy.signal import correlate
-        return correlate(arr1, arr2, mode, method)
+        return sig.correlate(arr1, arr2, mode, method)
 
     @staticmethod
     def where(cond, x, y):
@@ -149,12 +156,24 @@ class cplib(cohlib):
         return cp.amax(arr)
 
     @staticmethod
+    def amin(arr):
+        return cp.amin(arr)
+
+    @staticmethod
     def argmax(arr, axis=None):
         return cp.argmax(arr, axis)
 
     @staticmethod
+    def argmin(arr, axis=None):
+        return cp.argmin(arr, axis)
+
+    @staticmethod
     def unravel_index(indices, shape):
         return cp.unravel_index(indices, shape)
+
+    @staticmethod
+    def ravel(arr):
+        return cp.ravel(arr)
 
     @staticmethod
     def maximum(arr1, arr2):
@@ -213,8 +232,24 @@ class cplib(cohlib):
         return gaussian / cp.sum(gaussian)
 
     @staticmethod
+    def entropy(arr):
+        return stats.entropy(arr)
+
+    @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
         return sc.gaussian_filter(arr, sigma)
+
+    @staticmethod
+    def median_filter(arr, size, **kwargs):
+        return sc.median_filter(arr, size)
+
+    @staticmethod
+    def uniform_filter(arr, size, **kwargs):
+        return sc.uniform_filter(arr, size)
+
+    @staticmethod
+    def binary_erosion(arr, **kwargs):
+        return sc.binary_erosion(arr, iterations=1)
 
     @staticmethod
     def center_of_mass(inarr):
@@ -246,6 +281,10 @@ class cplib(cohlib):
         return cp.linspace(start, stop, num)
 
     @staticmethod
+    def geomspace(start, stop, num):
+        return cp.geomspace(start, stop, num)
+
+    @staticmethod
     def clip(arr, min, max=None):
         return cp.clip(arr, min, max)
 
@@ -256,10 +295,6 @@ class cplib(cohlib):
     @staticmethod
     def gradient(arr, dx=1):
         return cp.gradient(arr, dx)
-
-    @staticmethod
-    def argmin(arr, axis=None):
-        return cp.argmin(arr, axis)
 
     @staticmethod
     def take_along_axis(a, indices, axis):
@@ -286,38 +321,60 @@ class cplib(cohlib):
         return cp.concatenate(tup, axis)
 
     @staticmethod
-    def amin(arr):
-        return cp.amin(arr)
+    def stack(tup):
+        return cp.stack(tup)
 
     @staticmethod
     def affine_transform(arr, matrix, order=3, offset=0):
-        return cupyx.scipy.ndimage.affine_transform(arr, matrix, order=order, offset=offset, prefilter=True)
+        return sc.affine_transform(arr, matrix, order=order, offset=offset, prefilter=True)
 
+    @staticmethod
     def pad(arr, padding):
         return cp.pad(arr, padding)
 
     @staticmethod
-    def histogram2d(meas, rec, n_bins=100, log=False):
-        norm = cp.max(meas) / cp.max(rec)
-        if log:
-            bins = cp.logspace(cp.log10(1), cp.log10(cp.max(meas)), n_bins+1)
-        else:
-            bins = n_bins
-        return cp.histogram2d(cp.ravel(meas), cp.ravel(norm*rec), bins)[0]
+    def histogram2d(arr1, arr2, bins):
+        return cp.histogram2d(cp.ravel(arr1), cp.ravel(arr2), bins)[0]
+
+    # @staticmethod
+    # def calc_nmi(hgram):
+    #     h0 = stats.entropy(cp.sum(hgram, axis=0))
+    #     h1 = stats.entropy(cp.sum(hgram, axis=1))
+    #     h01 = stats.entropy(cp.reshape(hgram, -1))
+    #     return (h0 + h1) / h01
+    #
+    @staticmethod
+    def log(arr):
+        return cp.log(arr)
 
     @staticmethod
-    def calc_nmi(hgram):
-        h0 = stats.entropy(np.sum(hgram, axis=0))
-        h1 = stats.entropy(np.sum(hgram, axis=1))
-        h01 = stats.entropy(np.reshape(hgram, -1))
-        return (h0 + h1) / h01
+    def log10(arr):
+        return cp.log10(arr)
 
     @staticmethod
-    def calc_ehd(hgram):
-        n = hgram.shape[0] * 1j
-        x, y = cp.mgrid[0:1:n, 0:1:n]
-        return cp.sum(hgram * cp.abs(x - y)) / cp.sum(hgram)
+    def xlogy(x, y=None):
+        if y is None:
+            y = x
+        return sp.xlogy(x, y)
 
+    @staticmethod
+    def mean(arr):
+        return cp.mean(arr)
+
+    # @staticmethod
+    # def calc_ehd(hgram):
+    #     n = hgram.shape[0] * 1j
+    #     x, y = cp.mgrid[0:1:n, 0:1:n]
+    #     return cp.sum(hgram * cp.abs(x - y)) / cp.sum(hgram)
+    #
+    # @staticmethod
+    # def integrate_jacobian(jacobian, dx=1):
+    #     nx, ny, nz, _, _ = jacobian.shape
+    #     u = cp.zeros((nx, ny, nz, 3))
+    #     for ax in range(3):
+    #         u = u + dx * cp.cumsum(jacobian[:, :, :, ax, :], axis=ax)
+    #     return u
+    #
     @staticmethod
     def clean_default_mem():
         cp._default_memory_pool.free_all_blocks()

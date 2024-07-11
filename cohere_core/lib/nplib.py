@@ -2,7 +2,8 @@ from cohere_core.lib.cohlib import cohlib
 import numpy as np
 import scipy.ndimage as ndi
 import scipy.signal as sig
-
+import scipy.stats as stats
+import scipy.special as sp
 
 class nplib(cohlib):
     @staticmethod
@@ -12,6 +13,10 @@ class nplib(cohlib):
     @staticmethod
     def dot(arr1, arr2):
         return np.dot(arr1, arr2)
+
+    @staticmethod
+    def cross(arr1, arr2):
+        return np.cross(arr1, arr2)
 
     @staticmethod
     def set_device(dev_id):
@@ -48,6 +53,10 @@ class nplib(cohlib):
     @staticmethod
     def size(arr):
         return arr.size
+
+    @staticmethod
+    def nan_to_num(arr, **kwargs):
+        return np.nan_to_num(arr, **kwargs)
 
     @staticmethod
     def hasnan(arr):
@@ -148,6 +157,10 @@ class nplib(cohlib):
         return np.unravel_index(indices, shape)
 
     @staticmethod
+    def ravel(arr):
+        return np.ravel(arr)
+
+    @staticmethod
     def maximum(arr1, arr2):
         return np.maximum(arr1, arr2)
 
@@ -218,8 +231,24 @@ class nplib(cohlib):
         return grid / grid_total
 
     @staticmethod
+    def entropy(arr):
+        return stats.entropy(arr)
+
+    @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
         return ndi.gaussian_filter(arr, sigma)
+
+    @staticmethod
+    def median_filter(arr, size, **kwargs):
+        return ndi.median_filter(arr, size)
+
+    @staticmethod
+    def uniform_filter(arr, size, **kwargs):
+        return ndi.uniform_filter(arr, size)
+
+    @staticmethod
+    def binary_erosion(arr, **kwargs):
+        return ndi.binary_erosion(arr, iterations=1)
 
     @staticmethod
     def center_of_mass(inarr):
@@ -249,6 +278,10 @@ class nplib(cohlib):
     @staticmethod
     def linspace(start, stop, num):
         return np.linspace(start, stop, num)
+
+    @staticmethod
+    def geomspace(start, stop, num):
+        return np.geomspace(start, stop, num)
 
     @staticmethod
     def clip(arr, min, max=None):
@@ -291,28 +324,42 @@ class nplib(cohlib):
         return np.concatenate(tup, axis)
 
     @staticmethod
+    def stack(tup):
+        return np.stack(tup)
+
+    @staticmethod
     def amin(arr):
         return np.amin(arr)
 
     @staticmethod
     def affine_transform(arr, matrix, order=3, offset=0):
-        raise NotImplementedError
+        return ndi.affine_transform(arr, matrix, order=order, offset=offset, prefilter=True)
 
     @staticmethod
     def pad(arr, padding):
-        raise NotImplementedError
+        return np.pad(arr, padding)
 
     @staticmethod
-    def histogram2d(meas, rec, n_bins=100, log=False):
-        raise NotImplementedError
+    def histogram2d(arr1, arr2, bins):
+        return np.histogram2d(np.ravel(arr1), np.ravel(arr2), bins)[0]
 
     @staticmethod
-    def calc_nmi(hgram):
-        raise NotImplementedError
+    def log(arr):
+        return np.log(arr)
 
     @staticmethod
-    def calc_ehd(hgram):
-        raise NotImplementedError
+    def log10(arr):
+        return np.log10(arr)
+
+    @staticmethod
+    def xlogy(x, y=None):
+        if y is None:
+            y = x
+        return np.xlogy(x, y)
+
+    @staticmethod
+    def mean(arr):
+        return np.mean(arr)
 
     @staticmethod
     def clean_default_mem():

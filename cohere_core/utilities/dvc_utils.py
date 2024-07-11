@@ -731,3 +731,33 @@ def breed(breed_mode, alpha_dir, image):
         beta = 0.5 * (devlib.absolute(alpha) + devlib.absolute(beta)) * devlib.exp(1j * ph_alpha)
 
     return beta
+
+
+def histogram2d(arr1, arr2, n_bins=100, log=False):
+    norm = devlib.max(arr1) / devlib.max(arr2)
+    if log:
+        bins = devlib.logspace(devlib.log10(devlib.amin(arr1[arr1 != 0])), devlib.log10(devlib.amax(arr1)), n_bins + 1)
+    else:
+        bins = n_bins
+    return devlib.histogram2d(devlib.ravel(arr1), devlib.ravel(norm * arr2), bins)
+
+
+def calc_nmi(arr1, arr2=None, log=False):
+    if arr2 is None:
+        hgram = arr1
+    else:
+        hgram = histogram2d(arr1, arr2, log=log)
+    h0 = devlib.entropy(devlib.sum(hgram, axis=0))
+    h1 = devlib.entropy(devlib.sum(hgram, axis=1))
+    h01 = devlib.entropy(devlib.reshape(hgram, -1))
+    return (h0 + h1) / h01
+
+
+def calc_ehd(arr1, arr2=None, log=False):
+    if arr2 is None:
+        hgram = arr1
+    else:
+        hgram = histogram2d(arr1, arr2, log=log)
+    n = hgram.shape[0]
+    x, y = devlib.meshgrid(devlib.arange(n), devlib.arange(n))
+    return devlib.sum(hgram * devlib.abs(x - y)) / devlib.sum(hgram)
