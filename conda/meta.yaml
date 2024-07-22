@@ -1,24 +1,36 @@
+{% set version = "4.0.0" %}
+
 package:
-  name: cohere_core
-  version: "4.0.0"
+  name: "cohere_core"
+  version: {{ version }}
 
 source:
-  path: .
+  url: https://github.com/AdvancedPhotonSource/cohere/archive/refs/tags/{{ version }}.tar.gz
+  sha256: 4c589d82fe541dee4f5109028c7d26166d060802a7cd94a8a4222ae2982ba608
 
 build:
+  noarch: python
   number: 0
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
 
 requirements:
   host:
-    - python=3.11
-    - numpy
-
+    - python >=3.6
+    - setuptools >=61.0
   run:
-    - python=3.11
+    - python
     - numpy
-    - tensorflow
     - scikit-learn
+    - tensorflow
     - tifffile
+
+test:
+  requires:
+    - pip
+  commands:
+    - pip check
+  imports:
+    - cohere_core
 
 about:
   home: https://github.com/advancedPhotonSource/cohere
