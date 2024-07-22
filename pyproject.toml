@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cohere_core"
+author = [
+      {name = "Barbara Frosik", email = "bfrosik@anl.gov"},
+      {name = "Ross Harder"},
+]
+version = "4.0.0"
+dependencies = [
+      "numpy",
+      "scikit-learn",
+      "tifffile",
+      "tensorflow",
+]
+requires-python = ">=3.6"
+classifiers = [
+      "Intended Audience :: Science/Research"
+      "Programming Language :: Python :: 3.6"
+      "Programming Language :: Python :: 3.7"
+      "Programming Language :: Python :: 3.8"
+      "Programming Language :: Python :: 3.9"
+      "Programming Language :: Python :: 3.10"
+      "Programming Language :: Python :: 3.11"
+]
+description = "Tools for Bragg Coherent Diffraction Imaging (BCDI)."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["BCDI", "bragg", "diffraction", "imaging"]
+
+[project.urls]
+Repository = "https://github.com/advancedPhotonSource/cohere.git"
+Documentation = "https://cohere-dev.readthedocs.io/en/latest/"
+Issues = "https://github.com/advancedPhotonSource/cohere/issues"
