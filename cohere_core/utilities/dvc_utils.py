@@ -152,8 +152,7 @@ def shrink_wrap(arr, threshold, sigma):
     filter = devlib.gaussian_filter(devlib.absolute(arr), sigma)
     max_filter = devlib.amax(filter)
     adj_threshold = max_filter * threshold
-    support = devlib.full(devlib.dims(filter), 1)
-    support = devlib.where(filter >= adj_threshold, support, 0)
+    support = devlib.where(filter >= adj_threshold, 1, 0)
     return support
 
 

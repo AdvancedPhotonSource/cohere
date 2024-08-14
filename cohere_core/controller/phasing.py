@@ -167,25 +167,6 @@ class Rec:
 
 
     def init_iter_loop(self, dir=None, alpha_dir=None, gen=None):
-        def create_feat_objects(params, trig_op_info):
-            # FIXME why is this a function? It obscures where these objects are defined and is only called once.
-            if 'shrink_wrap_trigger' in params:
-                self.shrink_wrap_obj = ft.create('shrink_wrap', params, trig_op_info)
-                if self.shrink_wrap_obj is None:
-                    print('failed to create shrink wrap object')
-                    return False
-            if 'phc_trigger' in params:
-                self.phc_obj = ft.create('phc', params, trig_op_info)
-                if self.phc_obj is None:
-                    print('failed to create phase constrain object')
-                    return False
-            if 'lowpass_filter_trigger' in params:
-                self.lowpass_filter_obj = ft.create('lowpass_filter', params, trig_op_info)
-                if self.lowpass_filter_obj is None:
-                    print('failed to create lowpass filter object')
-                    return False
-            return True
-
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
@@ -234,11 +215,22 @@ class Rec:
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
 
-        # create the object even if the feature inactive, it will be empty
-        # If successful, it will return True, otherwise False
-
-        if not create_feat_objects(self.params, feats):
-            return -1
+        # create the trgger/sub-trigger objects
+        if 'shrink_wrap_trigger' in self.params:
+            self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
+            if self.shrink_wrap_obj is None:
+                print('failed to create shrink_wrap object')
+                return -1
+        if 'phc_trigger' in self.params:
+            self.phc_obj = ft.create('phc', self.params, feats)
+            if self.phc_obj is None:
+                print('failed to create phc object')
+                return -1
+        if 'lowpass_filter_trigger' in self.params:
+            self.lowpass_filter_obj = ft.create('lowpass_filter', self.params, feats)
+            if self.lowpass_filter_obj is None:
+                print('failed to create lowpass_filter object')
+                return -1
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -647,7 +639,7 @@ class CoupledRec(Rec):
         self.proj_weight = devlib.array([self.params["mp_weight_init"] for _ in range(self.iter_no)])
         for i, w in zip(self.params["mp_weight_iters"], self.params["mp_weight_vals"]):
             self.proj_weight[i:] = w
-        self.peak_threshold = devlib.array([self.params["peak_threshold_iters"] for _ in range(self.iter_no)])
+        self.peak_threshold = devlib.array([self.params["peak_threshold_init"] for _ in range(self.iter_no)])
 
         for i, w in zip(self.params["peak_threshold_iters"], self.params["peak_threshold_vals"]):
             self.peak_threshold[i:] = w
@@ -948,8 +940,8 @@ class CoupledRec(Rec):
         self.ds_image = devlib.where((support > 0), self.ds_image_proj, combined_image)
 
     def shrink_wrap_operation(self):
-        # if self.er_iter or self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
-        #     return
+        if self.er_iter or self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
+            return
         super().shrink_wrap_operation()
 
     def get_control_error(self):
