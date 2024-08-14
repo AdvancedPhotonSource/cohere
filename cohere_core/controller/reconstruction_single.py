@@ -23,23 +23,14 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def rec_process(pkg, pars, datafile, dev, continue_dir, save_dir):
-    worker = calc.Rec(pars, datafile, pkg)
-
+def rec_process(pkg, pars, datafile, dev, save_dir):
     if dev is None:
-        if 'device' in pars:
-            device = pars['device']
-        else:
-            device = [-1]
+        device = pars.get('device', -1)
     else:
         device = dev[0]
-    if worker.init_dev(device) < 0:
-        print (f'reconstruction failed, device not initialized to {device}')
-        return
 
-    ret_code = worker.init(continue_dir)
-    if ret_code < 0:
-        print ('reconstruction failed, check algorithm sequence and triggers in configuration')
+    worker = calc.create_rec(pars, datafile, pkg, device)
+    if worker is None:
         return
 
     ret_code = worker.iterate()
@@ -84,16 +75,12 @@ def reconstruction(pkg, conf_file, datafile, dir, dev=None):
     pars = ut.read_config(conf_file)
 
     pars['init_guess'] = pars.get('init_guess', 'random')
-    if pars['init_guess'] == 'continue':
-        continue_dir = pars['continue_dir']
-    elif pars['init_guess'] == 'AI_guess':
+    if pars['init_guess'] == 'AI_guess':
         import cohere_core.controller.AI_guess as ai
         ai_dir = ai.start_AI(pars, datafile, dir)
         if ai_dir is None:
             return
-        continue_dir = ai_dir
-    else:
-        continue_dir = None
+        pars['continue_dir'] = ai_dir
 
     if 'save_dir' in pars:
         save_dir = pars['save_dir']
@@ -101,7 +88,6 @@ def reconstruction(pkg, conf_file, datafile, dir, dev=None):
         filename = conf_file.split('/')[-1]
         save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    p = Process(target=rec_process, args=(pkg, pars, datafile, dev,
-                                          continue_dir, save_dir))
+    p = Process(target=rec_process, args=(pkg, pars, datafile, dev, save_dir))
     p.start()
     p.join()

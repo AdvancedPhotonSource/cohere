@@ -53,7 +53,7 @@ __all__ = ['join',
            'get_one_dev',
            'get_gpu_use',
            'estimate_no_proc',
-           'set_lib'
+           'get_lib',
            ]
 
 
@@ -961,9 +961,7 @@ def estimate_no_proc(arr_size, factor):
         return int(nmem)
 
 
-def set_lib(pkg):
-    global devlib
-
+def get_lib(pkg):
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
@@ -987,5 +985,3 @@ def measure(func):
             print("Total execution time: {end_ if end_ > 0 else 0} ms")
 
     return _time_it
-
-

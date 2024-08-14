@@ -63,7 +63,7 @@ def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
         print(f'reconstruction failed, device not initialized to {thr.gpu}')
         metric = None
     else:
-        ret_code = worker.init(prev_dir, alpha_dir, gen)
+        ret_code = worker.init_iter_loop(prev_dir, alpha_dir, gen)
         if ret_code < 0:
             print('reconstruction failed, check algorithm sequence and triggers in configuration')
             metric = None

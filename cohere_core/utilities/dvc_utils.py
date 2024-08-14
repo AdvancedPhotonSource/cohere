@@ -1,6 +1,8 @@
 import math
 import cmath
 import cohere_core.utilities.utils as ut
+from matplotlib import pyplot as plt
+
 
 _docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
@@ -27,7 +29,9 @@ __all__ = ['set_lib_from_pkg',
            'correlation_err',
            'remove_ramp',
            'zero_phase_cc',
-           'breed'
+           'breed',
+           'resample',
+           'pad_to_cube',
            ]
 
 
@@ -35,7 +39,7 @@ def set_lib_from_pkg(pkg):
     global devlib
 
     # get the lib object
-    devlib = ut.set_lib(pkg)
+    devlib = ut.get_lib(pkg)
 
 
 def arr_property(arr):
@@ -97,11 +101,13 @@ def center_sync(image, support):
                    image.flatten().real[int(image.flatten().shape[0] / 2)])
     image = image * cmath.exp(-1j * phi0)
 
-    com = devlib.center_of_mass(devlib.astype(support, dtype='int32'))
+    com = devlib.center_of_mass(devlib.absolute(image))
     # place center of mass in the center
-    sft = [shape[i] / 2.0 - com[i] + .5  for i in range(len(shape))]
+    sft = [e[0] / 2.0 - e[1] + .5 for e in zip(shape, com)]
+
     image = devlib.roll(image, sft)
     support =devlib.roll(support, sft)
+
 
     return image, support
 
@@ -761,3 +767,52 @@ def calc_ehd(arr1, arr2=None, log=False):
     n = hgram.shape[0]
     x, y = devlib.meshgrid(devlib.arange(n), devlib.arange(n))
     return devlib.sum(hgram * devlib.abs(x - y)) / devlib.sum(hgram)
+
+
+
+def resample(data, matrix, plot=False):
+    import numpy as np
+    s = data.shape
+    corners = [
+        [0, 0, 0],
+        [s[0], 0, 0], [0, s[1], 0], [0, 0, s[2]],
+        [0, s[1], s[2]], [s[0], 0, s[2]], [s[0], s[1], 0],
+        [s[0], s[1], s[2]]
+    ]
+    new_corners = [np.linalg.inv(matrix)@c for c in corners]
+    new_shape = np.ceil(np.max(new_corners, axis=0) - np.min(new_corners, axis=0)).astype(int)
+    pad = np.max((new_shape - s) // 2)
+    data = devlib.pad(data, np.max([pad, 0]))
+    mid_shape = np.array(data.shape)
+
+    offset = (mid_shape / 2) - matrix @ (mid_shape / 2)
+
+    # The phasing data as saved is a magnitude, which is not smooth everywhere (there are non-differentiable points
+    # where the complex amplitude crosses zero). However, the intensity (magnitude squared) is a smooth function.
+    # Thus, in order to allow a high-order spline, we take the square root of the interpolated square of the image.
+    data = devlib.affine_transform(devlib.square(data), devlib.array(matrix), order=1, offset=offset)
+    data = devlib.sqrt(devlib.clip(data, 0))
+    if plot:
+        arr = devlib.to_numpy(data)
+        plt.imshow(arr[np.argmax(np.sum(arr, axis=(1, 2)))])
+        plt.title(np.linalg.det(matrix))
+        plt.show()
+
+    return data
+
+
+def pad_to_cube(data, size):
+    import numpy as np
+
+    shp = np.array([size, size, size]) // 2
+    # Pad the array to the largest dimensions
+    shp1 = np.array(data.shape) // 2
+    pad = shp - shp1
+    pad[pad < 0] = 0
+    data = devlib.pad(data, [(pad[0], pad[0]), (pad[1], pad[1]), (pad[2], pad[2])])
+    # Crop the array to the final dimensions
+    shp1 = np.array(data.shape) // 2
+    start, end = shp1 - shp, shp1 + shp
+    data = data[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
+    return data
+

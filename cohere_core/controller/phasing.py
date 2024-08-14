@@ -20,7 +20,6 @@ import os
 import sys
 from math import pi
 import random
-import importlib
 import tqdm
 
 import numpy as np
@@ -38,6 +37,7 @@ __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
            'reconstruction',
+           'create_rec',
            'Breeder',
            'Rec']
 
@@ -46,7 +46,7 @@ def set_lib_from_pkg(pkg):
     global devlib
 
     # get the lib object
-    devlib = ut.set_lib(pkg)
+    devlib = ut.get_lib(pkg)
     # pass the lib object to the features associated with this reconstruction
     ft.set_lib(devlib)
     # the utilities are not associated with reconstruction and the initialization of lib is independent
@@ -124,7 +124,7 @@ class Rec:
         self.ds_image = None
         self.need_save_data = False
         self.saved_data = None
-        self.er_iter = False  # Indicates whether the last iteration done was ER, used in CoupledRec
+
 
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -166,7 +166,7 @@ class Rec:
         return 0
 
 
-    def init(self, dir=None, alpha_dir=None, gen=None):
+    def init_iter_loop(self, dir=None, alpha_dir=None, gen=None):
         def create_feat_objects(params, trig_op_info):
             # FIXME why is this a function? It obscures where these objects are defined and is only called once.
             if 'shrink_wrap_trigger' in params:
@@ -233,8 +233,10 @@ class Rec:
 
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
+
         # create the object even if the feature inactive, it will be empty
         # If successful, it will return True, otherwise False
+
         if not create_feat_objects(self.params, feats):
             return -1
 
@@ -390,19 +392,17 @@ class Rec:
         self.pc_obj.set_previous(devlib.absolute(self.rs_amplitudes))
 
     def to_direct_space(self):
-        self.ds_image_raw = devlib.fft(self.rs_amplitudes)
+        self.ds_image_proj = devlib.fft(self.rs_amplitudes)
 
     def er(self):
-        self.er_iter = True
-        self.ds_image = self.ds_image_raw * self.support
+        self.ds_image = self.ds_image_proj * self.support
 
     def hio(self):
-        self.er_iter = False
-        combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
-        self.ds_image = devlib.where((self.support > 0), self.ds_image_raw, combined_image)
+        combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
+        self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
 
     def new_alg(self):
-        self.ds_image = 2.0 * (self.ds_image_raw * self.support) - self.ds_image_raw
+        self.ds_image = 2.0 * (self.ds_image_proj * self.support) - self.ds_image_proj
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
@@ -435,56 +435,6 @@ class Rec:
     def get_ratio(self, divident, divisor):
         ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
         return ratio
-    
-    def make_binary(self):
-        self.support = devlib.absolute(self.support)
-        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
-
-
-def resample(data, matrix, size=None, plot=False):
-    s = data.shape
-    corners = [
-        [0, 0, 0],
-        [s[0], 0, 0], [0, s[1], 0], [0, 0, s[2]],
-        [0, s[1], s[2]], [s[0], 0, s[2]], [s[0], s[1], 0],
-        [s[0], s[1], s[2]]
-    ]
-    new_corners = [np.linalg.inv(matrix)@c for c in corners]
-    new_shape = np.ceil(np.max(new_corners, axis=0) - np.min(new_corners, axis=0)).astype(int)
-    pad = np.max((new_shape - s) // 2)
-    data = devlib.pad(data, np.max([pad, 0]))
-    mid_shape = np.array(data.shape)
-
-    offset = (mid_shape / 2) - matrix @ (mid_shape / 2)
-
-    # The phasing data as saved is a magnitude, which is not smooth everywhere (there are non-differentiable points
-    # where the complex amplitude crosses zero). However, the intensity (magnitude squared) is a smooth function.
-    # Thus, in order to allow a high-order spline, we take the square root of the interpolated square of the image.
-    data = devlib.affine_transform(devlib.square(data), devlib.array(matrix), order=1, offset=offset)
-    data = devlib.sqrt(devlib.clip(data, 0))
-    if plot:
-        arr = devlib.to_numpy(data)
-        plt.imshow(arr[np.argmax(np.sum(arr, axis=(1, 2)))])
-        plt.title(np.linalg.det(matrix))
-        plt.show()
-
-    if size is not None:
-        data = pad_to_cube(data, size)
-    return data
-
-
-def pad_to_cube(data, size):
-    shp = np.array([size, size, size]) // 2
-    # Pad the array to the largest dimensions
-    shp1 = np.array(data.shape) // 2
-    pad = shp - shp1
-    pad[pad < 0] = 0
-    data = devlib.pad(data, [(pad[0], pad[0]), (pad[1], pad[1]), (pad[2], pad[2])])
-    # Crop the array to the final dimensions
-    shp1 = np.array(data.shape) // 2
-    start, end = shp1 - shp, shp1 + shp
-    data = data[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
-    return data
 
 
 class Peak:
@@ -551,8 +501,8 @@ class Peak:
         self.full_data = devlib.moveaxis(self.full_data, 0, 2)
         self.full_data = devlib.moveaxis(self.full_data, 0, 1)
         self.full_size = np.max(self.full_data.shape)
-        self.full_data = pad_to_cube(self.full_data, self.full_size)
-        self.data = pad_to_cube(self.full_data, self.size)
+        self.full_data = dvut.pad_to_cube(self.full_data, self.full_size)
+        self.data = dvut.pad_to_cube(self.full_data, self.size)
 
         # Uncomment when phasing non-centered data
         # ind = devlib.center_of_mass(self.full_data)
@@ -561,9 +511,11 @@ class Peak:
         # self.full_data = devlib.roll(self.full_data, shift_dist, axis=(0, 1, 2))
 
         # Resample the diffraction patterns into the lab reference frame.
-        self.res_data = resample(self.full_data, self.rs_det_to_lab, self.size)
+        self.res_data = dvut.resample(self.full_data, self.rs_det_to_lab)
+        if self.size is not None:
+            self.res_data = dvut.pad_to_cube(self.res_data, self.size)
+
         tf.imwrite((Path(peak_dir) / "phasing_data/data_resampled.tif").as_posix(), devlib.to_numpy(self.res_data))
-        # self.res_mask = resample(devlib.array(np.ones(self.full_data.shape)), self.det_to_lab, self.size)
 
         # Do the fftshift on all the arrays
         self.full_data = devlib.fftshift(self.full_data)
@@ -627,6 +579,7 @@ class CoupledRec(Rec):
         self.params["calc_strain"] = self.params.get("calc_strain", True)
 
         self.peak_dirs = peak_dirs
+        self.er_iter = False  # Indicates whether the last iteration done was ER
 
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -682,8 +635,8 @@ class CoupledRec(Rec):
 
         return 0
 
-    def init(self, img_dir=None, alpha_dir=None, gen=None):
-        if super().init(img_dir, alpha_dir, gen) == -1:
+    def init_iter_loop(self, img_dir=None, alpha_dir=None, gen=None):
+        if super().init_iter_loop(img_dir, alpha_dir, gen) == -1:
             return -1
 
         # Define the shared image
@@ -692,11 +645,13 @@ class CoupledRec(Rec):
 
         # Define the multipeak projection weighting and tapering
         self.proj_weight = devlib.array([self.params["mp_weight_init"] for _ in range(self.iter_no)])
-        for i, w in zip(self.params["mp_weight_trig"], self.params["mp_weight_vals"]):
+        for i, w in zip(self.params["mp_weight_iters"], self.params["mp_weight_vals"]):
             self.proj_weight[i:] = w
-        self.peak_threshold = devlib.array([self.params["peak_threshold_init"] for _ in range(self.iter_no)])
-        for i, w in zip(self.params["peak_threshold_trig"], self.params["peak_threshold_vals"]):
+        self.peak_threshold = devlib.array([self.params["peak_threshold_iters"] for _ in range(self.iter_no)])
+
+        for i, w in zip(self.params["peak_threshold_iters"], self.params["peak_threshold_vals"]):
             self.peak_threshold[i:] = w
+
         self.peak_weights = []
         self.iter_weights = []
         self.adapt_iter = 200
@@ -760,6 +715,10 @@ class CoupledRec(Rec):
             np.savetxt(save_dir + '/ctrl_error.txt', ctrl_error)
         return 0
 
+    def make_binary(self):
+        self.support = devlib.absolute(self.support)
+        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
+
     def get_phase_gradient(self):
         """Calculate the phase gradient for a given peak"""
         # Project onto the peak
@@ -769,18 +728,6 @@ class CoupledRec(Rec):
             self.iter_data = self.peak_objs[self.pk].data
 
         self.to_working_image()
-
-        # # Iterate a few times to settle
-        # for _ in range(15):
-        #     self.to_reciprocal_space()
-        #     self.modulus()
-        #     self.to_direct_space()
-        #     self.hio()
-        # for _ in range(20):
-        #     self.to_reciprocal_space()
-        #     self.modulus()
-        #     self.to_direct_space()
-        #     self.er()
 
         # Calculate the continuous phase gradient using Hofmann's method
         # (https://doi.org/10.1103/PhysRevMaterials.4.013801)
@@ -819,13 +766,15 @@ class CoupledRec(Rec):
 
         half = self.dims[0] // 2
         qtr = self.dims[0] // 4
-        if self.params["live_view"]:
+        live_view = self.params.get("live_view", False)
+        if live_view:
             fig, axs = plt.subplots(2, 3, figsize=(12, 9), sharex="all", sharey="all", layout="constrained")
             plt.show(block=False)
+
         try:
             for f in self.flow:
                 f()
-                if f.__name__ == "next" and self.params["live_view"] and self.iter % 5 == 0:
+                if f.__name__ == "next" and live_view and self.iter % 5 == 0:
                     # p_weights = [pk.weight for pk in self.peak_objs]
                     # print(np.round(p_weights / np.sum(p_weights), 3))
                     plt.suptitle(
@@ -851,40 +800,14 @@ class CoupledRec(Rec):
                     # plt.savefig(f"/home/beams/CXDUSER/34idc-work/2022/cohere_dev_JNP/cohere-scripts/simulation/live_views/iter_{self.iter:04}.png")
                     plt.pause(0.2)
         except Exception as error:
-            print(error)
+            print('error',error)
             # raise error
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
 
-        if self.params["live_view"]:
+        if live_view:
             plt.show()
-        # else:
-        #     fig, axs = plt.subplots(2, 3, figsize=(12, 9), sharex="all", sharey="all", layout="constrained")
-        #     plt.suptitle(
-        #         f"iteration: {self.iter}\n"
-        #         f"peak: {self.peak_objs[self.pk].hkl}\n"
-        #         f"global wt: {self.proj_weight[self.iter]}\n"
-        #         f"peak wt: {self.peak_objs[self.pk].weight}"
-        #     )
-        #     for func, row in zip([devlib.absolute, devlib.angle], axs):
-        #         for ax in row:
-        #             ax.clear()
-        #             ax.set_xticks(())
-        #             ax.set_yticks(())
-        #         row[0].set_ylabel(f"{func.__name__}")
-        #         row[0].set_title("XY-plane")
-        #         row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
-        #         row[1].set_title("XZ-plane")
-        #         row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
-        #         row[2].set_title("YZ-plane")
-        #         row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get())
-        #     plt.figure()
-        #     wts = np.transpose(self.peak_weights)
-        #     for i, wt in enumerate(wts):
-        #         plt.plot(self.iter_weights, wt, label=f"{self.peak_objs[i].hkl}")
-        #     plt.legend()
-        #     plt.show()
 
         if devlib.hasnan(self.ds_image):
             print('reconstruction resulted in NaN')
@@ -903,7 +826,8 @@ class CoupledRec(Rec):
         self.to_shared_image()
         self.get_control_error()
 
-        if self.params["adaptive_weights"] and self.iter >= self.adapt_iter:
+        adaptive_weights = self.params.get("adaptive_weights", False)
+        if adaptive_weights and self.iter >= self.adapt_iter:
             print("Adapting weights")
             self.adapt_weights()
             self.adapt_iter += 200
@@ -928,9 +852,13 @@ class CoupledRec(Rec):
                 self.lab_frame = False
             else:
                 self.shift_to_center()
-                self.ds_image = resample(self.ds_image, self.peak_objs[self.pk].ds_det_to_lab, self.dims[0])
-                self.support = resample(self.support, self.peak_objs[self.pk].ds_det_to_lab,
-                                                    self.dims[0], plot=True)
+                self.ds_image = dvut.resample(self.ds_image, self.peak_objs[self.pk].ds_det_to_lab)
+                self.support = dvut.resample(self.support, self.peak_objs[self.pk].ds_det_to_lab,
+                                                    plot=True)
+                if self.dims is not None:
+                    self.ds_image = dvut.pad_to_cube(self.ds_image, self.dims[0])
+                    self.support = dvut.pad_to_cube(self.support, self.dims[0])
+
                 self.make_binary()
 
         pk = self.peak_objs[self.pk]
@@ -958,8 +886,11 @@ class CoupledRec(Rec):
         pk = self.peak_objs[self.pk]
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
         if not self.fast_resample:
-            self.ds_image = resample(self.ds_image, pk.ds_lab_to_det, self.dims[0])
-            self.support = resample(self.support, pk.ds_lab_to_det, self.dims[0])
+            self.ds_image = dvut.resample(self.ds_image, pk.ds_lab_to_det)
+            self.support = dvut.resample(self.support, pk.ds_lab_to_det)
+            if self.dims is not None:
+                self.ds_image = dvut.pad_to_cube(self.ds_image, self.dims[0])
+                self.support = dvut.pad_to_cube(self.support, self.dims[0])
             self.make_binary()
 
     def calc_confidence(self):
@@ -989,10 +920,10 @@ class CoupledRec(Rec):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
 
     def to_direct_space(self):
-        self.ds_image_raw = devlib.fft(self.rs_amplitudes)
+        self.ds_image_proj = devlib.fft(self.rs_amplitudes)
         # if self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
         #     rho = self.rho_image / self.peak_objs[self.pk].norm
-        #     self.ds_image_raw = rho * devlib.exp(1j * devlib.angle(self.ds_image_raw))
+        #     self.ds_image_proj = rho * devlib.exp(1j * devlib.angle(self.ds_image_proj))
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
@@ -1006,19 +937,19 @@ class CoupledRec(Rec):
         # back_prop = devlib.fft(self.rs_amplitudes)
         # w = self.peak_objs[self.pk].weight
         # rho = self.rho_image / self.peak_objs[self.pk].norm
-        # self.ds_image_raw = w * devlib.absolute(back_prop) + (1-w) * rho * devlib.exp(1j * devlib.angle(back_prop))
+        # self.ds_image_proj = w * devlib.absolute(back_prop) + (1-w) * rho * devlib.exp(1j * devlib.angle(back_prop))
 
-        self.ds_image = self.ds_image_raw * self.support
+        self.ds_image = self.ds_image_proj * self.support
 
     def hio(self):
         self.er_iter = False
-        combined_image = self.ds_image - self.ds_image_raw * self.params['hio_beta']
+        combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
         support = self.support
-        self.ds_image = devlib.where((support > 0), self.ds_image_raw, combined_image)
+        self.ds_image = devlib.where((support > 0), self.ds_image_proj, combined_image)
 
     def shrink_wrap_operation(self):
-        if self.er_iter or self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
-            return
+        # if self.er_iter or self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
+        #     return
         super().shrink_wrap_operation()
 
     def get_control_error(self):
@@ -1173,21 +1104,43 @@ def reconstruction(datafile, **kwargs):
                 except:
                     pkg = 'np'
 
-    worker = Rec(kwargs, datafile, pkg)
-
-    if worker.init_dev(device[0]) < 0:
+    worker = create_rec(kwargs, datafile, pkg, device[0])
+    if worker is None:
         return
 
-    continue_dir = kwargs.get('continue_dir')
-    ret_code = worker.init(continue_dir)
-    if ret_code < 0:
+    if worker.iterate() < 0:
         return
-    ret_code = worker.iterate()
-    if ret_code < 0:
-        return
+
     if 'save_dir' in kwargs:
         save_dir = kwargs['save_dir']
     else:
         save_dir, filename = os.path.split(datafile)
-    if ret_code == 0:
-        worker.save_res(save_dir)
+
+    worker.save_res(save_dir)
+
+
+def create_rec(params, datainfo, pkg, dev, rec_type='basic'):
+    """
+
+    :param params: dict, contains reconstruction parameters
+    :param datainfo: for 'basic' reconstruction contains data file name,
+                     for 'mp' reconstruction contains peak_dirs
+    :param pkg: python package that will be used as lib
+    :param dev: device
+    :param rec_type: 'mp' for multipeak, defaults to 'basic'
+    :return: created and initialized object if success, None if failure
+    """
+    if rec_type == 'basic':
+        worker = Rec(params, datainfo, pkg)
+    elif rec_type == 'mp':
+        worker = CoupledRec(params, datainfo, pkg)
+
+    if worker.init_dev(dev) < 0:
+        return None
+
+    continue_dir = params.get('continue_dir')
+    ret_code = worker.init_iter_loop(continue_dir)
+    if ret_code < 0:
+        return None
+
+    return worker
