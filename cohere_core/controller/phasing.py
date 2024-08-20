@@ -38,7 +38,6 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
            'reconstruction',
            'create_rec',
-           'Breeder',
            'Rec']
 
 
@@ -51,22 +50,6 @@ def set_lib_from_pkg(pkg):
     ft.set_lib(devlib)
     # the utilities are not associated with reconstruction and the initialization of lib is independent
     dvut.set_lib_from_pkg(pkg)
-
-
-class Breeder:
-    def __init__(self, alpha_dir):
-        self.alpha_dir = alpha_dir
-
-    def breed(self, phaser, breed_mode, threshold, sigma):
-        if breed_mode != 'none':
-            try:
-                phaser.ds_image = dvut.breed(breed_mode, self.alpha_dir, phaser.ds_image)
-                phaser.support = dvut.shrink_wrap(phaser.ds_image, threshold, sigma)
-            except:
-                print('exception during breeding')
-                return -1
-
-        return 0
 
 
 class Rec:
@@ -166,7 +149,7 @@ class Rec:
         return 0
 
 
-    def init_iter_loop(self, dir=None, alpha_dir=None, gen=None):
+    def init_iter_loop(self, dir=None, gen=None):
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
@@ -200,9 +183,7 @@ class Rec:
         self.aver = None
         self.iter = -1
         self.errs = []
-        self.gen = gen
         self.prev_dir = dir
-        self.alpha_dir = alpha_dir
 
         # create or get initial support
         if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
@@ -235,13 +216,13 @@ class Rec:
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
         if self.saved_data is not None:
-            if self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lpf_sigmas'][self.gen])
+            if self.params['low_resolution_generations'] > gen:
+                self.data = devlib.gaussian_filter(self.saved_data, self.params['ga_lpf_sigmas'][gen])
             else:
                 self.data = self.saved_data
         else:
-            if self.gen is not None and self.params['low_resolution_generations'] > self.gen:
-                self.data = devlib.gaussian_filter(self.data, self.params['ga_lpf_sigmas'][self.gen])
+            if gen is not None and self.params['low_resolution_generations'] > gen:
+                self.data = devlib.gaussian_filter(self.data, self.params['ga_lpf_sigmas'][gen])
 
         if 'lowpass_filter_range' not in self.params or not first_run:
             self.iter_data = self.data
@@ -257,25 +238,6 @@ class Rec:
 
             self.ds_image *= self.support
         return 0
-
-
-    def clean_breeder(self):
-        self.breeder = None
-        devlib.clean_default_mem()
-
-
-    def breed(self):
-        def breed_retry():
-            breed_mode = self.params['ga_breed_modes'][self.gen]
-            threshold = self.params['ga_sw_thresholds'][self.gen]
-            sigma = self.params['ga_sw_gauss_sigmas'][self.gen]
-            return self.breeder.breed(self, breed_mode, threshold, sigma)
-        try:
-            return breed_retry()
-        except Exception as e:
-            # retry
-            self.breeder = Breeder(self.alpha_dir)
-            return breed_retry()
 
 
     def iterate(self):
@@ -333,7 +295,7 @@ class Rec:
 
         return 0
 
-    def get_metric(self, metric_type):
+    def get_metric(self):
         return dvut.all_metrics(self.ds_image, self.errs)
 
     def next(self):

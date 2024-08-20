@@ -17,14 +17,14 @@ General
 | example:
 ::
 
-    data_dir = "/path/to/data_dir/data_dir"
+    data_dir = "/path/to/phasing_data"
 
 - save_dir:
-| Optional, used for specific cases, defualt is <experiment_dir>/results. Driven by the scripts, the experiment directory contains four directories: conf, preprocessed_data, phasing_data, results_phasing, and results_viz. The  reconstruction results are saved in <experiment_dir>/results_phasing directory. If the save_dir parameter is configured then the reconstruction result is saved in this directory.
+| Optional, used for specific cases, defualt is <experiment_dir>/results_phasing. Driven by the scripts, the experiment directory contains four directories: conf, preprocessed_data, phasing_data, results_phasing, and results_viz. The  reconstruction results are saved in <experiment_dir>/results_phasing directory. If the save_dir parameter is configured then the reconstruction result is saved in this directory.
 | example:
 ::
 
-    save_dir = "/path/to/save_dir/save_dir"
+    save_dir = "/path/to/results_phasing"
 
 - init_guess:
 | Optional, defines how the initial guess is set. Possible options are: 'random', 'continue', and 'AI_guess'. The choice "random" will generate random guess, "continue" will start from previously saved results, and "AI_guess" will run AI reconstruction that will be an initial guess saved at <experiment_dir>/results_AI. Each of these algorithms require different parameters, explained below. The default is 'random'.
@@ -38,7 +38,7 @@ General
 | example:
 ::
 
-    continue_dir = "/path/to/previous_results_dir/some_phasing_results_dir"
+    continue_dir = "/path/to/some_phasing_results_dir"
 
 - AI_trained_model:
 | Must be defined, if init_guess is "AI_guess". Defines the file in hdf5 format that holds trained model.

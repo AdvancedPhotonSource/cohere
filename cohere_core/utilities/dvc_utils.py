@@ -668,22 +668,22 @@ def zero_phase_cc(arr1, arr2):
     return arr
 
 
-def breed(breed_mode, alpha_dir, image):
+def breed(breed_mode, alpha, image):
     """
     Aligns the image to breed from with the alpha image, and applies breed formula, to obtain a 'child' image.
 
     Parameters
     ----------
-    alpha : ndarray
-        the best image in the generation
     breed_mode : str
         literal defining the breeding process
+    alpha : ndarray
+        the best image in the generation
+    image : ndarray
+        the bred image
     dirs : tuple
         a tuple containing two elements: directory where the image to breed from is stored, a 'parent', and a directory where the bred image, a 'child', will be stored.
 
     """
-    # load alpha from alpha dir
-    alpha = devlib.load(ut.join(alpha_dir, 'image.npy'))
     if devlib.array_equal(image, alpha):
         # it is alpha, no breeding
         return zero_phase(image)

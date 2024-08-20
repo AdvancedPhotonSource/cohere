@@ -15,6 +15,7 @@ import argparse
 import numpy as np
 import os
 import cohere_core.utilities.utils as ut
+import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.ga_utils as gaut
 import cohere_core.controller.phasing as calc
 from mpi4py import MPI
@@ -27,7 +28,7 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def order_ranks(tracing, proc_metrics, metric_type):
+def order_ranks(tracing, proc_metrics, metric_type, last_alpha_metric):
     """
     Orders results in generation directory in subdirectories numbered from 0 and up, the best result stored in the '0' subdirectory. The ranking is done by numbers in evals list, which are the results of the generation's metric to the image array.
 
@@ -47,6 +48,7 @@ def order_ranks(tracing, proc_metrics, metric_type):
     dict :
         evaluations of the best results
     """
+    last_alpha_best = False
     rank_eval = [(key, proc_metrics[key][metric_type]) for key in proc_metrics.keys()]
     ranked_proc = sorted(rank_eval, key=lambda x: x[1])
 
@@ -55,13 +57,18 @@ def order_ranks(tracing, proc_metrics, metric_type):
     # 'summed_phase' and 'area' it is opposite, so reversing the order
     if metric_type == 'summed_phase' or metric_type == 'area':
         ranked_proc.reverse()
+        if last_alpha_metric is not None:
+            last_alpha_best = last_alpha_metric[metric_type] > proc_metrics[ranked_proc[0][0]][metric_type]
+    else:
+        if last_alpha_metric is not None:
+            last_alpha_best = last_alpha_metric[metric_type] < proc_metrics[ranked_proc[0][0]][metric_type]
     gen_ranks = {}
     for i in range(len(ranked_proc)):
         rk = ranked_proc[i][0]
         gen_ranks[rk] = (i, proc_metrics[rk])
     tracing.append_gen(gen_ranks)
 
-    return ranked_proc, proc_metrics[ranked_proc[0][0]]
+    return ranked_proc, proc_metrics[ranked_proc[0][0]], last_alpha_best
 
 
 def cull(lst, no_left):
@@ -113,16 +120,20 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
         list of GPUs available for this reconstructions
 
     """
-    def save_metric(metric, file_name):
-        with open(file_name.replace(os.sep, '/'), 'w+') as f:
-            f.truncate(0)
-            linesep = os.linesep
-            for key, value in metric.items():
-                f.write(f'{key} = {str(value)}{linesep}')
-
+    # def save_metric(metric, file_name):
+    #     with open(file_name.replace(os.sep, '/'), 'w+') as f:
+    #         f.truncate(0)
+    #         linesep = os.linesep
+    #         for key, value in metric.items():
+    #             f.write(f'{key} = {str(value)}{linesep}')
+    #
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
     rank = comm.Get_rank()
+
+    print('this rank', rank)
+
+    dvut.set_lib_from_pkg(pkg)
 
     pars = ut.read_config(conf_file)
     if 'save_dir' in pars:
@@ -131,16 +142,12 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
         # the config_rec might be an alternate configuration with a postfix that will be included in save_dir
         filename = conf_file.split('/')[-1]
         save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
-        alpha_dir = ut.join(save_dir, 'alpha')
+    last_alpha = None
+    last_alpha_metric = None
 
     if rank == 0:
-        # create alpha dir and placeholder for the alpha's metrics
         if not os.path.isdir(save_dir):
             os.mkdir(save_dir)
-        if not os.path.isdir(alpha_dir):
-            os.mkdir(alpha_dir)
-
-    comm.Barrier()
 
     pars = gaut.set_ga_defaults(pars)
 
@@ -174,28 +181,24 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
                     import cohere_core.controller.AI_guess as ai
                     ai_dir = ai.start_AI(pars, datafile, dir)
                     if ai_dir is None:
-                        ret = worker.init_iter_loop(None, alpha_dir, g)
+                        ret = worker.init_iter_loop(None, g)
                     else:
-                        ret = worker.init_iter_loop(ai_dir, alpha_dir, g)
+                        ret = worker.init_iter_loop(ai_dir, g)
                 else:
-                    ret = worker.init_iter_loop(None, alpha_dir, g)
+                    ret = worker.init_iter_loop(None, g)
                 if ret < 0:
                     print('failed init, check config')
                     break
         else:
             if active:
-                ret = worker.init_iter_loop(None, alpha_dir, g)
+                ret = worker.init_iter_loop(None, g)
                 if ret < 0:
                     print(f'rank {rank} reconstruction failed, check algorithm sequence and triggers in configuration')
                     active = False
 
             if active:
-                ret = worker.breed()
-                worker.clean_breeder()
-                worker.breeder = None
-                if ret < 0:
-                    active = False
-            comm.Barrier()
+                worker.ds_image = dvut.breed(pars['ga_breed_modes'][g], alpha, worker.ds_image)
+                worker.support = dvut.shrink_wrap(worker.ds_image, pars['ga_sw_thresholds'][g], pars['ga_sw_gauss_sigmas'][g])
 
         if active:
             ret = worker.iterate()
@@ -205,7 +208,7 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
 
         if active:
             metric_type = pars['ga_metrics'][g]
-            metric = worker.get_metric(metric_type)
+            metric = worker.get_metric()
         else:
             metric = None
 
@@ -231,20 +234,26 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
             for r in to_remove:
                 active_ranks.remove(r)
 
-        comm.Barrier()
+#        comm.Barrier()
 
         if rank == 0:
             # order processes by metric
-            proc_ranks, best_metrics = order_ranks(tracing, metrics, metric_type)
+            proc_ranks, best_metrics, last_alpha_best = order_ranks(tracing, metrics, metric_type, last_alpha_metric)
             proc_ranks = [p[0] for p in proc_ranks]
+
             # cull
             culled_proc_ranks = cull(proc_ranks, pars['ga_reconstructions'][g])
-            # send out the ordered active ranks
+            no_active = len(culled_proc_ranks)
+            # if previous alpha was better, insert -1, so no rank will match
+            if last_alpha_best:
+                culled_proc_ranks = [-1] + culled_proc_ranks
+
+            # send out the ordered active ranks, if alpha best with preceding -1
             for r in active_ranks:
                 if r != 0:
                     comm.send(culled_proc_ranks, dest=r)
             # remove culled processes from active list
-            to_remove = proc_ranks[len(culled_proc_ranks) : len(proc_ranks)]
+            to_remove = proc_ranks[no_active : len(proc_ranks)]
             for r in to_remove:
                 if r in active_ranks:
                     active_ranks.remove(r)
@@ -253,37 +262,33 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
             if rank not in culled_proc_ranks:
                 active = False
 
-        # check if this process is the best
-        if active and rank == culled_proc_ranks[0]:
-            # compare current alpha and previous. If previous is better, set it as alpha.
-            if g == 0:
-                worker.save_res(alpha_dir, True)
-                save_metric(metric, ut.join(alpha_dir, 'alpha_metric'))
+        alpha_rank = max(0, culled_proc_ranks[0])
+
+        if rank == alpha_rank:
+            if culled_proc_ranks[0] == -1:
+                # check if last alpha is the best
+                alpha = last_alpha
             else:
-                def is_best(this_metric, alpha_metric, type):
-                    if type == 'chi' or type == 'sharpness':
-                        return this_metric[type] < alpha_metric[type]
-                    elif type == 'summed_phase' or type == 'area':
-                        return this_metric[type] > alpha_metric[type]
+                # check if this process is the best and find rank that would broadcast alpha
+                alpha = worker.ds_image
+        else:
+            alpha = None
+        # send the alpha image to oter workers
+        alpha = comm.bcast(alpha, root=alpha_rank)
 
-                # read the previous alpha metric
-                alpha_metric = ut.read_config(ut.join(alpha_dir, 'alpha_metric'))
-
-                if is_best(metric, alpha_metric, metric_type):
-                    worker.save_res(alpha_dir, True)
-                    save_metric(metric, ut.join(alpha_dir, 'alpha_metric'))
-
-        # save results, we may modify it later to save only some
-        gen_save_dir = ut.join(save_dir, f'g_{str(g)}')
-        if g == pars['ga_generations'] -1:
-            if active:
-                worker.save_res(ut.join(gen_save_dir, str(culled_proc_ranks.index(rank))))
+        if rank == 0:
+            last_alpha = alpha
+            last_alpha_metric = best_metrics
 
         if not active:
             worker = None
-            # devlib.clean_default_mem()
 
-        comm.Barrier()
+        if g == pars['ga_generations'] -1:
+        # save alpha result for last generation
+            if culled_proc_ranks[0] == -1:
+                alpha_rank = culled_proc_ranks[1]
+            if rank == alpha_rank:
+                worker.save_res(save_dir)
 
     if rank == 0 and success:
         tracing.save(save_dir)

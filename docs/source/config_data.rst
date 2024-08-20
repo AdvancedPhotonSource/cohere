@@ -6,7 +6,7 @@ config_data
 Parameters
 ==========
 - data_dir:
-| Optional, defines directory that contains data.tif file with experiment data. Defaults to <experiment_dir>/data directory.
+| Optional, defines directory that contains data.tif file with preprocessed experiment data. Defaults to <experiment_dir>/preprocessed_data directory.
 | example:
 ::
 
