@@ -105,8 +105,9 @@ def center_sync(image, support):
     # place center of mass in the center
     sft = [e[0] / 2.0 - e[1] + .5 for e in zip(shape, com)]
 
-    image = devlib.roll(image, sft)
-    support =devlib.roll(support, sft)
+    axis = tuple([i for i in range(len(shape))])
+    image = devlib.roll(image, sft, axis=axis)
+    support =devlib.roll(support, sft, axis=axis)
 
 
     return image, support

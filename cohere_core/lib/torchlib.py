@@ -131,10 +131,6 @@ class torchlib(cohlib):
 
     @staticmethod
     def fftshift(arr):
-        # if roll is implemented before fftshift
-        # shifts = tuple([d // 2 for d in arr.size()])
-        # dims = tuple([d for d in range(len(arr.size()))])
-        # return torch.roll(arr, shifts, dims=dims)
         try:
             return torch.fft.fftshift(arr)
         except Exception as e:
@@ -142,10 +138,6 @@ class torchlib(cohlib):
 
     @staticmethod
     def ifftshift(arr):
-        # if roll is implemented before ifftshift
-        # shifts = tuple([(d + 1) // 2 for d in arr.size()])
-        # dims = tuple([d for d in range(len(arr.size()))])
-        # return torch.roll(arr, shifts, dims=dims)
         try:
             return torch.fft.ifftshift(arr)
         except Exception as e:
@@ -282,32 +274,20 @@ class torchlib(cohlib):
         return torch.squeeze(arr)
 
     @staticmethod
-    def gaussian(dims, sigma, **kwargs):
-        def gaussian1(dim, sig):
-            x = torch.arange(dim, device=torchlib.device) - dim // 2
-            if dim % 2 == 0:
-                x = x + 0.5
-            gauss = torch.exp(-(x ** 2.0) / (2 * sig ** 2))
-            return gauss / gauss.sum()
-
-        if isinstance(sigma, int) or isinstance(sigma, float):
-            sigmas = [sigma] * len(dims)
-        else: # assuming a list of values
-            sigmas = sigma
-
-        sigmas = [dims[i] / (2.0 * math.pi * sigmas[i]) for i in range(len(dims))]
-
-        last_axis = len(dims) - 1
-        last_dim = dims[-1]
-        gaussian = gaussian1(dims[last_axis], sigmas[last_axis]).repeat(*dims[:-1], 1)
-        for i in range(int(len(dims)) - 1):
-            tdims = dims[:-1]
-            tdims[i] = last_dim
-            temp = gaussian1(dims[i], sigmas[i])
-            temp = temp.repeat(*tdims, 1)
-            temp = torch.swapaxes(temp, i, last_axis)
-            gaussian *= temp
-        return gaussian / gaussian.sum()
+    # this method is only in torchlib, not part of cohlib
+    def gaussian(sigma, size=5, **kwargs): #sigma, size=5, n=None):
+        """
+        Creates a nD Gaussian kernel with the specified shape and sigma.
+        It is assumed that all dimensions in shape are equal.
+        """
+        dims = kwargs.get('dims', None)
+        ranges = [torch.arange(size)] * dims
+        grid = torch.meshgrid(*ranges)
+        grid = torch.stack(grid, dim=-1).float()
+        center = (size - 1) / 2
+        kernel = torch.exp(-torch.sum((grid - center) ** 2, dim=-1) / (2 * sigma ** 2))
+        kernel /= kernel.sum()
+        return kernel
 
     @staticmethod
     def entropy(arr):
@@ -315,17 +295,29 @@ class torchlib(cohlib):
 
     @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
-        # will not work on M1 until the fft fuctions are supported
-        normalizer = torch.sum(arr)
-        dims = list(arr.shape)
-        dist = torchlib.gaussian(dims, 1 / sigma)
-        arr_f = torch.fft.ifftshift(torch.fft.fftn(torch.fft.ifftshift(arr)))
-        filter = arr_f * dist
-        filter = torch.fft.ifftshift(torch.fft.ifftn(torch.fft.ifftshift(filter)))
-        filter = torch.real(filter)
-        filter = torch.where(filter >= 0, filter, 0.0)
-        corr = normalizer/torch.sum(filter)
-        return filter * corr
+        """
+        Convolves a nD input tensor with a nD Gaussian kernel.
+        """
+        if arr.ndim == 3:
+            from torch.nn.functional import conv3d as convn
+        elif arr.ndim == 2:
+            from torch.nn.functional import conv2d as convn
+        elif arr.ndim == 1:
+            from torch.nn.functional import conv1d as convn
+
+        if 'kernel' in kwargs:
+            # kernel should be on device the arr is
+            kernel = kwargs.get('kernel')
+            gauss_kernel_size = kernel.size()[0]
+        else:
+            gauss_kernel_size = 5
+            kernel = torchlib.gaussian(sigma, gauss_kernel_size, dims=arr.ndim)
+            kernel = kernel.to(arr.device)
+
+        padding = gauss_kernel_size // 2
+
+        blurred = convn(arr.unsqueeze(0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding=padding)
+        return blurred.squeeze()
 
     @staticmethod
     def median_filter(arr, size, **kwargs):

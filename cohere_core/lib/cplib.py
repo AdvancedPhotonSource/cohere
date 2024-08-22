@@ -220,24 +220,12 @@ class cplib(cohlib):
         return cp.squeeze(arr)
 
     @staticmethod
-    def gaussian(shape, sigma, **kwargs):
-        from functools import reduce
-        import operator
-
-        n_el = reduce(operator.mul, shape)
-        inarr = cp.zeros((n_el))
-        inarr[int(n_el / 2)] = 1.0
-        inarr = cp.reshape(inarr, shape)
-        gaussian = sc.gaussian_filter(inarr, sigma)
-        return gaussian / cp.sum(gaussian)
-
-    @staticmethod
     def entropy(arr):
         return stats.entropy(arr)
 
     @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
-        return sc.gaussian_filter(arr, sigma)
+        return sc.gaussian_filter(arr, sigma, **kwargs)
 
     @staticmethod
     def median_filter(arr, size, **kwargs):

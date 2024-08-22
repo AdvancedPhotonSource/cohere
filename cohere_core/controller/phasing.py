@@ -955,10 +955,11 @@ class CoupledRec(Rec):
         ind = devlib.center_of_mass(self.rho_image)
         shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
         shift_dist = devlib.to_numpy(shift_dist).tolist()
-        self.rho_image = devlib.roll(self.rho_image, shift_dist, axis=(0, 1, 2))
-        self.u_image = devlib.roll(self.u_image, shift_dist, axis=(0, 1, 2))
-        self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=(0, 1, 2))
-        self.support = devlib.roll(self.support, shift_dist, axis=(0, 1, 2))
+        axis = tuple(np.arrange(len(self.rho_image.shape)))
+        self.rho_image = devlib.roll(self.rho_image, shift_dist, axis=axis)
+        self.u_image = devlib.roll(self.u_image, shift_dist, axis=axis)
+        self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
+        self.support = devlib.roll(self.support, shift_dist, axis=axis)
 
 
 def reconstruction(datafile, **kwargs):

@@ -101,8 +101,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.squeeze) and
                 hasattr(subclass, 'gaussian_filter') and
                 callable(subclass.gaussian_filter) and
-                hasattr(subclass, 'gaussian') and
-                callable(subclass.gaussian) and
                 hasattr(subclass, 'center_of_mass') and
                 callable(subclass.center_of_mass) and
                 hasattr(subclass, 'meshgrid') and
@@ -426,11 +424,6 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def binary_erosion(arr, **kwargs):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def gaussian(dims, sigma, **kwargs):
         pass
 
     @staticmethod

@@ -3,7 +3,6 @@ import numpy as np
 import scipy.ndimage as ndi
 import scipy.signal as sig
 import scipy.stats as stats
-import scipy.special as sp
 
 class nplib(cohlib):
     @staticmethod
@@ -209,34 +208,12 @@ class nplib(cohlib):
         return np.squeeze(arr)
 
     @staticmethod
-    def gaussian(shape, sigmas, **kwargs):
-        grid = np.full(shape, 1.0)
-        for i in range(len(shape)):
-            # prepare indexes for tile and transpose
-            tile_shape = list(shape)
-            tile_shape.pop(i)
-            tile_shape.append(1)
-            trans_shape = list(range(len(shape) - 1))
-            trans_shape.insert(i, len(shape) - 1)
-
-            multiplier = - 0.5 / pow(sigmas[i], 2)
-            line = np.linspace(-(shape[i] - 1) / 2.0, (shape[i] - 1) / 2.0, shape[i])
-            gi = np.tile(line, tile_shape)
-            gi = np.transpose(gi, tuple(trans_shape))
-            exponent = np.power(gi, 2) * multiplier
-            gi = np.exp(exponent)
-            grid = grid * gi
-
-        grid_total = np.sum(grid)
-        return grid / grid_total
-
-    @staticmethod
     def entropy(arr):
         return stats.entropy(arr)
 
     @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
-        return ndi.gaussian_filter(arr, sigma)
+        return ndi.gaussian_filter(arr, sigma, **kwargs)
 
     @staticmethod
     def median_filter(arr, size, **kwargs):
@@ -269,7 +246,6 @@ class nplib(cohlib):
     @staticmethod
     def array_equal(arr1, arr2):
         return np.array_equal(arr1, arr2)
-        # print(nplib.real(nplib.fft(nplib.gaussian((3,4,5),(3.0,4.0,5.0)))))
 
     @staticmethod
     def cos(arr):
