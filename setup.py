@@ -5,15 +5,15 @@ setuptools.setup(
       author = 'Barbara Frosik, Ross Harder',
       author_email = 'bfrosik@anl.gov',
       url='https://github.com/advancedPhotonSource/cohere',
-      version='4.1',
+      version='4.1.0',
       packages=setuptools.find_packages(),
-      install_requires=['numpy',
+      install_requires=[
+                        'numpy',
                         'scikit-learn',
                         'tifffile',
-                        'tensorflow-cpu==2.13',
                         'gputil',
                         'psutil',
-                        'tqdm'
+                        'tqdm',
                         ],
       classifiers=[
             'Intended Audience :: Science/Research',
