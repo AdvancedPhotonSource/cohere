@@ -277,8 +277,7 @@ def auto_alien1(data, config, data_dir=None):
     # labels is same size as input arr with a cluster label per point
     iter = 0
     nclusters = 0
-    finished = False
-    while (not finished):
+    while (True):
         non_zero = cuboid.nonzero()
         # print("running db", iter)
         labels = DBSCAN(eps=eps, metric='euclidean', min_samples=min_pts, n_jobs=-1).fit_predict(
@@ -288,7 +287,7 @@ def auto_alien1(data, config, data_dir=None):
         if (save_arrs):
             save_arrays(arrs, iter, threshold, eps, save_dir)
         if nclusters == arrs[0]:
-            finished = True
+            break
         nclusters = arrs[0]
         if iter == 0:  # keep values for all iterations
             rel_cluster_size = arrs[2]

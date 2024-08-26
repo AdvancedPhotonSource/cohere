@@ -50,6 +50,14 @@ config_mp
 
     final_size = 180
 
+
+- switch_peak_trigger:
+| Mandatory, a trigger defining at which iteration to switch the peak.
+| example:
+::
+
+    switch_peak_trigger = [0, 50]
+
 - mp_max_weight:
 | Optional, a number between 0 and 1.0 specifying the initial coupling weight assigned to all peaks. if not provided, defaults to 1.0.
 | example:
@@ -71,9 +79,15 @@ config_mp
 
     lattice_size = 0.4078
 
-- switch_peak_trigger:
-| Mandatory, a trigger defining at which iteration to switch the peak.
-| example:
-::
+- control_peak = None
+- mp_weight_init = 1.0
+- mp_weight_iters = [300, 500, 700, 900, 950]
+- mp_weight_vals = [0.75, 0.5, 0.3, 0.1, 0.01]
+- adaptive_weights = False
+- peak_threshold_init = 0.5
+- peak_threshold_iters = [300, 500, 700, 900]
+- peak_threshold_vals = [0.6, 0.7, 0.8, 0.9]
+- rs_voxel_size = 0.0024519465219604176
+- ds_voxel_size = 10.009880878864648
+- calc_strain = False
 
-    switch_peak_trigger = [0, 50]

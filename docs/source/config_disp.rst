@@ -6,11 +6,11 @@ config_disp
 Parameters
 ==========
 - results_dir:
-| Optional, defaults to <experiment_dir>. A directory that has a tree, or leaf with reconstruction results. The results will be used as input to the visualization processing. There could be several results in the given directory tree, and all will be processed concurrently.
+| Optional, defaults to <experiment_dir>/results_phasing. A directory that has a tree, or leaf with reconstruction results. The results will be used as input to the visualization processing. There could be several results in the given directory tree, and all will be processed concurrently.
 | example:
 ::
 
-    results_dir = "/path/to/phasing_results_dir_tree"
+    results_dir = "/path/to/results_phasing"
 
 - rampups:                
 | Optional, upsize when running ramp removal, default is 1. Expect long processing time for greater numbers.

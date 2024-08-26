@@ -96,7 +96,7 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
         print(f'rank {rank} failed initializing device {devices[rank]}')
         return
 
-    ret = worker.init(prev_dir)
+    ret = worker.init_iter_loop(prev_dir)
     if ret < 0:
         print(f'rank {rank} failed, reconstruction failed, check algorithm sequence and triggers in configuration')
         return

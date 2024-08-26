@@ -7,6 +7,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.array) and
                 hasattr(subclass, 'dot') and
                 callable(subclass.dot) and
+                hasattr(subclass, 'cross') and
+                callable(subclass.cross) and
                 hasattr(subclass, 'set_device') and
                 callable(subclass.set_device) and
                 hasattr(subclass, 'set_backend') and
@@ -30,8 +32,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'copy') and
                 callable(subclass.copy) and
                 hasattr(subclass, 'roll') and
-                callable(subclass.shift) and
-                hasattr(subclass, 'roll') and
+                callable(subclass.roll) and
+                hasattr(subclass, 'shift') and
                 callable(subclass.shift) and
                 hasattr(subclass, 'fftshift') and
                 callable(subclass.fftshift) and
@@ -63,10 +65,16 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.imag) and
                 hasattr(subclass, 'amax') and
                 callable(subclass.amax) and
+                hasattr(subclass, 'amin') and
+                callable(subclass.amin) and
                 hasattr(subclass, 'argmax') and
                 callable(subclass.argmax) and
+                hasattr(subclass, 'argmin') and
+                callable(subclass.argmin) and
                 hasattr(subclass, 'unravel_index') and
                 callable(subclass.unravel_index) and
+                hasattr(subclass, 'ravel') and
+                callable(subclass.ravel) and
                 hasattr(subclass, 'maximum') and
                 callable(subclass.maximum) and
                 hasattr(subclass, 'ceil') and
@@ -93,8 +101,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.squeeze) and
                 hasattr(subclass, 'gaussian_filter') and
                 callable(subclass.gaussian_filter) and
-                hasattr(subclass, 'gaussian') and
-                callable(subclass.gaussian) and
                 hasattr(subclass, 'center_of_mass') and
                 callable(subclass.center_of_mass) and
                 hasattr(subclass, 'meshgrid') and
@@ -109,12 +115,12 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.cos) and
                 hasattr(subclass, 'linspace') and
                 callable(subclass.linspace) and
+                hasattr(subclass, 'geomspace') and
+                callable(subclass.geomspace) and
                 hasattr(subclass, 'clip') and
                 callable(subclass.clip) and
                 hasattr(subclass, 'gradient') and
                 callable(subclass.gradient) and
-                hasattr(subclass, 'argmin') and
-                callable(subclass.argmin) and
                 hasattr(subclass, 'take_along_axis') and
                 callable(subclass.take_along_axis) and
                 hasattr(subclass, 'moveaxis') and
@@ -129,287 +135,433 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.diff) and
                 hasattr(subclass, 'concatenate') and
                 callable(subclass.concatenate) and
-                callable(subclass, 'clean_default_mem') and
+                hasattr(subclass, 'nan_to_num') and
+                callable(subclass.nan_to_num) and
+                hasattr(subclass, 'entropy') and
+                callable(subclass.entropy) and
+                hasattr(subclass, 'median_filter') and
+                callable(subclass.median_filter) and
+                hasattr(subclass, 'uniform_filter') and
+                callable(subclass.uniform_filter) and
+                hasattr(subclass, 'binary_erosion') and
+                callable(subclass.binary_erosion) and
+                hasattr(subclass, 'stack') and
+                callable(subclass.stack) and
+                hasattr(subclass, 'affine_transform') and
+                callable(subclass.affine_transform) and
+                hasattr(subclass, 'pad') and
+                callable(subclass.pad) and
+                hasattr(subclass, 'histogram2d') and
+                callable(subclass.histogram2d) and
+                hasattr(subclass, 'log') and
+                callable(subclass.log) and
+                hasattr(subclass, 'log10') and
+                callable(subclass.log10) and
+                hasattr(subclass, 'xlogy') and
+                callable(subclass.xlogy) and
+                hasattr(subclass, 'mean') and
+                callable(subclass.mean) and
+                hasattr(subclass, 'clean_default_mem') and
                 callable(subclass.clean_default_mem) or
                 NotImplemented)
 
+    @staticmethod
     @abc.abstractmethod
     def array(obj):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def dot(arr1, arr2):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def cross(arr1, arr2):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def set_device(dev_id):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def set_backend(proc):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def to_numpy(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def save(filename, arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def load(filename):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def from_numpy(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def dtype(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def astype(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def size(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def hasnan(arr):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def nan_to_num(arr):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def copy(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def roll(arr, sft, axis):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def shift(arr, sft):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def fftshift(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def ifftshift(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def fft(arr, norm='forward'):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def ifft(arr, norm='forward'):
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def fftconvolve(arr1, kernel):
+    def fftconvolve(arr1, arr2):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def where(cond, x, y):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def dims(arr):
         # get array dimensions
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def absolute(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def square(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def sqrt(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def sum(arr, axis=None):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def real(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def imag(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def amax(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def argmax(arr, axis=None):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def unravel_index(indices, shape):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def ravel(arr):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def maximum(arr1, arr2):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def ceil(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def fix(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def round(val):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def random(shape, **kwargs):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def full(shape, fill_value, **kwargs):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def print(arr, **kwargs):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def angle(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def flip(arr, axis):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def tile(arr, rep):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def expand_dims(arr, axis):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def squeeze(arr):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def entropy(arr):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def gaussian_filter(arr, sigma, **kwargs):
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def gaussian(dims, sigma, **kwargs):
+    def median_filter(arr, size, **kwargs):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def uniform_filter(arr, size, **kwargs):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def binary_erosion(arr, **kwargs):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def center_of_mass(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def meshgrid(*xi):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def exp(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def conj(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def array_equal(arr1, arr2):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def cos(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def linspace(start, stop, num):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def geomspace(start, stop, num):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def diff(arr, axis=None, prepend=0):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def clip(arr, min, max=None):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def gradient(arr, dx=1):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def argmin(arr, axis=None):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def take_along_axis(a, indices, axis):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def moveaxis(arr, source, dest):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def lstsq(A, B):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def zeros(shape):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def indices(dims):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def concatenate(tup, axis=0):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def stack(tup):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def amin(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def affine_transform(arr, matrix, order=3, offset=0):
         pass
 
+    @staticmethod
     @abc.abstractmethod
     def pad(arr, padding):
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def histogram2d(meas, rec, n_bins=100, log=False):
+    def histogram2d(arr1, arr2, bins):
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def calc_nmi(hgram):
+    def log(arr):
         pass
 
+    @staticmethod
     @abc.abstractmethod
-    def calc_ehd(hgram):
+    def log10(arr):
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def xlogy(arr, y=None):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def mean(arr):
+        pass
+
+    @staticmethod
     @abc.abstractmethod
     def clean_default_mem():
         pass

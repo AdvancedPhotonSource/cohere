@@ -94,44 +94,7 @@ Multiple reconstruction
 
 Genetic Algorithm
 +++++++++++++++++
-| Results of reconstruction when using GA are reflected in relevant directory structure. The "results" directory will have subdirectories reflecting the generation, and each generation subdirectory will have subdirectories reflecting the runs. The generation directory is a concatenation of "g", underscore, and the generation number.
-| Below is an example of "results" directory structure when running two generations and three reconstructions. Only the last generation is saved.:
-| <experiment_dir>
-|                \|
-|                \|--results_phasing
-|                       \|--g_2
-|                           \|--0
-|                               \|--image.npy
-|                               \|--support.npy
-|                               \|--image.tif
-|                               \|--errors.npy
-|                               \|--errors.txt
-|                               \|--metrics.txt
-|                           \|--1
-|                               \|--image.npy
-|                               \|--support.npy
-|                               \|--image.tif
-|                               \|--errors.npy
-|                               \|--errors.txt
-|                               \|--metrics.txt
-|                           \|--2
-|                               \|--image.npy
-|                               \|--support.npy
-|                               \|--image.tif
-|                               \|--errors.npy
-|                               \|--errors.txt
-|                               \|--metrics.txt
-|                \|--results_viz
-|                       \|--g_2
-|                           \|--0
-|                               \|--image.vts
-|                               \|--support.vts
-|                           \|--1
-|                               \|--image.vts
-|                               \|--support.vts
-|                           \|--2
-|                               \|--image.vts
-|                               \|--support.vts
+| When running GA, only the best results are saved. Phasing results are saved in results_phasing directory, and visualization results are saved in results_viz.
 
 Separate scans
 ++++++++++++++

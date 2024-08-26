@@ -15,6 +15,7 @@ Refer to cohere_core-ui suite for use cases. The reconstruction can be started f
 import numpy as np
 import os
 import cohere_core.utilities.utils as ut
+import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.ga_utils as gaut
 from multiprocessing import Queue
 import shutil
@@ -42,64 +43,52 @@ class Devices:
         self.index = self.index + 1
 
 
-def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
+def gen_single_rec_process(pkg, breed_mode, threshold, sigma, gen, alpha_dir, rec_attrs):
     """
     This function runs a single reconstruction process.
 
-<<<<<<< HEAD
     Parameters
     ----------
-    proc : str
-        string defining library, supported 'np' and 'cp'
-
-    pars : Object
-        Params object containing parsed configuration
-
-    data : numpy array
-        data array
-
-    req_metric : str
-        defines metric that will be used if GA is utilized
-
-    dirs : list
-        tuple of two elements: directory that contain results of previous run or None, and directory where the
-        results of this processing will be saved
-
-    Returns
-    -------
-    metric : float
-        a calculated characteristic of the image array defined by the metric
-=======
-    :param metric_type: str
-        defines metric that will be used for ranking
+    :param pkg: str
+        defines package used as backend
+    :param breed_mode: str
+        breeding type
+    :param threshold: float
+        threshold value used in shrink wrap after breeding
+    :param sigma: float
+        sigma value used in shrink wrap after breeding
     :param gen: int
         current generation
     :param alpha_dir: str
         directory where result of alpha will be placed
     :param rec_attrs: dict
-        parameters applicable to reconstruction
+        objects (worker, previous dir, save dir) used in this reconstruction
     :return: list of two elements
         metric for the result of reconstruction, save_dir of the results
->>>>>>> Dev
     """
+    dvut.set_lib_from_pkg(pkg)
+    devlib = ut.get_lib(pkg)
+
     worker, prev_dir, save_dir = rec_attrs
     thr = threading.current_thread()
     if worker.init_dev(thr.gpu) < 0:
         print(f'reconstruction failed, device not initialized to {thr.gpu}')
         metric = None
     else:
-        ret_code = worker.init(prev_dir, alpha_dir, gen)
+        ret_code = worker.init_iter_loop(prev_dir, gen)
         if ret_code < 0:
             print('reconstruction failed, check algorithm sequence and triggers in configuration')
             metric = None
         else:
             if gen is not None and gen > 0:
-                worker.breed()
+                alpha = devlib.load(ut.join(alpha_dir, 'image.npy'))
+                worker.ds_image = dvut.breed(breed_mode, alpha, worker.ds_image)
+                worker.support = dvut.shrink_wrap(worker.ds_image, threshold, sigma)
 
             ret_code = worker.iterate()
             if ret_code == 0:
                 worker.save_res(save_dir)
-                metric = worker.get_metric(metric_type)
+                metric = worker.get_metric()
             else:    # bad reconstruction
                 print('reconstruction failed during iterations')
                 metric = None
@@ -107,7 +96,7 @@ def single_rec_process(metric_type, gen, alpha_dir, rec_attrs):
     return [metric, save_dir]
 
 
-def multi_rec(pkg, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric_type='chi', gen=None, alpha_dir=None, q=None):
+def multi_rec(pkg, save_dir, devices, no_recs, pars, datafile, prev_dirs, gen=None, alpha_dir=None, q=None):
     """
     This function controls the multiple reconstructions.
 
@@ -136,6 +125,10 @@ def multi_rec(pkg, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         if provided the results will be queued
     :return:
     """
+    threshold = pars['ga_sw_thresholds'][gen]
+    sigma = pars['ga_sw_gauss_sigmas'][gen]
+    breed_mode = pars['ga_breed_modes'][gen]
+
     results = []
 
     def collect_result(result):
@@ -150,7 +143,7 @@ def multi_rec(pkg, save_dir, devices, no_recs, pars, datafile, prev_dirs, metric
         save_sub = ut.join(save_dir, str(i))
         save_dirs.append(save_sub)
         iterable.append((workers[i], prev_dirs[i], save_sub))
-    func = partial(single_rec_process, metric_type, gen, alpha_dir)
+    func = partial(gen_single_rec_process, pkg, breed_mode, threshold, sigma, gen, alpha_dir)
     with Pool(processes=len(devices), initializer=dev_obj.assign_gpu, initargs=()) as pool:
         pool.map_async(func, iterable, callback=collect_result)
         pool.close()
@@ -253,14 +246,11 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
 
     Parameters
     ----------
-<<<<<<< HEAD
-    lib : str
-=======
     pkg : str
->>>>>>> Dev
         library acronym to use for reconstruction. Supported:
         np - to use numpy,
         cp - to use cupy,
+        torch - to use torch
 
     conf_file : str
         configuration file name
@@ -331,7 +321,7 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
         gen_save_dir = ut.join(save_dir, f'g_{str(g)}')
         metric_type = pars['ga_metrics'][g]
         reconstructions = len(prev_dirs)
-        p = Process(target=multi_rec, args=(pkg, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, metric_type, g, alpha_dir, q))
+        p = Process(target=multi_rec, args=(pkg, gen_save_dir, devices, reconstructions, pars, datafile, prev_dirs, g, alpha_dir, q))
         p.start()
         p.join()
 
@@ -366,8 +356,16 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
                 (metric_type == 'chi' or metric_type == 'sharpness')):
             shutil.copyfile(ut.join(current_dirs[0], 'image.npy'), ut.join(alpha_dir, 'image.npy'))
             alpha_metrics = best_metrics
+
     # remove the previous gen
     shutil.rmtree(ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 2)))
+    shutil.rmtree(ut.join(save_dir, 'alpha'))
+    # move results from the best reconstruction to save_dir
+    source_dir = ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 1), '0')
+    for file_name in os.listdir(source_dir):
+        shutil.move(ut.join(source_dir, file_name), save_dir)
+    # remove the last gen
+    shutil.rmtree(ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 1)))
 
     tracing.save(save_dir)
 

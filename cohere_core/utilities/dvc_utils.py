@@ -1,6 +1,8 @@
 import math
 import cmath
 import cohere_core.utilities.utils as ut
+from matplotlib import pyplot as plt
+
 
 _docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
@@ -27,7 +29,9 @@ __all__ = ['set_lib_from_pkg',
            'correlation_err',
            'remove_ramp',
            'zero_phase_cc',
-           'breed'
+           'breed',
+           'resample',
+           'pad_to_cube',
            ]
 
 
@@ -35,7 +39,7 @@ def set_lib_from_pkg(pkg):
     global devlib
 
     # get the lib object
-    devlib = ut.set_lib(pkg)
+    devlib = ut.get_lib(pkg)
 
 
 def arr_property(arr):
@@ -97,11 +101,13 @@ def center_sync(image, support):
                       image.flatten().real[int(image.flatten().shape[0] / 2)])
     image = image * cmath.exp(-1j * phi0)
 
-    com = devlib.center_of_mass(devlib.astype(support, dtype='int32'))
+    com = devlib.center_of_mass(devlib.absolute(image))
     # place center of mass in the center
-    sft = [shape[i] / 2.0 - com[i] + .5 for i in range(len(shape))]
-    image = devlib.roll(image, sft)
-    support = devlib.roll(support, sft)
+    sft = [e[0] / 2.0 - e[1] + .5 for e in zip(shape, com)]
+
+    axis = tuple([i for i in range(len(shape))])
+    image = devlib.roll(image, sft, axis=axis)
+    support =devlib.roll(support, sft, axis=axis)
 
     return image, support
 
@@ -146,8 +152,7 @@ def shrink_wrap(arr, threshold, sigma):
     filter = devlib.gaussian_filter(devlib.absolute(arr), sigma)
     max_filter = devlib.amax(filter)
     adj_threshold = max_filter * threshold
-    support = devlib.full(devlib.dims(filter), 1)
-    support = devlib.where(filter >= adj_threshold, support, 0)
+    support = devlib.where(filter >= adj_threshold, 1, 0)
     return support
 
 
@@ -667,22 +672,22 @@ def zero_phase_cc(arr1, arr2):
     return arr
 
 
-def breed(breed_mode, alpha_dir, image):
+def breed(breed_mode, alpha, image):
     """
     Aligns the image to breed from with the alpha image, and applies breed formula, to obtain a 'child' image.
 
     Parameters
     ----------
-    alpha : ndarray
-        the best image in the generation
     breed_mode : str
         literal defining the breeding process
+    alpha : ndarray
+        the best image in the generation
+    image : ndarray
+        the bred image
     dirs : tuple
         a tuple containing two elements: directory where the image to breed from is stored, a 'parent', and a directory where the bred image, a 'child', will be stored.
 
     """
-    # load alpha from alpha dir
-    alpha = devlib.load(ut.join(alpha_dir, 'image.npy'))
     if devlib.array_equal(image, alpha):
         # it is alpha, no breeding
         return zero_phase(image)
@@ -736,3 +741,81 @@ def breed(breed_mode, alpha_dir, image):
         beta = 0.5 * (devlib.absolute(alpha) + devlib.absolute(beta)) * devlib.exp(1j * ph_alpha)
 
     return beta
+
+
+def histogram2d(arr1, arr2, n_bins=100, log=False):
+    norm = devlib.max(arr1) / devlib.max(arr2)
+    if log:
+        bins = devlib.logspace(devlib.log10(devlib.amin(arr1[arr1 != 0])), devlib.log10(devlib.amax(arr1)), n_bins + 1)
+    else:
+        bins = n_bins
+    return devlib.histogram2d(devlib.ravel(arr1), devlib.ravel(norm * arr2), bins)
+
+
+def calc_nmi(arr1, arr2=None, log=False):
+    if arr2 is None:
+        hgram = arr1
+    else:
+        hgram = histogram2d(arr1, arr2, log=log)
+    h0 = devlib.entropy(devlib.sum(hgram, axis=0))
+    h1 = devlib.entropy(devlib.sum(hgram, axis=1))
+    h01 = devlib.entropy(devlib.reshape(hgram, -1))
+    return (h0 + h1) / h01
+
+
+def calc_ehd(arr1, arr2=None, log=False):
+    if arr2 is None:
+        hgram = arr1
+    else:
+        hgram = histogram2d(arr1, arr2, log=log)
+    n = hgram.shape[0]
+    x, y = devlib.meshgrid(devlib.arange(n), devlib.arange(n))
+    return devlib.sum(hgram * devlib.abs(x - y)) / devlib.sum(hgram)
+
+
+
+def resample(data, matrix, plot=False):
+    import numpy as np
+    s = data.shape
+    corners = [
+        [0, 0, 0],
+        [s[0], 0, 0], [0, s[1], 0], [0, 0, s[2]],
+        [0, s[1], s[2]], [s[0], 0, s[2]], [s[0], s[1], 0],
+        [s[0], s[1], s[2]]
+    ]
+    new_corners = [np.linalg.inv(matrix)@c for c in corners]
+    new_shape = np.ceil(np.max(new_corners, axis=0) - np.min(new_corners, axis=0)).astype(int)
+    pad = np.max((new_shape - s) // 2)
+    data = devlib.pad(data, np.max([pad, 0]))
+    mid_shape = np.array(data.shape)
+
+    offset = (mid_shape / 2) - matrix @ (mid_shape / 2)
+
+    # The phasing data as saved is a magnitude, which is not smooth everywhere (there are non-differentiable points
+    # where the complex amplitude crosses zero). However, the intensity (magnitude squared) is a smooth function.
+    # Thus, in order to allow a high-order spline, we take the square root of the interpolated square of the image.
+    data = devlib.affine_transform(devlib.square(data), devlib.array(matrix), order=1, offset=offset)
+    data = devlib.sqrt(devlib.clip(data, 0))
+    if plot:
+        arr = devlib.to_numpy(data)
+        plt.imshow(arr[np.argmax(np.sum(arr, axis=(1, 2)))])
+        plt.title(np.linalg.det(matrix))
+        plt.show()
+
+    return data
+
+
+def pad_to_cube(data, size):
+    import numpy as np
+
+    shp = np.array([size, size, size]) // 2
+    # Pad the array to the largest dimensions
+    shp1 = np.array(data.shape) // 2
+    pad = shp - shp1
+    pad[pad < 0] = 0
+    data = devlib.pad(data, [(pad[0], pad[0]), (pad[1], pad[1]), (pad[2], pad[2])])
+    # Crop the array to the final dimensions
+    shp1 = np.array(data.shape) // 2
+    start, end = shp1 - shp, shp1 + shp
+    data = data[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
+    return data

@@ -24,17 +24,15 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def rec_process(pkg, pars, peak_dirs, dev, continue_dir):
-    worker = calc.CoupledRec(pars, peak_dirs, pkg)
-    if worker.init_dev(dev[0]) < 0:
+def rec_process(pkg, pars, peak_dirs, dev):
+    worker = calc.create_rec(pars, peak_dirs, pkg, dev[0], rec_type='mp')
+    if worker is None:
         return
-    worker.init(continue_dir)
+
     if worker.iterate() < 0:
         return
-    if 'save_dir' in pars:
-        save_dir = pars['save_dir']
-    else:
-        save_dir = ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing')
+
+    save_dir = pars.get('save_dir', ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing'))
     worker.save_res(save_dir)
 
 
@@ -64,15 +62,10 @@ def reconstruction(lib, pars, peak_dirs, dev=None):
     """
     if 'init_guess' not in pars:
         pars['init_guess'] = 'random'
-    if pars['init_guess'] == 'continue':
-        continue_dir = pars['continue_dir']
     elif pars['init_guess'] == 'AI_guess':
         print('AI initial guess is not a valid choice for multi peak reconstruction')
         return -1
-    else:
-        continue_dir = None
 
-    p = Process(target=rec_process, args=(lib, pars, peak_dirs, dev,
-                                          continue_dir))
+    p = Process(target=rec_process, args=(lib, pars, peak_dirs, dev))
     p.start()
     p.join()
