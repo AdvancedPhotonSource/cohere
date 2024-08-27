@@ -120,18 +120,9 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
         list of GPUs available for this reconstructions
 
     """
-    # def save_metric(metric, file_name):
-    #     with open(file_name.replace(os.sep, '/'), 'w+') as f:
-    #         f.truncate(0)
-    #         linesep = os.linesep
-    #         for key, value in metric.items():
-    #             f.write(f'{key} = {str(value)}{linesep}')
-    #
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
     rank = comm.Get_rank()
-
-    print('this rank', rank)
 
     dvut.set_lib_from_pkg(pkg)
 
@@ -194,9 +185,14 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
                     active = False
 
             if active:
-                worker.ds_image = dvut.breed(pars['ga_breed_modes'][g], alpha, worker.ds_image)
-                worker.support = dvut.shrink_wrap(worker.ds_image, pars['ga_sw_thresholds'][g], pars['ga_sw_gauss_sigmas'][g])
-
+                def breed():
+                    worker.ds_image = dvut.breed(pars['ga_breed_modes'][g], alpha, worker.ds_image)
+                    worker.support = dvut.shrink_wrap(worker.ds_image, pars['ga_sw_thresholds'][g], pars['ga_sw_gauss_sigmas'][g])
+                try:
+                    breed()
+                except:
+                    # retry
+                    breed()
         if active:
             ret = worker.iterate()
             if ret < 0:

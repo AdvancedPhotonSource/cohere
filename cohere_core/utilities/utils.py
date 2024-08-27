@@ -832,13 +832,14 @@ def get_balanced_load(avail_runs, runs):
     need_runs -= distributed
     available -= distributed
 
-    # need to add the few remaining
-    for k, v in avail_runs.items():
-        if v > 0:
-            load[k] = load[k] + 1
-            need_runs -= 1
-            if need_runs == 0:
-                break
+    if need_runs > 0:
+        # need to add the few remaining
+        for k, v in avail_runs.items():
+            if v > 0:
+                load[k] = load[k] + 1
+                need_runs -= 1
+                if need_runs == 0:
+                    break
 
     return load, runs
 

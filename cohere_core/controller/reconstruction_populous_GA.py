@@ -359,13 +359,14 @@ def reconstruction(pkg, conf_file, datafile, dir, devices):
 
     # remove the previous gen
     shutil.rmtree(ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 2)))
-    shutil.rmtree(ut.join(save_dir, 'alpha'))
     # move results from the best reconstruction to save_dir
     source_dir = ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 1), '0')
     for file_name in os.listdir(source_dir):
-        shutil.move(ut.join(source_dir, file_name), save_dir)
+        shutil.copy(ut.join(source_dir, file_name), save_dir)
     # remove the last gen
     shutil.rmtree(ut.join(save_dir, 'g_' + str(pars['ga_generations'] - 1)))
+    shutil.rmtree(alpha_dir)
+    shutil.rmtree(source_dir)
 
     tracing.save(save_dir)
 

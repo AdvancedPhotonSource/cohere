@@ -967,10 +967,14 @@ def reconstruction(datafile, **kwargs):
     Reconstructs the image from experiment data in datafile according to given parameters. The results: image.npy, support.npy, and errors.npy are saved in 'saved_dir' defined in kwargs, or if not defined, in the directory of datafile.
 
     example of the simplest kwargs parameters:
-        - algorithm_sequence ='3*(20*ER+180*HIO)+20*ER'
-        - shrink_wrap_trigger = [1, 1]
-        - twin_trigger = [2]
-        - progress_trigger = [0, 20]
+        - device=[-1]
+        - algorithm_sequence='3*(20*ER+180*HIO)+20*ER'
+        - shrink_wrap_type="GAUSS"
+        - shrink_wrap_threshold=0.1
+        - shrink_wrap_gauss_sigma=1.0
+        - shrink_wrap_trigger=[1, 1]
+        - twin_trigger=[2]
+        - progress_trigger=[0, 20]
 
     Parameters
     ----------

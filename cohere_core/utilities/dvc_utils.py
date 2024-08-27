@@ -255,7 +255,7 @@ def check_get_conj_reflect(arr1, arr2):
     support2 = shrink_wrap(abs(arr2), .1, .1)
     cc1 = cross_correlation(support1, shrink_wrap(conj_reflect(arr2), .1, .1))
     cc2 = cross_correlation(support1, support2)
-    if devlib.amax(cc1) > devlib.amax(cc2):
+    if devlib.amax(devlib.absolute(cc1)) > devlib.amax(devlib.absolute(cc2)):
         return conj_reflect(arr2)
     else:
         return arr2

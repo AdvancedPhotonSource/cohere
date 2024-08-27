@@ -359,7 +359,7 @@ class torchlib(cohlib):
 
     @staticmethod
     def array_equal(arr1, arr2):
-        raise NotImplementedError
+        return torch.equal(arr1, arr2)
 
     @staticmethod
     def linspace(start, stop, num):
