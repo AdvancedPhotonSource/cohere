@@ -457,6 +457,7 @@ class Peak:
         self.full_size = np.max(self.full_data.shape)
         self.full_data = dvut.pad_to_cube(self.full_data, self.full_size)
         self.data = dvut.pad_to_cube(self.full_data, self.size)
+        self.mask = devlib.zeros(self.data.shape)
 
         # Uncomment when phasing non-centered data
         # ind = devlib.center_of_mass(self.full_data)
@@ -795,11 +796,6 @@ class CoupledRec(Rec):
         self.iter_weights.append(self.iter)
         self.pk = random.choices([x for x in range(self.num_peaks)], p_weights)[0]
 
-        if self.fast_resample:
-            self.iter_data = self.peak_objs[self.pk].res_data
-        else:
-            self.iter_data = self.peak_objs[self.pk].data
-
         self.to_working_image()
 
     def to_shared_image(self):
@@ -841,6 +837,20 @@ class CoupledRec(Rec):
     def to_working_image(self):
         pk = self.peak_objs[self.pk]
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
+
+        if self.fast_resample:
+            self.iter_data = pk.res_data
+        else:
+            self.iter_data = pk.data
+
+        if self.iter > 200:
+            proj = devlib.absolute(devlib.ifft(self.ds_image))
+            proj_blurred = devlib.gaussian_filter(proj, 1)
+            meas_blurred = devlib.gaussian_filter(self.iter_data, 1)
+            diff_map = devlib.absolute(meas_blurred - proj_blurred) / proj_blurred
+            pk.mask = diff_map > devlib.median(diff_map) * 2
+            self.iter_data = devlib.where(pk.mask, proj, self.iter_data)
+
         if not self.fast_resample:
             self.ds_image = dvut.resample(self.ds_image, pk.ds_lab_to_det)
             self.support = dvut.resample(self.support, pk.ds_lab_to_det)
@@ -861,7 +871,7 @@ class CoupledRec(Rec):
     def adapt_weights(self):
         # [p.conf_iter > p.weight_iter]
         confidences = [
-            sorted(p.conf_hist)[len(p.conf_hist) // 2]
+            sorted(p.conf_hist, reverse=True)[len(p.conf_hist) // 4]
             if len(p.conf_hist) > 0 else -1
             for p in self.peak_objs
         ]
