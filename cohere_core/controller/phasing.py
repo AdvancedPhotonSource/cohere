@@ -584,6 +584,14 @@ class CoupledRec(Rec):
         self.dims = self.data.shape
         self.n_voxels = self.dims[0]*self.dims[1]*self.dims[2]
 
+        live_view = self.params.get("live_view", False)
+        if live_view:
+            self.fig, self.axs = plt.subplots(3, 3, figsize=(12, 13), layout="constrained")
+            plt.show(block=False)
+        else:
+            self.fig = None
+            self.axs = None
+
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
             self.need_save_data = False
@@ -719,41 +727,9 @@ class CoupledRec(Rec):
         self.iter = -1
         start_t = time.time()
 
-        half = self.dims[0] // 2
-        qtr = self.dims[0] // 4
-        live_view = self.params.get("live_view", False)
-        if live_view:
-            fig, axs = plt.subplots(2, 3, figsize=(12, 9), sharex="all", sharey="all", layout="constrained")
-            plt.show(block=False)
-
         try:
             for f in self.flow:
                 f()
-                if f.__name__ == "next" and live_view and self.iter % 5 == 0:
-                    # p_weights = [pk.weight for pk in self.peak_objs]
-                    # print(np.round(p_weights / np.sum(p_weights), 3))
-                    plt.suptitle(
-                        f"iteration: {self.iter}\n"
-                        f"peak: {self.peak_objs[self.pk].hkl}\n"
-                        f"global weight: {self.proj_weight[self.iter]}\n"
-                        f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
-                        f"confidence threshold: {self.peak_threshold[self.iter]}\n"
-                    )
-                    for func, row, clim in zip([devlib.absolute, devlib.angle], axs, [None, None]):
-                        for ax in row:
-                            ax.clear()
-                            ax.set_xticks(())
-                            ax.set_yticks(())
-                        row[0].set_ylabel(f"{func.__name__}")
-                        row[0].set_title("XY-plane")
-                        row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), clim=clim)
-                        row[1].set_title("XZ-plane")
-                        row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), clim=clim)
-                        row[2].set_title("YZ-plane")
-                        row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get(), clim=clim)
-                    plt.draw()
-                    # plt.savefig(f"/home/beams/CXDUSER/34idc-work/2022/cohere_dev_JNP/cohere-scripts/simulation/live_views/iter_{self.iter:04}.png")
-                    plt.pause(0.2)
         except Exception as error:
             print('error',error)
             # raise error
@@ -761,7 +737,7 @@ class CoupledRec(Rec):
 
         print('iterate took ', (time.time() - start_t), ' sec')
 
-        if live_view:
+        if self.params.get("live_view", False):
             plt.show()
 
         if devlib.hasnan(self.ds_image):
@@ -782,6 +758,7 @@ class CoupledRec(Rec):
             self.calc_confidence()
         self.to_shared_image()
         self.get_control_error()
+        self.update_live()
 
         adaptive_weights = self.params.get("adaptive_weights", False)
         if adaptive_weights and self.iter >= self.adapt_iter:
@@ -947,6 +924,60 @@ class CoupledRec(Rec):
             prg += f"|  EHD {self.ctrl_error[-1][2]:0.6f}  "
             prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
         print(prg)
+
+    def update_live(self):
+        half = self.dims[0] // 2
+        qtr = self.dims[0] // 4
+        plt.suptitle(
+            f"iteration: {self.iter}\n"
+            f"peak: {self.peak_objs[self.pk].hkl}\n"
+            f"global weight: {self.proj_weight[self.iter]}\n"
+            f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
+            f"confidence threshold: {self.peak_threshold[self.iter]}\n"
+        )
+
+        [[ax.clear() for ax in row] for row in self.axs]
+        for func, row, clim in zip([devlib.absolute, devlib.angle], self.axs, [None, None]):
+            for ax in row:
+                ax.clear()
+                ax.set_xticks(())
+                ax.set_yticks(())
+            row[0].set_ylabel(f"{func.__name__}")
+            row[0].set_title("XY-plane")
+            row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), clim=clim)
+            row[1].set_title("XZ-plane")
+            row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), clim=clim)
+            row[2].set_title("YZ-plane")
+            row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get(), clim=clim)
+
+        s = 125
+        row = self.axs[2]
+        row[0].set_title("Projection")
+        row[0].imshow(devlib.log(devlib.ifftshift(devlib.absolute(devlib.ifft(self.ds_image)))[s]+1).get())
+        row[1].set_title("Measurement")
+        row[1].imshow(devlib.log(devlib.ifftshift(self.peak_objs[self.pk].res_data)[s]+1).get())
+        row[2].set_title("Hybrid")
+        row[2].imshow(devlib.log(devlib.ifftshift(self.iter_data)[s]+1).get())
+        plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
+
+        plt.draw()
+        plt.pause(0.2)
+
+        # For testing adaptive alien removal:
+        # if self.pk == 1 and self.iter > 400:
+        #     fig, axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
+        #     s = 125
+        #     axs[0][0].set_title("Projection")
+        #     axs[0][0].imshow(devlib.log(devlib.ifftshift(devlib.absolute(devlib.ifft(self.ds_image)))[s]+1).get())
+        #     axs[0][1].set_title("Measurement")
+        #     axs[0][1].imshow(devlib.log(devlib.ifftshift(self.peak_objs[self.pk].res_data)[s]+1).get())
+        #     axs[1][0].set_title("Mask")
+        #     axs[1][0].imshow(devlib.ifftshift(self.peak_objs[self.pk].mask)[s].get())
+        #     axs[1][1].set_title("Hybrid")
+        #     axs[1][1].imshow(devlib.log(devlib.ifftshift(self.iter_data)[s]+1).get())
+        #     plt.setp(fig.get_axes(), xticks=[], yticks=[])
+        #     plt.show()
+
 
     def switch_resampling_operation(self):
         self.fast_resample = False
