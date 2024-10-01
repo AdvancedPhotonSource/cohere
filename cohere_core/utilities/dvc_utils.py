@@ -744,7 +744,7 @@ def breed(breed_mode, alpha, image):
 
 
 def histogram2d(arr1, arr2, n_bins=100, log=False):
-    norm = devlib.max(arr1) / devlib.max(arr2)
+    norm = devlib.amax(arr1) / devlib.amax(arr2)
     if log:
         bins = devlib.logspace(devlib.log10(devlib.amin(arr1[arr1 != 0])), devlib.log10(devlib.amax(arr1)), n_bins + 1)
     else:

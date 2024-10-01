@@ -589,8 +589,8 @@ class CoupledRec(Rec):
 
         return 0
 
-    def init_iter_loop(self, img_dir=None, alpha_dir=None, gen=None):
-        if super().init_iter_loop(img_dir, alpha_dir, gen) == -1:
+    def init_iter_loop(self, img_dir=None, gen=None):
+        if super().init_iter_loop(img_dir, gen) == -1:
             return -1
 
         # Define the shared image
@@ -777,6 +777,8 @@ class CoupledRec(Rec):
         return 0
 
     def switch_peak_operation(self):
+        if self.params.get("adaptive_weights", False):
+            self.calc_confidence()
         self.to_shared_image()
         self.get_control_error()
 
@@ -867,8 +869,7 @@ class CoupledRec(Rec):
             if confidence == -1:
                 continue
             pk.weight = (confidence / max(confidences)) ** 2
-        print(f"New weights: [0     1     2     3     4   ]")
-        print(f"             {[round(p.weight, 2) for p in self.peak_objs]}")
+        print(f"New weights: {[round(p.weight, 2) for p in self.peak_objs]}")
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
@@ -955,7 +956,7 @@ class CoupledRec(Rec):
         ind = devlib.center_of_mass(self.rho_image)
         shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
         shift_dist = devlib.to_numpy(shift_dist).tolist()
-        axis = tuple(np.arrange(len(self.rho_image.shape)))
+        axis = tuple(range(len(self.rho_image.shape)))
         self.rho_image = devlib.roll(self.rho_image, shift_dist, axis=axis)
         self.u_image = devlib.roll(self.u_image, shift_dist, axis=axis)
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
