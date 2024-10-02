@@ -526,11 +526,10 @@ class CoupledRec(Rec):
     def __init__(self, params, peak_dirs, pkg):
         super().__init__(params, None, pkg)
 
-        self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peak_operation]
+        self.iter_functions = [self.adapt_operation] + self.iter_functions + [self.switch_peak_operation]
 
         self.params["switch_peak_trigger"] = self.params.get("switch_peak_trigger", [0, 5])
-        self.params["mp_max_weight"] = self.params.get("mp_max_weight", 0.9)
-        self.params["mp_taper"] = self.params.get("mp_taper", 0.75)
+        self.params["adapt_trigger"] = self.params.get("adapt_trigger", [])
         self.params["calc_strain"] = self.params.get("calc_strain", True)
 
         self.peak_dirs = peak_dirs
@@ -586,7 +585,7 @@ class CoupledRec(Rec):
 
         live_view = self.params.get("live_view", False)
         if live_view:
-            self.fig, self.axs = plt.subplots(3, 3, figsize=(12, 13), layout="constrained")
+            self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
             plt.show(block=False)
         else:
             self.fig = None
@@ -607,17 +606,16 @@ class CoupledRec(Rec):
         self.u_image = devlib.absolute(self.ds_image[:, :, :, None]) * devlib.array([0, 0, 0])
 
         # Define the multipeak projection weighting and tapering
-        self.proj_weight = devlib.array([self.params["mp_weight_init"] for _ in range(self.iter_no)])
-        for i, w in zip(self.params["mp_weight_iters"], self.params["mp_weight_vals"]):
+        self.proj_weight = devlib.array([self.params["weight_init"] for _ in range(self.iter_no)])
+        for i, w in zip(self.params["weight_iters"], self.params["weight_vals"]):
             self.proj_weight[i:] = w
-        self.peak_threshold = devlib.array([self.params["peak_threshold_init"] for _ in range(self.iter_no)])
 
-        for i, w in zip(self.params["peak_threshold_iters"], self.params["peak_threshold_vals"]):
+        self.adapt_on = False
+        self.peak_threshold = devlib.array([self.params["adapt_threshold_init"] for _ in range(self.iter_no)])
+        for i, w in zip(self.params["adapt_threshold_iters"], self.params["adapt_threshold_vals"]):
             self.peak_threshold[i:] = w
-
         self.peak_weights = []
         self.iter_weights = []
-        self.adapt_iter = 200
         return 0
 
     def save_res(self, save_dir):
@@ -754,21 +752,18 @@ class CoupledRec(Rec):
         return 0
 
     def switch_peak_operation(self):
-        if self.params.get("adaptive_weights", False):
-            self.calc_confidence()
-
+        self.calc_confidence()
         self.to_shared_image()
-
         self.get_control_error()
+
+        if self.adapt_on:
+            print("Adapting weights")
+            self.update_weights()
+
         if self.params.get("live_view", False):
             self.update_live()
 
-        if self.params.get("adaptive_weights", False) and self.iter >= self.adapt_iter:
-            print("Adapting weights")
-            self.adapt_weights()
-            self.adapt_iter += 200  # TODO: remove hard-coded value and add to config
-
-        # Use the peak weights as probabilities for projecting to that peak. High-confidence peaks are more likely
+        # Use the peak weights as probabilities for projecting to that peak. High-confidence = more likely
         p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
         p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
         self.peak_weights.append(p_weights / np.sum(p_weights))
@@ -834,7 +829,7 @@ class CoupledRec(Rec):
             # Use the original sampling
             self.iter_data = pk.data
 
-        if self.iter > 200:
+        if self.iter > self.params["adapt_alien_start"]:
             # Calculate the diffraction amplitude from the current exit wave (which is based ONLY on shared object).
             proj = devlib.absolute(devlib.ifft(self.ds_image))
 
@@ -854,7 +849,7 @@ class CoupledRec(Rec):
 
             # Mask voxels where the difference map is exceptionally high compared to its median. If there are no
             # outliers, the difference map will be tightly clustered around the median.
-            pk.mask = diff_map > devlib.median(diff_map) * 2
+            pk.mask = diff_map > devlib.median(diff_map) * self.params["adapt_alien_threshold"]
 
             # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
             self.iter_data = devlib.where(pk.mask, proj, proj + pk.weight*(self.iter_data - proj))
@@ -882,7 +877,10 @@ class CoupledRec(Rec):
         pk.conf_hist.append(conf)
         pk.conf_iter.append(self.iter)
 
-    def adapt_weights(self):
+    def adapt_operation(self):
+        self.adapt_on = True
+
+    def update_weights(self):
         # Grab the 75th %ile confidence for each peak. If a peak has not been phased, then its confidence history will
         # be empty, in which case it just gets a -1 and skips the weighting.
         confidences = [
@@ -895,8 +893,9 @@ class CoupledRec(Rec):
                 continue
             # Assign the weights based on the RELATIVE confidence raised to a power (currently hard-coded at 2). The
             # power determines how harshly bad peaks are punished.
-            pk.weight = (confidence / max(confidences)) ** 2
+            pk.weight = (confidence / max(confidences)) ** self.params["adapt_power"]
         print(f"New weights: {[round(p.weight, 2) for p in self.peak_objs]}")
+        self.adapt_on = False
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
@@ -969,47 +968,20 @@ class CoupledRec(Rec):
         )
 
         [[ax.clear() for ax in row] for row in self.axs]
-        for func, row, clim in zip([devlib.absolute, devlib.angle], self.axs, [None, None]):
-            for ax in row:
-                ax.clear()
-                ax.set_xticks(())
-                ax.set_yticks(())
-            row[0].set_ylabel(f"{func.__name__}")
-            row[0].set_title("XY-plane")
-            row[0].imshow(func(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), clim=clim)
-            row[1].set_title("XZ-plane")
-            row[1].imshow(func(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), clim=clim)
-            row[2].set_title("YZ-plane")
-            row[2].imshow(func(self.ds_image[half, qtr:-qtr, qtr:-qtr]).get(), clim=clim)
+        self.axs[0][0].set_title("XY amplitude")
+        self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
+        self.axs[1][0].set_title("XY phase")
+        self.axs[1][0].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
 
         s = 125
-        row = self.axs[2]
-        row[0].set_title("Projection")
-        row[0].imshow(devlib.log(devlib.ifftshift(devlib.absolute(devlib.ifft(self.ds_image)))[s]+1).get())
-        row[1].set_title("Measurement")
-        row[1].imshow(devlib.log(devlib.ifftshift(self.peak_objs[self.pk].res_data)[s]+1).get())
-        row[2].set_title("Hybrid")
-        row[2].imshow(devlib.log(devlib.ifftshift(self.iter_data)[s]+1).get())
+        self.axs[0][1].set_title("Measurement")
+        self.axs[0][1].imshow(devlib.log(devlib.ifftshift(self.peak_objs[self.pk].res_data)[s]+1).get())
+        self.axs[1][1].set_title("Fourier Constraint")
+        self.axs[1][1].imshow(devlib.log(devlib.ifftshift(self.iter_data)[s]+1).get())
         plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
 
         plt.draw()
-        plt.pause(0.2)
-
-        # For testing adaptive alien removal:
-        # if self.pk == 1 and self.iter > 400:
-        #     fig, axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
-        #     s = 125
-        #     axs[0][0].set_title("Projection")
-        #     axs[0][0].imshow(devlib.log(devlib.ifftshift(devlib.absolute(devlib.ifft(self.ds_image)))[s]+1).get())
-        #     axs[0][1].set_title("Measurement")
-        #     axs[0][1].imshow(devlib.log(devlib.ifftshift(self.peak_objs[self.pk].res_data)[s]+1).get())
-        #     axs[1][0].set_title("Mask")
-        #     axs[1][0].imshow(devlib.ifftshift(self.peak_objs[self.pk].mask)[s].get())
-        #     axs[1][1].set_title("Hybrid")
-        #     axs[1][1].imshow(devlib.log(devlib.ifftshift(self.iter_data)[s]+1).get())
-        #     plt.setp(fig.get_axes(), xticks=[], yticks=[])
-        #     plt.show()
-
+        plt.pause(0.15)
 
     def switch_resampling_operation(self):
         self.fast_resample = False
