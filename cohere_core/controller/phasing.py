@@ -756,17 +756,19 @@ class CoupledRec(Rec):
     def switch_peak_operation(self):
         if self.params.get("adaptive_weights", False):
             self.calc_confidence()
-        self.to_shared_image()
-        self.get_control_error()
-        self.update_live()
 
-        adaptive_weights = self.params.get("adaptive_weights", False)
-        if adaptive_weights and self.iter >= self.adapt_iter:
+        self.to_shared_image()
+
+        self.get_control_error()
+        if self.params.get("live_view", False):
+            self.update_live()
+
+        if self.params.get("adaptive_weights", False) and self.iter >= self.adapt_iter:
             print("Adapting weights")
             self.adapt_weights()
-            self.adapt_iter += 200
+            self.adapt_iter += 200  # TODO: remove hard-coded value and add to config
 
-        # Use the peak weights as probabilities for projecting to that peak.
+        # Use the peak weights as probabilities for projecting to that peak. High-confidence peaks are more likely
         p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
         p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
         self.peak_weights.append(p_weights / np.sum(p_weights))
@@ -776,7 +778,10 @@ class CoupledRec(Rec):
         self.to_working_image()
 
     def to_shared_image(self):
+        pk = self.peak_objs[self.pk]  # shorthand
+
         if not self.fast_resample:
+            # Resample the object
             if self.lab_frame:
                 self.lab_frame = False
             else:
@@ -790,45 +795,72 @@ class CoupledRec(Rec):
 
                 self.make_binary()
 
-        pk = self.peak_objs[self.pk]
-
+        # The weighting is determined by the peak weight and the global weight. I'm leaving the option to give the
+        # density and displacement their own weights, but currently they're just the same.
         wt_rho = pk.weight * self.proj_weight[self.iter]
         wt_u = pk.weight * self.proj_weight[self.iter]
 
+        # Update density with a weighted average of the shared and working objects
         self.rho_image = (1-wt_rho) * self.rho_image + wt_rho * devlib.absolute(self.ds_image)
 
+        # Update displacement with a weighted average.
         old_u = (devlib.dot(self.u_image, pk.g_vec) / pk.gdotg)[:, :, :, None] * pk.g_vec
         new_u = (devlib.angle(self.ds_image) / pk.gdotg)[:, :, :, None] * pk.g_vec
         self.u_image = self.u_image + wt_u * (new_u - old_u)
 
         if self.er_iter:
+            # No shrinkwrap during ER blocks. Instead, the shared object is given an extra-tight support constraint,
+            # and the density is given a 3-pixel smoothover.
             tight_support = devlib.binary_erosion(self.support)
             self.rho_image = devlib.median_filter(self.rho_image, 3)
             self.rho_image = self.rho_image * tight_support
             self.u_image = self.u_image * tight_support[:, :, :, None]
             self.shift_to_center()
 
+        # Shift the displacement field so that the center of the image is at ux=uy=uz=0
         ctr = self.dims[0] / 2
         self.u_image = self.u_image[:, :, :] - self.u_image[ctr, ctr, ctr]
 
     def to_working_image(self):
-        pk = self.peak_objs[self.pk]
+        pk = self.peak_objs[self.pk]  # Shorthand for convenience
+
+        # Define the exit wave for this peak based on the shared density/displacement
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
 
         if self.fast_resample:
+            # Use the resampled data
             self.iter_data = pk.res_data
         else:
+            # Use the original sampling
             self.iter_data = pk.data
 
         if self.iter > 200:
+            # Calculate the diffraction amplitude from the current exit wave (which is based ONLY on shared object).
             proj = devlib.absolute(devlib.ifft(self.ds_image))
+
+            # Blur the projected and measured diffraction amplitudes by one pixel (to mitigate HF noise)
             proj_blurred = devlib.gaussian_filter(proj, 1)
             meas_blurred = devlib.gaussian_filter(self.iter_data, 1)
+
+            # Map the absolute difference between the two blurred images.
+            # Normalizing to the projected image makes bright artifacts in the measurement stand out:
+            #   proj  |  meas  | diff_map
+            # --------|--------|----------
+            #   high  |  high  |  low
+            #   low   |  low   |  low
+            #   high  |  low   |  low
+            #   low   |  high  |  HIGH
             diff_map = devlib.absolute(meas_blurred - proj_blurred) / proj_blurred
+
+            # Mask voxels where the difference map is exceptionally high compared to its median. If there are no
+            # outliers, the difference map will be tightly clustered around the median.
             pk.mask = diff_map > devlib.median(diff_map) * 2
+
+            # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
             self.iter_data = devlib.where(pk.mask, proj, self.iter_data)
 
         if not self.fast_resample:
+            # Resample the object and support
             self.ds_image = dvut.resample(self.ds_image, pk.ds_lab_to_det)
             self.support = dvut.resample(self.support, pk.ds_lab_to_det)
             if self.dims is not None:
@@ -837,16 +869,22 @@ class CoupledRec(Rec):
             self.make_binary()
 
     def calc_confidence(self):
-        pk = self.peak_objs[self.pk]
+        pk = self.peak_objs[self.pk]  # shorthand
+
+        # Calculate the amplitude of the exit wave after phasing.
         rho = devlib.absolute(self.ds_image)
         cond = self.support > 0
+
+        # Compare the exit wave amplitude before and after phasing (only within the support region)
         # conf = 1 / dvut.calc_ehd(self.rho_image[cond], rho[cond], log=False).get()
         conf = dvut.calc_nmi(self.rho_image[cond], rho[cond], log=False).get() - 1
+
         pk.conf_hist.append(conf)
         pk.conf_iter.append(self.iter)
 
     def adapt_weights(self):
-        # [p.conf_iter > p.weight_iter]
+        # Grab the 75th %ile confidence for each peak. If a peak has not been phased, then its confidence history will
+        # be empty, in which case it just gets a -1 and skips the weighting.
         confidences = [
             sorted(p.conf_hist, reverse=True)[len(p.conf_hist) // 4]
             if len(p.conf_hist) > 0 else -1
@@ -855,6 +893,8 @@ class CoupledRec(Rec):
         for pk, confidence in zip(self.peak_objs, confidences):
             if confidence == -1:
                 continue
+            # Assign the weights based on the RELATIVE confidence raised to a power (currently hard-coded at 2). The
+            # power determines how harshly bad peaks are punished.
             pk.weight = (confidence / max(confidences)) ** 2
         print(f"New weights: {[round(p.weight, 2) for p in self.peak_objs]}")
 
@@ -863,9 +903,6 @@ class CoupledRec(Rec):
 
     def to_direct_space(self):
         self.ds_image_proj = devlib.fft(self.rs_amplitudes)
-        # if self.peak_objs[self.pk].weight < self.peak_threshold[self.iter]:
-        #     rho = self.rho_image / self.peak_objs[self.pk].norm
-        #     self.ds_image_proj = rho * devlib.exp(1j * devlib.angle(self.ds_image_proj))
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
@@ -876,11 +913,6 @@ class CoupledRec(Rec):
 
     def er(self):
         self.er_iter = True
-        # back_prop = devlib.fft(self.rs_amplitudes)
-        # w = self.peak_objs[self.pk].weight
-        # rho = self.rho_image / self.peak_objs[self.pk].norm
-        # self.ds_image_proj = w * devlib.absolute(back_prop) + (1-w) * rho * devlib.exp(1j * devlib.angle(back_prop))
-
         self.ds_image = self.ds_image_proj * self.support
 
     def hio(self):
