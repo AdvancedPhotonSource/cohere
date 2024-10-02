@@ -857,7 +857,7 @@ class CoupledRec(Rec):
             pk.mask = diff_map > devlib.median(diff_map) * 2
 
             # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
-            self.iter_data = devlib.where(pk.mask, proj, self.iter_data)
+            self.iter_data = devlib.where(pk.mask, proj, proj + pk.weight*(self.iter_data - proj))
 
         if not self.fast_resample:
             # Resample the object and support
