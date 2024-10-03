@@ -54,6 +54,10 @@ class cplib(cohlib):
         return arr.astype(dtype=dtype)
 
     @staticmethod
+    def reshape(arr, shape):
+        return cp.reshape(arr, shape)
+
+    @staticmethod
     def size(arr):
         return arr.size
 
@@ -348,6 +352,10 @@ class cplib(cohlib):
     @staticmethod
     def mean(arr):
         return cp.mean(arr)
+
+    @staticmethod
+    def median(arr):
+        return cp.median(arr)
 
     # @staticmethod
     # def calc_ehd(hgram):

@@ -50,6 +50,10 @@ class nplib(cohlib):
         return arr.astype(dtype=dtype)
 
     @staticmethod
+    def reshape(arr, shape):
+        return np.reshape(arr, shape)
+
+    @staticmethod
     def size(arr):
         return arr.size
 
@@ -336,6 +340,10 @@ class nplib(cohlib):
     @staticmethod
     def mean(arr):
         return np.mean(arr)
+
+    @staticmethod
+    def median(arr):
+        return np.median(arr)
 
     @staticmethod
     def clean_default_mem():

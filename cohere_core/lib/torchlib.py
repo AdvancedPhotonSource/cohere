@@ -89,6 +89,10 @@ class torchlib(cohlib):
         return arr.type(dtype=dtype)
 
     @staticmethod
+    def reshape(arr, shape):
+        raise NotImplementedError
+
+    @staticmethod
     def size(arr):
         return torch.numel(arr)
 
@@ -445,7 +449,9 @@ class torchlib(cohlib):
     def mean(arr):
         raise NotImplementedError
 
-
+    @staticmethod
+    def median(arr):
+        raise NotImplementedError
 
     @staticmethod
     def clean_default_mem():
