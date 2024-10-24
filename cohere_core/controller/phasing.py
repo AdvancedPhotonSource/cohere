@@ -1009,16 +1009,17 @@ class CoupledRec(Rec):
         )
         [[ax.clear() for ax in row] for row in self.axs]
         self.axs[0][0].set_title("XY amplitude")
-        self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
+        self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), cmap="gray")
         self.axs[0][1].set_title("XY phase")
-        self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
+        self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="hsv",
+                              interpolation_stage="rgba")
 
         self.axs[1][0].set_title("Measurement")
         meas = devlib.sum(devlib.ifftshift(self.peak_objs[self.pk].res_data), axis=0)
-        self.axs[1][0].imshow(devlib.sqrt(meas).get())
+        self.axs[1][0].imshow(devlib.sqrt(meas).get(), cmap="magma")
         self.axs[1][1].set_title("Fourier Constraint")
         data = devlib.sum(devlib.ifftshift(self.iter_data), axis=0)
-        self.axs[1][1].imshow(devlib.sqrt(data).get())
+        self.axs[1][1].imshow(devlib.sqrt(data).get(), cmap="magma")
         plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
 
         plt.draw()
