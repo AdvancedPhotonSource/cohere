@@ -84,7 +84,8 @@ class Rec:
                                self.new_alg,
                                self.twin_operation,
                                self.average_operation,
-                               self.progress_operation]
+                               self.progress_operation,
+                               self.live_operation]
 
         params['init_guess'] = params.get('init_guess', 'random')
         if params['init_guess'] == 'AI_guess':
@@ -141,6 +142,13 @@ class Rec:
         self.data = devlib.fftshift(devlib.absolute(data))
         self.dims = devlib.dims(self.data)
         print('data shape', self.dims)
+
+        if self.params.get("live_trigger", None) is not None:
+            self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
+            plt.show(block=False)
+        else:
+            self.fig = None
+            self.axs = None
 
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
@@ -263,6 +271,9 @@ class Rec:
         mx = devlib.amax(devlib.absolute(self.ds_image))
         self.ds_image = self.ds_image / mx
 
+        if self.params.get("live_trigger", None) is not None:
+            plt.show()
+
         return 0
 
     def save_res(self, save_dir, only_image=False):
@@ -339,7 +350,7 @@ class Rec:
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
         error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
                                       0)) / dvut.get_norm(self.iter_data)
-        self.errs.append(error)
+        self.errs.append(error.get())
         self.rs_amplitudes *= ratio
 
     def set_prev_pc(self):
@@ -386,9 +397,40 @@ class Rec:
     def progress_operation(self):
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
+    def live_operation(self):
+        self.shift_to_center()
+        half = self.dims[0] // 2
+        qtr = self.dims[0] // 4
+        plt.suptitle(
+            f"iteration: {self.iter}\n"
+            f"error: {self.errs[-1]}\n"
+        )
+        [[ax.clear() for ax in row] for row in self.axs]
+        img = self.ds_image[qtr:-qtr, qtr:-qtr, half]
+        self.axs[0][0].set(title="Amplitude", xticks=[], yticks=[])
+        self.axs[0][0].imshow(devlib.absolute(img).get(), cmap="gray")
+        self.axs[0][1].set(title="Phase", xticks=[], yticks=[])
+        self.axs[0][1].imshow(devlib.angle(img).get(), cmap="hsv", interpolation_stage="rgba")
+
+        self.axs[1][0].set(title="Error", xlim=(0,self.iter_no), xlabel="Iteration", yscale="log")
+        self.axs[1][0].plot(self.errs[1:])
+        self.axs[1][1].set(title="Support", xticks=[], yticks=[])
+        self.axs[1][1].imshow(self.support[qtr:-qtr, qtr:-qtr, half].get(), cmap="gray")
+
+        plt.draw()
+        plt.pause(0.15)
+
     def get_ratio(self, divident, divisor):
         ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
         return ratio
+
+    def shift_to_center(self):
+        ind = devlib.center_of_mass(self.support.astype('int32'))
+        shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
+        shift_dist = devlib.to_numpy(shift_dist).tolist()
+        axis = tuple(range(len(self.ds_image.shape)))
+        self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
+        self.support = devlib.roll(self.support, shift_dist, axis=axis)
 
 
 class Peak:
@@ -530,7 +572,7 @@ class CoupledRec(Rec):
 
         self.params["switch_peak_trigger"] = self.params.get("switch_peak_trigger", [0, 5])
         self.params["adapt_trigger"] = self.params.get("adapt_trigger", [])
-        self.params["calc_strain"] = self.params.get("calc_strain", True)
+        self.params["calc_strain"] = self.params.get("calc_strain", False)
 
         self.peak_dirs = peak_dirs
         self.er_iter = False  # Indicates whether the last iteration done was ER
@@ -583,8 +625,7 @@ class CoupledRec(Rec):
         self.dims = self.data.shape
         self.n_voxels = self.dims[0]*self.dims[1]*self.dims[2]
 
-        live_view = self.params.get("live_view", False)
-        if live_view:
+        if self.params.get("live_trigger", None) is not None:
             self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
             plt.show(block=False)
         else:
@@ -735,7 +776,7 @@ class CoupledRec(Rec):
 
         print('iterate took ', (time.time() - start_t), ' sec')
 
-        if self.params.get("live_view", False):
+        if self.params.get("live_trigger", None) is not None:
             plt.show()
 
         if devlib.hasnan(self.ds_image):
@@ -759,9 +800,6 @@ class CoupledRec(Rec):
         if self.adapt_on:
             print("Adapting weights")
             self.update_weights()
-
-        if self.params.get("live_view", False):
-            self.update_live()
 
         # Use the peak weights as probabilities for projecting to that peak. High-confidence = more likely
         p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
@@ -956,7 +994,7 @@ class CoupledRec(Rec):
             prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
         print(prg)
 
-    def update_live(self):
+    def live_operation(self):
         half = self.dims[0] // 2
         qtr = self.dims[0] // 4
         plt.suptitle(
@@ -966,18 +1004,18 @@ class CoupledRec(Rec):
             f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
             f"confidence threshold: {self.peak_threshold[self.iter]}\n"
         )
-
         [[ax.clear() for ax in row] for row in self.axs]
         self.axs[0][0].set_title("XY amplitude")
         self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get())
-        self.axs[1][0].set_title("XY phase")
-        self.axs[1][0].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
+        self.axs[0][1].set_title("XY phase")
+        self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get())
 
-        s = 125
-        self.axs[0][1].set_title("Measurement")
-        self.axs[0][1].imshow(devlib.log(devlib.ifftshift(self.peak_objs[self.pk].res_data)[s]+1).get())
+        self.axs[1][0].set_title("Measurement")
+        meas = devlib.sum(devlib.ifftshift(self.peak_objs[self.pk].res_data), axis=0)
+        self.axs[1][0].imshow(devlib.sqrt(meas).get())
         self.axs[1][1].set_title("Fourier Constraint")
-        self.axs[1][1].imshow(devlib.log(devlib.ifftshift(self.iter_data)[s]+1).get())
+        data = devlib.sum(devlib.ifftshift(self.iter_data), axis=0)
+        self.axs[1][1].imshow(devlib.sqrt(data).get())
         plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
 
         plt.draw()
