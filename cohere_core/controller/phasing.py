@@ -801,6 +801,9 @@ class CoupledRec(Rec):
             print("Adapting weights")
             self.update_weights()
 
+        if self.params.get("live_view", False):
+            self.update_live()
+
         # Use the peak weights as probabilities for projecting to that peak. High-confidence = more likely
         p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
         p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
