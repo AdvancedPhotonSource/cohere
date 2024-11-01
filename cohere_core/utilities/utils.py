@@ -151,7 +151,12 @@ def read_config(config):
             value = value.strip()
             if value.startswith('('):
                 value = value.strip().replace('(','[').replace(')',']')
-            param_dict[param.strip()] = ast.literal_eval(value)
+            try:
+                param_dict[param.strip()] = ast.literal_eval(value)
+            except:
+                print(f'{param}: {value}\n  string value should be surrounded by "" ')
+                raise
+
         line = input.readline()
     input.close()
     return param_dict
@@ -328,11 +333,9 @@ def get_good_dim(dim):
 
     def is_correct(x):
         sub = x
-        if sub % 3 == 0:
+        while sub % 3 == 0:
             sub = sub / 3
-        if sub % 3 == 0:
-            sub = sub / 3
-        if sub % 5 == 0:
+        while sub % 5 == 0:
             sub = sub / 5
         while sub % 2 == 0:
             sub = sub / 2
@@ -344,7 +347,6 @@ def get_good_dim(dim):
     while not is_correct(new_dim):
         new_dim += 2
     return new_dim
-
 
 def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
     """

@@ -65,7 +65,7 @@ class Rec:
 
     """
     __all__ = []
-    def __init__(self, params, data_file, pkg):
+    def __init__(self, params, data_file, pkg, **kwargs):
         set_lib_from_pkg(pkg)
         self.iter_functions = [self.next,
                                self.lowpass_filter_operation,
@@ -107,6 +107,7 @@ class Rec:
         self.ds_image = None
         self.need_save_data = False
         self.saved_data = None
+        self.debug = kwargs.get('debug', False)
 
 
     def init_dev(self, device_id):
@@ -117,6 +118,8 @@ class Rec:
                 try:
                     devlib.set_device(device_id)
                 except Exception as e:
+                    if self.debug:
+                        raise
                     print(e)
                     print('may need to restart GUI')
                     return -1
@@ -126,12 +129,16 @@ class Rec:
                 data_np = ut.read_tif(self.data_file)
                 data = devlib.from_numpy(data_np)
             except Exception as e:
+                if self.debug:
+                    raise
                 print(e)
                 return -1
         elif self.data_file.endswith('npy'):
             try:
                 data = devlib.load(self.data_file)
             except Exception as e:
+                if self.debug:
+                    raise
                 print(e)
                 return -1
         else:
@@ -247,6 +254,8 @@ class Rec:
             for f in self.flow:
                 f()
         except Exception as error:
+            if self.debug:
+                raise
             print(error)
             return -1
 
@@ -522,8 +531,8 @@ class CoupledRec(Rec):
     __author__ = "Nick Porter"
     __all__ = []
 
-    def __init__(self, params, peak_dirs, pkg):
-        super().__init__(params, None, pkg)
+    def __init__(self, params, peak_dirs, pkg, **kwargs):
+        super().__init__(params, None, pkg, **kwargs)
 
         self.iter_functions = self.iter_functions + [self.switch_resampling_operation, self.switch_peak_operation]
 
@@ -543,6 +552,8 @@ class CoupledRec(Rec):
                 try:
                     devlib.set_device(device_id)
                 except Exception as e:
+                    if self.debug:
+                        raise
                     print(e)
                     print('may need to restart GUI')
                     return -1
@@ -754,8 +765,9 @@ class CoupledRec(Rec):
                     # plt.savefig(f"/home/beams/CXDUSER/34idc-work/2022/cohere_dev_JNP/cohere-scripts/simulation/live_views/iter_{self.iter:04}.png")
                     plt.pause(0.2)
         except Exception as error:
+            if self.debug:
+                raise
             print('error',error)
-            # raise error
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
@@ -1033,8 +1045,10 @@ def reconstruction(datafile, **kwargs):
             defines when to print info on the console. The info includes current iteration and error.
         no_verify : boolean
             if in no_verify mode the verifier will not stop the progress, only print message
+        debug : boolean
+            if True the excetions are not handled
     """
-    no_verify = kwargs.get('no_verify', False)
+    no_verify = kwargs.pop('no_verify', False)
     error_msg = ver.verify('config_rec', kwargs)
     if len(error_msg) > 0:
         print(error_msg)
@@ -1063,7 +1077,7 @@ def reconstruction(datafile, **kwargs):
                 except:
                     pkg = 'np'
 
-    worker = create_rec(kwargs, datafile, pkg, device[0])
+    worker = create_rec(kwargs, datafile, pkg, device[0], **kwargs)
     if worker is None:
         return
 
@@ -1078,7 +1092,7 @@ def reconstruction(datafile, **kwargs):
     worker.save_res(save_dir)
 
 
-def create_rec(params, datainfo, pkg, dev, rec_type='basic'):
+def create_rec(params, datainfo, pkg, dev, **kwargs):
     """
 
     :param params: dict, contains reconstruction parameters
@@ -1086,13 +1100,17 @@ def create_rec(params, datainfo, pkg, dev, rec_type='basic'):
                      for 'mp' reconstruction contains peak_dirs
     :param pkg: python package that will be used as lib
     :param dev: device
-    :param rec_type: 'mp' for multipeak, defaults to 'basic'
+    :param kwargs : var parameters
+        may contain:
+        rec_type: 'mp' for multipeak, defaults to 'basic'
+        debug : if True the exceptions are not handled
     :return: created and initialized object if success, None if failure
     """
-    if rec_type == 'basic':
-        worker = Rec(params, datainfo, pkg)
-    elif rec_type == 'mp':
-        worker = CoupledRec(params, datainfo, pkg)
+    rec_type = kwargs.pop('rec_type', None)
+    if rec_type == 'mp':
+        worker = CoupledRec(params, datainfo, pkg, **kwargs)
+    else:
+        worker = Rec(params, datainfo, pkg, **kwargs)
 
     if worker.init_dev(dev) < 0:
         return None

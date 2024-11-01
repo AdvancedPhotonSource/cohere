@@ -23,13 +23,13 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def rec_process(pkg, pars, datafile, dev, save_dir):
+def rec_process(pkg, pars, datafile, dev, save_dir, **kwargs):
     if dev is None:
         device = pars.get('device', -1)
     else:
         device = dev[0]
 
-    worker = calc.create_rec(pars, datafile, pkg, device)
+    worker = calc.create_rec(pars, datafile, pkg, device, **kwargs)
     if worker is None:
         return
 
@@ -42,7 +42,7 @@ def rec_process(pkg, pars, datafile, dev, save_dir):
     return
 
 
-def reconstruction(pkg, conf_file, datafile, dir, dev=None):
+def reconstruction(pkg, conf_file, datafile, dir, dev, **kwargs):
     """
     Controls single reconstruction.
 
@@ -71,6 +71,10 @@ def reconstruction(pkg, conf_file, datafile, dir, dev=None):
     dev : int
         id defining GPU the this reconstruction will be utilizing, or -1 if running cpu
 
+    kwargs : var parameters
+        may contain:
+        debug : if True the exceptions are not handled
+
     """
     pars = ut.read_config(conf_file)
 
@@ -88,6 +92,8 @@ def reconstruction(pkg, conf_file, datafile, dir, dev=None):
         filename = conf_file.split('/')[-1]
         save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    p = Process(target=rec_process, args=(pkg, pars, datafile, dev, save_dir))
-    p.start()
-    p.join()
+    rec_process(pkg, pars, datafile, dev, save_dir, **kwargs)
+
+    # p = Process(target=rec_process, args=(pkg, pars, datafile, dev, save_dir, **kwargs))
+    # p.start()
+    # p.join()

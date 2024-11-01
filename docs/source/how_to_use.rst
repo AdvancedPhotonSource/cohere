@@ -28,14 +28,19 @@ Installing Scripts
         wget https://github.com/AdvancedPhotonSource/cohere-ui/archive/main.zip
         unzip main.zip
 
-| After the package is installed run setup.py and install_pkgs.sh/install_pkgs.bat scripts. The setup.py script modifies paths from relative to absolute in the provided example configuration. The install_pkgs script installs python packages xrayutilities, mayavi, and pyqt that are required to run the cohere-ui.
+| Go to the user directory.
+| The cohere-ui uses several packages. If they are not installed during cohere installation run the install command below.
 
   ::
 
         cd cohere-ui
+        pip install pyqt5 mayavi scikit-image xrayutilities
+
+| The setup.py script modifies paths from relative to absolute in the provided example configuration.
+
+  ::
+
         python setup.py
-        sh install_pkgs.sh    # for Linux and OS_X
-        install_pkgs.bat      # for Windows
 
 Scripts
 ####### 
@@ -71,6 +76,11 @@ Scripts
      * specfile: optional, used when specfile configured in <conf_dir>/config file should be replaced by another specfile
      * copy_prep: this is a switch parameter, set to True if the prep_data.tif file should be copied from experiment with the <conf_dir> into the prep directory of the newly created experiment
 
+| The scripts below are for running all phases of the user reconstruction, starting with data preprocess, up to results visualization. The scripts can take optional parameters that can be useful during development.
+  The optional boolean parameters:
+     * --no_verify: if set the configuration will be verified but any error will be ignored
+     * --debug: if set the reconstruction will not handle exception but crash. Handling exception is important for the GA and multi-rec scenarios. It has no effect for other scripts currently but can be used by developer.
+
 - beamline_preprocess.py
 
   To run this script a configuration file "config_prep" must be defined in the <experiment_dir>/conf directory and the main configuration "config" file must have beamline parameter configured. This script reads raw data, applies correction based on physical properties of the instrument used during experiment, and optionally aligns and combines multiple scans. The prepared data file is stored in <experiment_dir>/preprocessed_data/prep_data.tif file.
@@ -78,7 +88,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/beamline_preprocess.py <experiment_dir>
+        python cohere-scripts/beamline_preprocess.py <experiment_dir> --no_verify --debug
 
   The parameters are as follows:
      - experiment directory: directory of the experiment space
@@ -89,7 +99,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/standard_preprocess.py <experiment_dir>
+        python cohere-scripts/standard_preprocess.py <experiment_dir> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -101,7 +111,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/run_reconstruction.py <experiment_dir> --rec_id <alternate reconstruction id>
+        python cohere-scripts/run_reconstruction.py <experiment_dir> --rec_id <alternate reconstruction id> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space.
@@ -113,7 +123,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/beamline_visualization.py <experiment_dir> --rec_id <reconstruction id> --image_file <image_file>
+        python cohere-scripts/beamline_visualization.py <experiment_dir> --rec_id <reconstruction id> --image_file <image_file> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -126,7 +136,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/everything.py <experiment_dir> --rec_id <reconstruction id>
+        python cohere-scripts/everything.py <experiment_dir> --rec_id <reconstruction id> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -138,5 +148,5 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/cdi_window.py
+        python cohere-scripts/cdi_window.py --no_verify --debug
 

@@ -73,13 +73,6 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         no_verify : boolean
             If True, ignores verifier error.
     """
-    no_verify = kwargs.pop("no_verify", False)
-    er_msg = ver.verify('config_data', kwargs)
-    if len(er_msg) > 0:
-        # the error message is printed in verifier
-        if not no_verify:
-            return
-
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     beam_data = ut.read_tif(beamline_full_datafile_name)
@@ -173,6 +166,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             kwargs['binning'] = bins
         except:
             print('check "binning" configuration')
+            raise
 
     # save data
     data_file = ut.join(data_dir, 'data.tif')

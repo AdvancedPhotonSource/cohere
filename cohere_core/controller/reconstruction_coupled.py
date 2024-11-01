@@ -24,19 +24,7 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def rec_process(pkg, pars, peak_dirs, dev):
-    worker = calc.create_rec(pars, peak_dirs, pkg, dev[0], rec_type='mp')
-    if worker is None:
-        return
-
-    if worker.iterate() < 0:
-        return
-
-    save_dir = pars.get('save_dir', ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing'))
-    worker.save_res(save_dir)
-
-
-def reconstruction(lib, pars, peak_dirs, dev=None):
+def reconstruction(lib, pars, peak_dirs, dev, **kwargs):
     """
     Controls multipeak reconstruction.
 
@@ -57,8 +45,10 @@ def reconstruction(lib, pars, peak_dirs, dev=None):
         list of directories with data taken at each peak
 
     dev : int
-        id defining GPU the this reconstruction will be utilizing
-
+        id defining GPU this reconstruction will be utilizing
+    kwargs : var parameters
+        may contain:
+        debug : if True the exceptions are not handled
     """
     if 'init_guess' not in pars:
         pars['init_guess'] = 'random'
@@ -66,6 +56,13 @@ def reconstruction(lib, pars, peak_dirs, dev=None):
         print('AI initial guess is not a valid choice for multi peak reconstruction')
         return -1
 
-    p = Process(target=rec_process, args=(lib, pars, peak_dirs, dev))
-    p.start()
-    p.join()
+    kwargs['rec_type'] = 'mp'
+    worker = calc.create_rec(pars, peak_dirs, lib, dev[0], **kwargs)
+    if worker is None:
+        return
+
+    if worker.iterate() < 0:
+        return
+
+    save_dir = pars.get('save_dir', ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing'))
+    worker.save_res(save_dir)

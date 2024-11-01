@@ -15,11 +15,15 @@ It is highly recommended to install the cohere_core package in conda environment
 | Create and activate the environment.
 Run the commands below::
 
-    conda create -n <env_name> -c conda-forge python=3.10 mpi4py=3.1.5
+    conda create -n <env_name> -c conda-forge python=3.11 mpi4py=3.1.5
     conda activate <env_name>
 then run the cohere installation command::
 
     pip install cohere-core
+| Additional packages must be installed when using cohere-iu, a complementing user interface.
+Run the commands below to install the additional packages::
+
+    pip install pyqt5 mayavi scikit-image xrayutilities
 The cohere_core package can be run utilizing numpy library. Other available libraries are cupy and torch.
 User has to install the preferred library.
 
@@ -29,7 +33,7 @@ If using cupy library::
 If torch is preferred, install with command::
 
     conda install -c conda-forge torch
-The cohere-core package does not install python packages used by user's scripts in cohere-ui package. If planning to use the scripts Refer to :ref:`use` page, section "Installing Scripts".
+Refer to :ref:`use` page, for instructions how to use cohere with cohere-ui.
 
 Note: The cupy installation on Windows may result in incompatible libraries, which makes the environment unusable. Run the repack.bat script from cohere-ui package and try running again.
 
@@ -39,12 +43,13 @@ This will install the latest development. It might be not 100 percent tested. Th
 
 Create environment, activate it and clone cohere repository. It contains the cohere-ui submodule. Run the following commands::
 
-    conda create --name <env_name> -c conda-forge python=3.10 mpi4py=3.1.5 mayavi pyqt scikit-image xrayutilities
+    conda create --name <env_name> -c conda-forge python=3.11 mpi4py=3.1.5
     conda activate <env_name>
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
     git checkout Dev
     pip install .
+    pip install pyqt5 mayavi scikit-image xrayutilities
     cd cohere-ui
     git checkout Dev
     python setup.py
