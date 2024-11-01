@@ -25,6 +25,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.dtype) and
                 hasattr(subclass, 'astype') and
                 callable(subclass.astype) and
+                hasattr(subclass, 'reshape') and
+                callable(subclass.reshape) and
                 hasattr(subclass, 'size') and
                 callable(subclass.size) and
                 hasattr(subclass, 'hasnan') and
@@ -161,6 +163,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.xlogy) and
                 hasattr(subclass, 'mean') and
                 callable(subclass.mean) and
+                hasattr(subclass, 'median') and
+                callable(subclass.median) and
                 hasattr(subclass, 'clean_default_mem') and
                 callable(subclass.clean_default_mem) or
                 NotImplemented)
@@ -218,6 +222,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def astype(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def reshape(arr, shape):
         pass
 
     @staticmethod
@@ -559,6 +568,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def mean(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def median(arr):
         pass
 
     @staticmethod
