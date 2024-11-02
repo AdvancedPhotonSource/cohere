@@ -9,7 +9,7 @@ The best practice is to create conda environment dedicated for the development.
 
   ::
 
-    conda create -n <dev_env> -c conda-forge python=3.10 mpi4py=3.1.5 mayavi pyqt scikit-image xrayutilities
+    conda create -n <dev_env> -c conda-forge python=3.11 mpi4py=3.1.5
     conda activate <dev_env>
 
 | Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such users scripts and example.
@@ -27,6 +27,8 @@ The best practice is to create conda environment dedicated for the development.
     #To create your own branch of Dev for your own development create and checkout a new branch as follows.
     git checkout -b <dev_branch>
     pip install -e .
+    # Install packages used in cohere-ui
+    pip install pyqt5 mayavi scikit-image xrayutilities
 
 | Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py. The setup.py script modifies paths from relative to absolute in the provided example configuration.
 
