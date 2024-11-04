@@ -262,6 +262,16 @@ progress
 
     progress_trigger = [0, 20]
 
+live viewing
+++++++++++++
+| This feature allows for a live view of the amplitude, phase, support, and error as the reconstruction develops. With adaptive multipeak phasing, this will instead show the amplitude, phase, measured diffraction pattern, and adapted diffraction pattern. These are shown using a central slice cropped to half the full array size.
+- live_trigger:
+| Defines when to update the live view.
+| example:
+::
+
+    live_trigger = [0, 10]
+
 GA
 ++
 - ga_generations:
