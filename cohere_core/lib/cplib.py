@@ -240,8 +240,11 @@ class cplib(cohlib):
         return sc.uniform_filter(arr, size)
 
     @staticmethod
-    def binary_erosion(arr, **kwargs):
-        return sc.binary_erosion(arr, iterations=1)
+    def binary_erosion(arr, iterations=1, **kwargs):
+        if iterations > 1:
+            return cplib.binary_erosion(sc.binary_erosion(arr), iterations=iterations-1)
+        else:
+            return sc.binary_erosion(arr)
 
     @staticmethod
     def center_of_mass(inarr):
