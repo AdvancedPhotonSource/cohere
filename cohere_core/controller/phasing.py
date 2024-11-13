@@ -622,11 +622,12 @@ class CoupledRec(Rec):
         self.pk = 0  # index in list of current peak being reconstructed
         self.data = self.peak_objs[self.pk].res_data
         self.iter_data = self.data
+        self.proj = devlib.copy(self.data)
         self.dims = self.data.shape
         self.n_voxels = self.dims[0]*self.dims[1]*self.dims[2]
 
         if self.params.get("live_trigger", None) is not None:
-            self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
+            self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 12), layout="constrained")
             plt.show(block=False)
         else:
             self.fig = None
@@ -707,9 +708,10 @@ class CoupledRec(Rec):
         with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
 
-        for pk in self.peak_objs:
-            np.savetxt(f"{save_dir}/conf_hist_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_hist)
-            np.savetxt(f"{save_dir}/conf_iter_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_iter)
+        np.savetxt(f"{save_dir}/peak_weights.txt", self.peak_weights)
+        # for pk in self.peak_objs:
+        #     np.savetxt(f"{save_dir}/conf_hist_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_hist)
+        #     np.savetxt(f"{save_dir}/conf_iter_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_iter)
 
         if self.ctrl_error is not None:
             ctrl_error = np.array(self.ctrl_error)
@@ -793,7 +795,6 @@ class CoupledRec(Rec):
         return 0
 
     def switch_peak_operation(self):
-        self.calc_confidence()
         self.to_shared_image()
         self.get_control_error()
 
@@ -801,15 +802,9 @@ class CoupledRec(Rec):
             print("Adapting weights")
             self.update_weights()
 
-        if self.params.get("live_view", False):
-            self.update_live()
-
-        # Use the peak weights as probabilities for projecting to that peak. High-confidence = more likely
-        p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
-        p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
-        self.peak_weights.append(p_weights / np.sum(p_weights))
+        self.peak_weights.append([pk.weight for pk in self.peak_objs])
         self.iter_weights.append(self.iter)
-        self.pk = random.choices([x for x in range(self.num_peaks)], p_weights)[0]
+        self.pk = (self.pk + 1) % self.num_peaks
 
         self.to_working_image()
 
@@ -862,6 +857,8 @@ class CoupledRec(Rec):
 
         # Define the exit wave for this peak based on the shared density/displacement
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
+        # Calculate the diffraction amplitude from the current exit wave (which is based ONLY on shared object).
+        self.proj = devlib.absolute(devlib.ifft(self.ds_image * self.support))
 
         if self.fast_resample:
             # Use the resampled data
@@ -870,30 +867,27 @@ class CoupledRec(Rec):
             # Use the original sampling
             self.iter_data = pk.data
 
+        # Because the projection doesn't have a limited dynamic range, it will always have some intensity in
+        # regions where the measurement has been thresholded to zero. This means that the average non-zero pixel
+        # in the measurement will be brighter than the corresponding pixels in the projection.
+        nonzero = self.iter_data > 0
+        mult = devlib.mean(self.iter_data[nonzero]) / devlib.mean(self.proj[nonzero])
+
+        # Blur the projected and measured diffraction amplitudes by one pixel (to mitigate HF noise)
+        proj_blurred = devlib.gaussian_filter(self.proj*mult, 1)
+        meas_blurred = devlib.gaussian_filter(self.iter_data, 1)
+
+        # Map the element-wise ratio between the two images and mask voxels where it is above a certain threshold.
+        ratio = meas_blurred / proj_blurred
+        pk.conf_hist.append(1/devlib.mean(ratio[ratio!=0]).get())
+        pk.conf_iter.append(self.iter)
+
         if self.iter > self.params["adapt_alien_start"]:
-            # Calculate the diffraction amplitude from the current exit wave (which is based ONLY on shared object).
-            proj = devlib.absolute(devlib.ifft(self.ds_image))
-
-            # Blur the projected and measured diffraction amplitudes by one pixel (to mitigate HF noise)
-            proj_blurred = devlib.gaussian_filter(proj, 1)
-            meas_blurred = devlib.gaussian_filter(self.iter_data, 1)
-
-            # Map the absolute difference between the two blurred images.
-            # Normalizing to the projected image makes bright artifacts in the measurement stand out:
-            #   proj  |  meas  | diff_map
-            # --------|--------|----------
-            #   high  |  high  |  low
-            #   low   |  low   |  low
-            #   high  |  low   |  low
-            #   low   |  high  |  HIGH
-            diff_map = devlib.absolute(meas_blurred - proj_blurred) / proj_blurred
-
-            # Mask voxels where the difference map is exceptionally high compared to its median. If there are no
-            # outliers, the difference map will be tightly clustered around the median.
-            pk.mask = diff_map > devlib.median(diff_map) * self.params["adapt_alien_threshold"]
-
+            threshold = self.params["adapt_alien_threshold"] * pk.weight
+            ratio = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(ratio), 3))
+            pk.mask = ratio > threshold
             # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
-            self.iter_data = devlib.where(pk.mask, proj, proj + pk.weight*(self.iter_data - proj))
+            self.iter_data = devlib.where(pk.mask, self.proj, self.proj + pk.weight * (self.iter_data - self.proj))
 
         if not self.fast_resample:
             # Resample the object and support
@@ -904,20 +898,6 @@ class CoupledRec(Rec):
                 self.support = dvut.pad_to_cube(self.support, self.dims[0])
             self.make_binary()
 
-    def calc_confidence(self):
-        pk = self.peak_objs[self.pk]  # shorthand
-
-        # Calculate the amplitude of the exit wave after phasing.
-        rho = devlib.absolute(self.ds_image)
-        cond = self.support > 0
-
-        # Compare the exit wave amplitude before and after phasing (only within the support region)
-        # conf = 1 / dvut.calc_ehd(self.rho_image[cond], rho[cond], log=False).get()
-        conf = dvut.calc_nmi(self.rho_image[cond], rho[cond], log=False).get() - 1
-
-        pk.conf_hist.append(conf)
-        pk.conf_iter.append(self.iter)
-
     def adapt_operation(self):
         self.adapt_on = True
 
@@ -925,7 +905,7 @@ class CoupledRec(Rec):
         # Grab the 75th %ile confidence for each peak. If a peak has not been phased, then its confidence history will
         # be empty, in which case it just gets a -1 and skips the weighting.
         confidences = [
-            sorted(p.conf_hist, reverse=True)[len(p.conf_hist) // 4]
+            sorted(p.conf_hist, reverse=True)[len(p.conf_hist) // 2]
             if len(p.conf_hist) > 0 else -1
             for p in self.peak_objs
         ]
@@ -989,7 +969,8 @@ class CoupledRec(Rec):
         prg = f'|  iter {self.iter:>4}  ' \
               f'|  peak {self.pk}  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
               f'|  err {self.errs[-1]:0.6f}  ' \
-              f'|  sup {devlib.sum(self.support):>8}  '
+              f'|  wt {self.peak_objs[self.pk].weight:0.4f}  '\
+              f'|  mask {devlib.sum(self.peak_objs[self.pk].mask):>6}'
         if self.ctrl_error is not None:
             prg += f"|  NMI {self.ctrl_error[-1][0]:0.6f}  "
             prg += f"|  LNMI {self.ctrl_error[-1][1]:0.6f}  "
@@ -1003,27 +984,44 @@ class CoupledRec(Rec):
         plt.suptitle(
             f"iteration: {self.iter}\n"
             f"peak: {self.peak_objs[self.pk].hkl}\n"
-            f"global weight: {self.proj_weight[self.iter]}\n"
-            f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
-            f"confidence threshold: {self.peak_threshold[self.iter]}\n"
+            # f"global weight: {self.proj_weight[self.iter]}\n"
+            # f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
+            # f"confidence threshold: {self.peak_threshold[self.iter]}\n"
         )
-        [[ax.clear() for ax in row] for row in self.axs]
-        self.axs[0][0].set_title("XY amplitude")
-        self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), cmap="gray")
-        self.axs[0][1].set_title("XY phase")
-        self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="hsv",
-                              interpolation_stage="rgba")
+        mask_slices = devlib.sum(devlib.ifftshift(self.peak_objs[self.pk].mask), axis=(1,2))
+        if mask_slices.max():
+            s = devlib.argmax(mask_slices)
+        else:
+            s = half
 
-        self.axs[1][0].set_title("Measurement")
-        meas = devlib.sum(devlib.ifftshift(self.peak_objs[self.pk].res_data), axis=0)
-        self.axs[1][0].imshow(devlib.sqrt(meas).get(), cmap="magma")
+        proj = devlib.ifftshift(devlib.sqrt(devlib.absolute(devlib.ifft(self.ds_image*self.support))))[s]
+        mask = devlib.ifftshift(self.peak_objs[self.pk].mask)[s]
+        meas = devlib.ifftshift(devlib.sqrt(self.peak_objs[self.pk].res_data))[s]
+        data = devlib.ifftshift(devlib.sqrt(self.iter_data))[s]
+        vmax = max([devlib.amax(arr).get() for arr in (proj, meas, data)])
+
+        [[ax.clear() for ax in row] for row in self.axs]
+        self.axs[0][0].set_title("Projection")
+        self.axs[0][0].imshow(proj.get(), cmap="magma", vmax=vmax)
+        self.axs[0][1].set_title("Measurement")
+        self.axs[0][1].imshow(meas.get(), cmap="magma", vmax=vmax)
+        # self.axs[0][1].imshow(devlib.absolute(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="gray")
+        # self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="hsv",
+        #                       interpolation_stage="rgba")
+
+        self.axs[1][0].set_title("Mask")
+        self.axs[1][0].imshow(mask.get(), cmap="magma")
         self.axs[1][1].set_title("Fourier Constraint")
-        data = devlib.sum(devlib.ifftshift(self.iter_data), axis=0)
-        self.axs[1][1].imshow(devlib.sqrt(data).get(), cmap="magma")
+        self.axs[1][1].imshow(data.get(), cmap="magma", vmax=vmax)
         plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
 
         plt.draw()
         plt.pause(0.15)
+        # plt.savefig(f"/home/beams7/CXDUSER/34idc-work/2022/cohere_dev_JNP/cohere-scripts/simulation/live_views/"
+        #             f"i{self.iter:0>5}.png")
+        if self.iter > 200:
+            # plt.pause(0.85)
+            pass
 
     def switch_resampling_operation(self):
         self.fast_resample = False
