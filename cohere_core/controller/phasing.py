@@ -660,7 +660,7 @@ class CoupledRec(Rec):
         self.iter_weights = []
         return 0
 
-    def save_res(self, save_dir):
+    def save_res(self, save_dir, only_image=False):
         from array import array
         tight_support = devlib.binary_erosion(self.support)
         self.rho_image = self.rho_image * tight_support
@@ -874,20 +874,21 @@ class CoupledRec(Rec):
         mult = devlib.mean(self.iter_data[nonzero]) / devlib.mean(self.proj[nonzero])
 
         # Blur the projected and measured diffraction amplitudes by one pixel (to mitigate HF noise)
-        proj_blurred = devlib.gaussian_filter(self.proj*mult, 1)
-        meas_blurred = devlib.gaussian_filter(self.iter_data, 1)
+        proj_blurred = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(self.proj*mult), 1))
+        meas_blurred = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(self.iter_data), 1))
 
         # Map the element-wise ratio between the two images and mask voxels where it is above a certain threshold.
         ratio = meas_blurred / proj_blurred
-        pk.conf_hist.append(1/devlib.mean(ratio[ratio!=0]).get())
+        pk.conf_hist.append(1/devlib.mean(ratio[ratio != 0]).get())
         pk.conf_iter.append(self.iter)
 
         if self.iter > self.params["adapt_alien_start"]:
-            threshold = self.params["adapt_alien_threshold"] * pk.weight
+            threshold = self.params["adapt_alien_threshold"]
             ratio = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(ratio), 3))
             pk.mask = ratio > threshold
             # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
-            self.iter_data = devlib.where(pk.mask, self.proj, self.proj + pk.weight * (self.iter_data - self.proj))
+            self.iter_data = devlib.where(pk.mask, 0, self.iter_data)
+            self.iter_data[self.iter_data==0] = (1-pk.weight) * self.proj[self.iter_data==0]
 
         if not self.fast_resample:
             # Resample the object and support
@@ -1001,18 +1002,18 @@ class CoupledRec(Rec):
         vmax = max([devlib.amax(arr).get() for arr in (proj, meas, data)])
 
         [[ax.clear() for ax in row] for row in self.axs]
-        self.axs[0][0].set_title("Projection")
-        self.axs[0][0].imshow(proj.get(), cmap="magma", vmax=vmax)
-        self.axs[0][1].set_title("Measurement")
-        self.axs[0][1].imshow(meas.get(), cmap="magma", vmax=vmax)
-        # self.axs[0][1].imshow(devlib.absolute(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="gray")
-        # self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="hsv",
-        #                       interpolation_stage="rgba")
+        # self.axs[0][0].set_title("Projection")
+        # self.axs[0][0].imshow(proj.get(), cmap="magma", vmax=vmax)
+        # self.axs[0][1].set_title("Measurement")
+        # self.axs[0][1].imshow(meas.get(), cmap="magma", vmax=vmax)
+        self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="gray")
+        self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="hsv",
+                              interpolation_stage="rgba")
 
         self.axs[1][0].set_title("Mask")
         self.axs[1][0].imshow(mask.get(), cmap="magma")
         self.axs[1][1].set_title("Fourier Constraint")
-        self.axs[1][1].imshow(data.get(), cmap="magma", vmax=vmax)
+        self.axs[1][1].imshow(devlib.log(data+1).get(), cmap="magma")
         plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
 
         plt.draw()
