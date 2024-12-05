@@ -23,25 +23,6 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['reconstruction']
 
 
-def rec_process(pkg, pars, datafile, dev, save_dir, **kwargs):
-    if dev is None:
-        device = pars.get('device', -1)
-    else:
-        device = dev[0]
-
-    worker = calc.create_rec(pars, datafile, pkg, device, **kwargs)
-    if worker is None:
-        return
-
-    ret_code = worker.iterate()
-    if ret_code < 0:
-        print ('reconstruction failed during iterations')
-        return
-
-    worker.save_res(save_dir)
-    return
-
-
 def reconstruction(pkg, conf_file, datafile, dir, dev, **kwargs):
     """
     Controls single reconstruction.
@@ -92,8 +73,18 @@ def reconstruction(pkg, conf_file, datafile, dir, dev, **kwargs):
         filename = conf_file.split('/')[-1]
         save_dir = ut.join(dir, filename.replace('config_rec', 'results_phasing'))
 
-    rec_process(pkg, pars, datafile, dev, save_dir, **kwargs)
+    if dev is None:
+        device = pars.get('device', -1)
+    else:
+        device = dev[0]
 
-    # p = Process(target=rec_process, args=(pkg, pars, datafile, dev, save_dir, **kwargs))
-    # p.start()
-    # p.join()
+    worker = calc.create_rec(pars, datafile, pkg, device, **kwargs)
+    if worker is None:
+        return
+
+    ret_code = worker.iterate()
+    if ret_code < 0:
+        print ('reconstruction failed during iterations')
+        return
+
+    worker.save_res(save_dir)
