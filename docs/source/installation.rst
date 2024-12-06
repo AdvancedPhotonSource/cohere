@@ -49,7 +49,7 @@ Create environment, activate it and clone cohere repository. It contains the coh
     cd cohere
     git checkout Dev
     pip install .
-    pip install pyqt5 mayavi scikit-image xrayutilities
+    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1
     cd cohere-ui
     git checkout Dev
     python setup.py
