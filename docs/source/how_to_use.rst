@@ -34,7 +34,7 @@ Installing Scripts
   ::
 
         cd cohere-ui
-        pip install pyqt5 mayavi scikit-image xrayutilities
+        pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1
 
 | The setup.py script modifies paths from relative to absolute in the provided example configuration.
 
