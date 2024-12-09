@@ -17,7 +17,6 @@ The software can run code utilizing different library, such as numpy and cupy. U
 from pathlib import Path
 import time
 import os
-import sys
 from math import pi
 import random
 import tqdm
@@ -28,7 +27,6 @@ import tifffile as tf
 
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
-import cohere_core.utilities.config_verifier as ver
 import cohere_core.controller.op_flow as of
 import cohere_core.controller.features as ft
 
@@ -36,7 +34,6 @@ __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
-           'reconstruction',
            'create_rec',
            'Rec']
 
