@@ -23,7 +23,7 @@ then run the cohere installation command::
 | Additional packages must be installed when using cohere-iu, a complementing user interface.
 Run the commands below to install the additional packages::
 
-    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1
+    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1 scipy==1.14.1
 The cohere_core package can be run utilizing numpy library. Other available libraries are cupy and torch.
 User has to install the preferred library.
 
@@ -49,7 +49,7 @@ Create environment, activate it and clone cohere repository. It contains the coh
     cd cohere
     git checkout Dev
     pip install .
-    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1
+    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1 scipy==1.14.1
     cd cohere-ui
     git checkout Dev
     python setup.py

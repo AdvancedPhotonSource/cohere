@@ -28,7 +28,7 @@ The best practice is to create conda environment dedicated for the development.
     git checkout -b <dev_branch>
     pip install -e .
     # Install packages used in cohere-ui
-    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1
+    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1 scipy==1.14.1
 
 | Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py. The setup.py script modifies paths from relative to absolute in the provided example configuration.
 
