@@ -275,15 +275,15 @@ class Rec:
             ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
             self.ds_image *= ratio / self.aver_iter
 
-        mx = devlib.amax(devlib.absolute(self.ds_image))
-        self.ds_image = self.ds_image / mx
-
         if self.params.get("live_trigger", None) is not None:
             plt.show()
 
         return 0
 
     def save_res(self, save_dir, only_image=False):
+        mx = devlib.amax(devlib.absolute(self.ds_image))
+        self.ds_image = self.ds_image / mx
+
         # center image's center_of_mass and sync support
         self.ds_image, self.support = dvut.center_sync(self.ds_image, self.support)
 
