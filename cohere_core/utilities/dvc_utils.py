@@ -101,6 +101,10 @@ def center_sync(image, support):
                       image.flatten().real[int(image.flatten().shape[0] / 2)])
     image = image * cmath.exp(-1j * phi0)
 
+    # roll the max to the center to avoid distributing the mass at edges by center of mass
+    shift = [int(shape[i]/2 - devlib.unravel_index(devlib.argmax(image), shape)[i]) for i in range(len(shape))]
+    image = devlib.roll(image, shift, tuple(range(image.ndim)))
+
     com = devlib.center_of_mass(devlib.absolute(image))
     # place center of mass in the center
     sft = [e[0] / 2.0 - e[1] + .5 for e in zip(shape, com)]
