@@ -104,14 +104,15 @@ def center_sync(image, support):
     # roll the max to the center to avoid distributing the mass at edges by center of mass
     shift = [int(shape[i]/2 - devlib.unravel_index(devlib.argmax(image), shape)[i]) for i in range(len(shape))]
     image = devlib.roll(image, shift, tuple(range(image.ndim)))
+    support = devlib.roll(support, shift, tuple(range(image.ndim)))
 
     com = devlib.center_of_mass(devlib.absolute(image))
     # place center of mass in the center
-    sft = [e[0] / 2.0 - e[1] + .5 for e in zip(shape, com)]
+    shift = [e[0] / 2.0 - e[1] + .5 for e in zip(shape, com)]
 
     axis = tuple([i for i in range(len(shape))])
-    image = devlib.roll(image, sft, axis=axis)
-    support =devlib.roll(support, sft, axis=axis)
+    image = devlib.roll(image, shift, axis=axis)
+    support =devlib.roll(support, shift, axis=axis)
 
     return image, support
 
