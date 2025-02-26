@@ -909,7 +909,7 @@ def get_gpu_use(devices, no_jobs, job_size):
             picked_devs.append(ds)
         host_file.close()
 
-    return picked_devs, min(avail_jobs_no, no_jobs), hostfile_name
+    return picked_devs, int(min(avail_jobs_no, no_jobs)), hostfile_name
 
 
 def arr_property(arr):
