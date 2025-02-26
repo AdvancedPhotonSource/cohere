@@ -72,6 +72,9 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             Optional, mandatory if auto_data is True. is True the auto binning wil be done, and not otherwise.
         no_verify : boolean
             If True, ignores verifier error.
+        no_adjust_dims : False
+            Used in time evolving reconstruction experiment type
+            True if the size should not be changed.
     """
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
@@ -109,25 +112,27 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     # square root data
     data = np.sqrt(data)
 
-    if 'adjust_dimensions' in kwargs:
-        crops_pads = kwargs['adjust_dimensions']
-        # the adjust_dimension parameter list holds adjustment in each direction. Append 0s, if shorter
-        if len(crops_pads) < 6:
-            for _ in range(6 - len(crops_pads)):
-                crops_pads.append(0)
-    else:
-        # the size still has to be adjusted to the opencl supported dimension
-        crops_pads = (0, 0, 0, 0, 0, 0)
-    # adjust the size, either pad with 0s or crop array
-    pairs = []
-    for i in range(int(len(crops_pads) / 2)):
-        pair = crops_pads[2 * i:2 * i + 2]
-        pairs.append(pair)
+    no_adjust_dims = kwargs.get('no_adjust_dims', False)
+    if not no_adjust_dims:
+        if 'adjust_dimensions' in kwargs:
+            crops_pads = kwargs['adjust_dimensions']
+            # the adjust_dimension parameter list holds adjustment in each direction. Append 0s, if shorter
+            if len(crops_pads) < 6:
+                for _ in range(6 - len(crops_pads)):
+                    crops_pads.append(0)
+        else:
+            # the size still has to be adjusted to the opencl supported dimension
+            crops_pads = (0, 0, 0, 0, 0, 0)
+        # adjust the size, either pad with 0s or crop array
+        pairs = []
+        for i in range(int(len(crops_pads) / 2)):
+            pair = crops_pads[2 * i:2 * i + 2]
+            pairs.append(pair)
 
-    data = ut.adjust_dimensions(data, pairs)
-    if data is None:
-        print('check "adjust_dimensions" configuration')
-        return
+        data = ut.adjust_dimensions(data, pairs)
+        if data is None:
+            print('check "adjust_dimensions" configuration')
+            return
 
     if 'center_shift' in kwargs:
         center_shift = kwargs['center_shift']

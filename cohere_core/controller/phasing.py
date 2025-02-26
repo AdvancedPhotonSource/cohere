@@ -143,7 +143,7 @@ class Rec:
             print('no data file found')
             return -1
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
-        self.data = devlib.fftshift(devlib.absolute(data))
+        self.data = devlib.fftshift(data)
         self.dims = devlib.dims(self.data)
         print('data shape', self.dims)
 
@@ -1058,6 +1058,144 @@ class CoupledRec(Rec):
         self.u_image = devlib.roll(self.u_image, shift_dist, axis=axis)
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
         self.support = devlib.roll(self.support, shift_dist, axis=axis)
+
+
+class TeRec(Rec):
+    """
+    Coherent diffractive imaging of time-evolving samples with improved temporal resolution
+
+    params : dict
+        parameters used in reconstruction. Refer to x for parameters description
+    data_file : str
+        name of file containing data
+
+    """
+
+    def __init__(self, params, data_file, pkg, comm):
+        super().__init__(params, data_file, pkg)
+
+        self.comm = comm
+        self.size = comm.Get_size()
+        self.rank = comm.Get_rank()
+        self.weight = .1
+
+
+    # def init_dev(self, device_id=-1):
+    #     import cupy as cp
+    #     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    #     if device_id != -1:
+    #         self.dev = device_id
+    #         if device_id != -1:
+    #             try:
+    #                 devlib.set_device(device_id)
+    #             except Exception as e:
+    #                 print(e)
+    #                 print('may need to restart GUI')
+    #                 return -1
+    #     # print('devid', device_id, cp.cuda.runtime.getDevice())
+    #
+    #     if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
+    #         try:
+    #             data_np = ut.read_tif(self.data_file)
+    #             data = devlib.from_numpy(data_np)
+    #         except Exception as e:
+    #             print(e)
+    #             return -1
+    #     elif self.data_file.endswith('npy'):
+    #         try:
+    #             data = devlib.load(self.data_file)
+    #         except Exception as e:
+    #             print(e)
+    #             return -1
+    #     else:
+    #         print('no data file found')
+    #         return -1
+    #     self.data = data
+    #     # in the formatted data the max is in the center, we want it in the corner, so do fft shift
+    #     self.data = devlib.fftshift(data)
+    #     self.dims = devlib.dims(self.data)
+    #
+    #     if self.need_save_data:
+    #         self.saved_data = devlib.copy(self.data)
+    #         self.need_save_data = False
+    #
+    #     return 0
+    #
+
+    def exchange_data_info(self):
+        print('in exchange_data_info')
+        # The data with fewer frames comparing to full data
+        # has the missing frames filled with -1.
+        # Since data collected by detector is greater than 0,
+        # the data that does not have any negative values is full data,
+        # and partial data otherwise.
+        self.is_full_data = (self.data < 0).sum() == 0
+        print('rank, full', self.rank, self.is_full_data)
+        # send to previous if full_data
+        if self.rank != 0:
+            self.comm.send(self.is_full_data, dest=self.rank - 1)
+        if self.rank != self.size - 1:
+            next_full_data = self.comm.recv(source=self.rank+1)
+        # send to next if full_data
+        if self.rank != self.size - 1:
+            self.comm.send(self.is_full_data, dest=self.rank + 1)
+        if self.rank != 0:
+            prev_full_data = self.comm.recv(source=self.rank-1)
+
+        # figure out if rank needs to send prev/next
+        self.send_to_prev = (self.rank > 0) and (not prev_full_data)
+        self.send_to_next = (self.rank < self.size - 1) and (not next_full_data)
+
+
+    def er(self):
+        if self.send_to_prev:
+            self.comm.send(self.ds_image, dest=self.rank - 1)
+        if not self.is_full_data:
+            ds_image_next = self.comm.recv(source=self.rank + 1)
+        if self.send_to_next:
+            self.comm.send(self.ds_image, dest=self.rank + 1)
+        if not self.is_full_data:
+            ds_image_prev = self.comm.recv(source=self.rank - 1)
+
+        if self.is_full_data:
+            # run the super er
+            self.ds_image = self.ds_image_proj * self.support
+
+        else:
+            # use previous and next to run modified er
+            self.ds_image = (1/(1+2*self.weight)) * self.support * (self.ds_image_proj +
+            self.weight * (ds_image_prev + ds_image_next))
+
+
+    def hio(self):
+        if self.send_to_prev:
+            self.comm.send(self.ds_image, dest=self.rank - 1)
+        if not self.is_full_data:
+            ds_image_next = self.comm.recv(source=self.rank + 1)
+        if self.send_to_next:
+            self.comm.send(self.ds_image, dest=self.rank + 1)
+        if not self.is_full_data:
+            ds_image_prev = self.comm.recv(source=self.rank - 1)
+
+        if self.is_full_data:
+            # run the super hio
+            combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
+            self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
+        else:
+            # use previous and next to run modified hio
+            combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
+            corr = self.weight * self.support * (2 * (self.ds_image) - (ds_image_prev + ds_image_next))
+            self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image) - corr
+
+    def modulus(self):
+        ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
+        error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / dvut.get_norm(self.iter_data)
+        self.errs.append(float(error))
+        # do not change the frames with -1 value.
+        # This value is marking frames that were not collected, and the reconstruction
+        # is taking neighboring results (in hio and er)
+        self.rs_amplitudes[self.iter_data != -1.0] *= ratio[self.iter_data != -1.0]
 
 
 def create_rec(params, datainfo, pkg, dev, **kwargs):
