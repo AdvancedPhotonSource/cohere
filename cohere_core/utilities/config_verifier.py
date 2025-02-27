@@ -838,17 +838,17 @@ def ver_config_data(config_map):
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Adjustdimensions'
-    if 'adjust_dimensions' in config_map:
-        if not ver_list_int('pad_crop', config_map['adjust_dimensions']):
+    config_parameter = 'CropPad'
+    if 'crop_pad' in config_map:
+        if not ver_list_int('crop_pad', config_map['crop_pad']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Centershift'
-    if 'center_shift' in config_map:
-        if not ver_list_int('center_shift', config_map['center_shift']):
+    config_parameter = 'Shift'
+    if 'shift' in config_map:
+        if not ver_list_int('shift', config_map['shift']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)

@@ -565,25 +565,21 @@ def pad_center(arr, new_shape):
     return centered
 
 
-def center_max(arr, center_shift):
+def center_max(arr):
     """
-    This function finds maximum value in the array, and puts it in a center of a new array. If center_shift is not zeros,
-     the array will be shifted accordingly. The shifted elements are rolled into the other end of array.
+    This function finds maximum value in the array, and puts it in a center of a new array.
 
     Parameters
     ----------
     arr : ndarray
         the original array to be centered
 
-    center_shift : list
-        a list defining shift of the center
-
     Returns
     -------
     ndarray
         centered array
     """
-    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape) + np.array(center_shift)
+    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape)
     return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
 
 

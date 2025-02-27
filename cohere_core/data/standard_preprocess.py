@@ -62,10 +62,10 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             Used in the ‘AutoAliens1’ method, optional. If given the algorithm will apply last step of cleaning the data using the configured sigma.
         intensity_threshold : float
             Mandatory, min data threshold. Intensity values below this are set to 0. The threshold is applied after removing aliens.
-        adjust_dimensions : list
+        crop_pad : list
             Optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right] The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 or a*2^n, where a is 3, 5, or 9
-        center_shift : list
-            Optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, [0,0,0] has no effect
+        shift : list
+            Optional, enter center shift list the array maximum is centered before binning, and moved according to shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
         do_auto_binning : boolean
@@ -75,6 +75,8 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         no_adjust_dims : False
             Used in time evolving reconstruction experiment type
             True if the size should not be changed.
+        no_center_max : False
+            True if the max is not centered
     """
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
@@ -114,8 +116,8 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
 
     no_adjust_dims = kwargs.get('no_adjust_dims', False)
     if not no_adjust_dims:
-        if 'adjust_dimensions' in kwargs:
-            crops_pads = kwargs['adjust_dimensions']
+        if 'crop_pad' in kwargs:
+            crops_pads = kwargs['crop_pad']
             # the adjust_dimension parameter list holds adjustment in each direction. Append 0s, if shorter
             if len(crops_pads) < 6:
                 for _ in range(6 - len(crops_pads)):
@@ -131,14 +133,18 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
 
         data = ut.adjust_dimensions(data, pairs)
         if data is None:
-            print('check "adjust_dimensions" configuration')
+            print('check "crop_pad" configuration')
             return
 
-    if 'center_shift' in kwargs:
-        center_shift = kwargs['center_shift']
-        data, shift = ut.center_max(data, center_shift)
-    else:
-        data, shift = ut.center_max(data, [0, 0, 0])
+    no_center_max = kwargs.get('no_center_max', False)
+    shift = [0, 0, 0]
+    if not no_center_max:
+        data, shift = ut.center_max(data)
+
+    if 'shift' in kwargs:
+        conf_shift = kwargs['shift']
+        data = np.roll(data, conf_shift, tuple(range(data.ndim)))
+        shift = [s + cs for s, cs in zip(shift, conf_shift)]
 
     try:
         # assuming the mask file is in directory of preprocessed data
