@@ -1,5 +1,6 @@
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
+import scipy.fft as fft
 import scipy.ndimage as ndi
 import scipy.signal as sig
 import scipy.stats as stats
@@ -104,11 +105,11 @@ class nplib(cohlib):
 
     @staticmethod
     def fft(arr):
-        return np.fft.fftn(arr, norm='forward')
+        return fft.fftn(arr, norm='forward')
 
     @staticmethod
     def ifft(arr):
-        return np.fft.ifftn(arr, norm='forward')
+        return fft.ifftn(arr, norm='forward')
 
     @staticmethod
     def fftconvolve(arr1, kernel):

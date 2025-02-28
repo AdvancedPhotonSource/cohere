@@ -32,6 +32,7 @@ __all__ = ['set_lib_from_pkg',
            'breed',
            'resample',
            'pad_to_cube',
+           'lucy_deconvolution',
            ]
 
 
@@ -44,7 +45,7 @@ def set_lib_from_pkg(pkg):
 
 def arr_property(arr):
     """
-    Used only in development. Prints max value of the array and max coordinates.
+    Used only in development. Prints array statistics.
 
     Parameters
     ----------
@@ -57,8 +58,8 @@ def arr_property(arr):
     print('mean across all data', arr1.mean())
     print('std all data', arr1.std())
     print('sum', np.sum(arr))
-    # print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
-    # print('std non zeros only', arr1[np.nonzero(arr1)].std())
+    print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
+    print('std non zeros only', arr1[np.nonzero(arr1)].std())
     max_coordinates = list(devlib.unravel_index(devlib.argmax(arr1), arr.shape))
     print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
 
@@ -824,3 +825,16 @@ def pad_to_cube(data, size):
     start, end = shp1 - shp, shp1 + shp
     data = data[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
     return data
+
+
+def lucy_deconvolution(pristine, blurred, kernel, iterations):
+    blurred_mirror = devlib.flip(blurred)
+    for i in range(iterations):
+        conv = devlib.fftconvolve(kernel, blurred)
+        conv = devlib.where(conv == 0.0, 1.0, conv)
+        relative_blurr = pristine / conv
+        kernel = kernel * devlib.fftconvolve(relative_blurr, blurred_mirror)
+    kernel = devlib.real(kernel)
+    coh_sum = devlib.sum(devlib.absolute(kernel))
+    return devlib.absolute(kernel) / coh_sum
+

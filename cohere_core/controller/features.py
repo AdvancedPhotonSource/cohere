@@ -67,19 +67,8 @@ class Pcdi:
             amplitudes = roi_combined_amp
 
         if self.type == "LUCY":
-            self.lucy_deconvolution(devlib.square(amplitudes), devlib.square(self.roi_data),
-                                    self.iterations)
-
-    def lucy_deconvolution(self, amplitudes, data, iterations):
-        data_mirror = devlib.flip(data)
-        for i in range(iterations):
-            conv = devlib.fftconvolve(self.kernel, data)
-            conv = devlib.where(conv == 0.0, 1.0, conv)
-            relative_blurr = amplitudes / conv
-            self.kernel = self.kernel * devlib.fftconvolve(relative_blurr, data_mirror)
-        self.kernel = devlib.real(self.kernel)
-        coh_sum = devlib.sum(devlib.absolute(self.kernel))
-        self.kernel = devlib.absolute(self.kernel) / coh_sum
+            self.kernel = dvut.lucy_deconvolution(devlib.square(amplitudes), devlib.square(self.roi_data),
+                                    self.kernel, self.iterations)
 
 
 class TriggeredOp(ABC):
