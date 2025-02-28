@@ -13,6 +13,7 @@ This tools auto eliminate aliens from CDI experiment data. It is configuration d
 import numpy as np
 import os
 import tifffile as tif
+from scipy.ndimage import gaussian_filter
 import cohere_core.utilities.utils as ut
 
 __author__ = "Kenly Pelzer, Ross Harder"
@@ -301,7 +302,7 @@ def auto_alien1(data, config, data_dir=None):
     if (expandcleanedsig > 0):
         cuboid = np.where(cuboid > 0, 1.0, 0.0)
         sig = [expandcleanedsig, expandcleanedsig, 1.0]
-        cuboid = np.gaussian_filter(cuboid, sig)
+        cuboid = gaussian_filter(cuboid, sig)
         no_thresh_cuboid = crop_center(data)
         cuboid = np.where(cuboid > 0.1, no_thresh_cuboid, 0.0)
     return cuboid
