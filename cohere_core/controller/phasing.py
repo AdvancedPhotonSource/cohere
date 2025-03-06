@@ -1077,60 +1077,16 @@ class TeRec(Rec):
         self.comm = comm
         self.size = comm.Get_size()
         self.rank = comm.Get_rank()
-        self.weight = .1
+        self.weight = params['weight']
 
-
-    # def init_dev(self, device_id=-1):
-    #     import cupy as cp
-    #     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    #     if device_id != -1:
-    #         self.dev = device_id
-    #         if device_id != -1:
-    #             try:
-    #                 devlib.set_device(device_id)
-    #             except Exception as e:
-    #                 print(e)
-    #                 print('may need to restart GUI')
-    #                 return -1
-    #     # print('devid', device_id, cp.cuda.runtime.getDevice())
-    #
-    #     if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
-    #         try:
-    #             data_np = ut.read_tif(self.data_file)
-    #             data = devlib.from_numpy(data_np)
-    #         except Exception as e:
-    #             print(e)
-    #             return -1
-    #     elif self.data_file.endswith('npy'):
-    #         try:
-    #             data = devlib.load(self.data_file)
-    #         except Exception as e:
-    #             print(e)
-    #             return -1
-    #     else:
-    #         print('no data file found')
-    #         return -1
-    #     self.data = data
-    #     # in the formatted data the max is in the center, we want it in the corner, so do fft shift
-    #     self.data = devlib.fftshift(data)
-    #     self.dims = devlib.dims(self.data)
-    #
-    #     if self.need_save_data:
-    #         self.saved_data = devlib.copy(self.data)
-    #         self.need_save_data = False
-    #
-    #     return 0
-    #
 
     def exchange_data_info(self):
-        print('in exchange_data_info')
         # The data with fewer frames comparing to full data
         # has the missing frames filled with -1.
         # Since data collected by detector is greater than 0,
         # the data that does not have any negative values is full data,
         # and partial data otherwise.
         self.is_full_data = (self.data < 0).sum() == 0
-        print('rank, full', self.rank, self.is_full_data)
         # send to previous if full_data
         if self.rank != 0:
             self.comm.send(self.is_full_data, dest=self.rank - 1)

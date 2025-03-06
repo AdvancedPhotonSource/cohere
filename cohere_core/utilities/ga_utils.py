@@ -29,10 +29,6 @@ class Tracing:
                 self.report_tracing.append([f'random{str(i)}'])
 
 
-    def set_map(self, map):
-        self.map = map
-
-
     def append_gen(self, gen_ranks):
         for key in gen_ranks:
             self.report_tracing[self.map[key]].append(gen_ranks[key])
@@ -97,6 +93,9 @@ class Tracing:
             rank_file.write(report_str)
             rank_file.flush()
 
+
+    def set_map(self, map):
+        self.map = map
 
 
 def set_ga_defaults(pars):
