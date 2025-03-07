@@ -719,7 +719,7 @@ def save_tif(arr, filename):
     filename : str
         tif format file name
     """
-    tf.imsave(filename.replace(os.sep, '/'), np.abs(arr).transpose().astype(np.float32))
+    tf.imwrite(filename.replace(os.sep, '/'), np.abs(arr).transpose().astype(np.float32))
 
 
 def save_metrics(errs, dir, metrics=None):
