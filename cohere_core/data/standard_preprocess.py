@@ -105,7 +105,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     elif 'intensity_threshold' in kwargs:
         intensity_threshold = kwargs['intensity_threshold']
     else:
-        print('define amplitude threshold. Exiting')
+        print('define intensity threshold. Exiting')
         return
 
     # zero out the noise
