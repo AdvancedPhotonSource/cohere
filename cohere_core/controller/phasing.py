@@ -78,7 +78,8 @@ class Rec:
                                self.to_direct_space,
                                self.er,
                                self.hio,
-                               self.new_alg,
+                               self.sf,
+                               self.raar,
                                self.twin_operation,
                                self.average_operation,
                                self.progress_operation,
@@ -373,8 +374,15 @@ class Rec:
         combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
         self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
 
-    def new_alg(self):
+    def sf(self):
+        # solvent flipping
         self.ds_image = 2.0 * (self.ds_image_proj * self.support) - self.ds_image_proj
+
+    def raar(self):
+        # Relaxed averaged alternating reflectors
+        # TODO make raar_beta config param
+        raar_beta = .9 / 2
+        self.ds_image = raar_beta * (self.support * self.ds_image_proj + self.ds_image) + (1 - 2 * raar_beta) * self.ds_image_proj
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?

@@ -8,6 +8,8 @@ algs = {'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er'),
         'HIO': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'hio'),
         'ERpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'er'),
         'HIOpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'hio'),
+        'SF': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'sf'),
+        'RAAR': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'raar')
         }
 
 # This map keeps the names of triggers that can be configured as sub-trigger, i.e. be a trigger for the iteration span
