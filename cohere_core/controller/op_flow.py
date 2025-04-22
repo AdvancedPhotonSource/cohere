@@ -258,8 +258,7 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
 
     if pc_start is not None:
         if pc_start == 0:
-            print('partial coherence is configured in first iteration, allow several ER before')
-            raise
+            raise ValueError('partial coherence is configured in first iteration, allow several ER before.')
         else:
             pc_interval = params['pc_interval']
             params['pc_trigger'] = [pc_start, pc_interval]

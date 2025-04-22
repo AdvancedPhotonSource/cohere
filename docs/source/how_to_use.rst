@@ -61,13 +61,13 @@ Scripts
      * specfile: optional, but typically used for beamline aps_34idc
      * beamline: optional, specifies at which beamline the experiment was performed. If not configured, the beamline preprocessing and visualization is not available.
 
-- setup_34idc.py
+- copy_setup.py
 
   This script creates a new experiment directory structure.
   Running this script:
   ::
 
-        python cohere-scripts/setup_34idc.py <id> <scan range> <conf_dir> --specfile <specfile> --copy_prep
+        python cohere-scripts/copy_setup.py <id> <scan range> <conf_dir> --specfile <specfile> --copy_prep
 
   The parameters are as follows:
      * id: an arbitrary literal value assign to this experiment

@@ -90,12 +90,12 @@ Parameters
 
     intensity_threshold = 25.0
 
-- adjust_dimensions:
+- crop_pad:
 | Optional, a list of numbers defining how to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right]. The final dimensions will be adjusted up to the good number for the FFT such as: powers of 2 or a*2^n, where a is 3, 5, or 9.
 | example:
 ::
 
-    adjust_dimensions = [13, 0, -65, -65, -65, -65]
+    crop_pad = [13, 0, -65, -65, -65, -65]
 
 - center_shift:
 | Optional, defines offset of max element from the array center.

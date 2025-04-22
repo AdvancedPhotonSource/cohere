@@ -68,4 +68,4 @@ Parameters
 | example:
 ::
 
-    converter_ver = 1
+    converter_ver = 2
