@@ -32,7 +32,7 @@ If using cupy library::
     conda install cupy=12.2.0 -c conda-forge
 If torch is preferred, install with command::
 
-    conda install -c conda-forge torch
+    pip install torch
 Refer to :ref:`use` page, for instructions how to use cohere with cohere-ui.
 
 Note: The cupy installation on Windows may result in incompatible libraries, which makes the environment unusable. Run the repack.bat script from cohere-ui package and try running again.
@@ -60,6 +60,9 @@ For Windows make sure that numpy version is 1.23.5. The commands above will crea
 | If using torch library::
 
     pip install torch
+| for Petra beamline install additional package::
+
+    pip install hdf5plugin
 After installation you may start using scripts from this directory, for example::
 
     python cohere-scripts/cdi_window.py

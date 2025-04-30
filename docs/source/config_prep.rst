@@ -34,12 +34,12 @@ Parameters
 
     roi = [0,256,0,256]
 
-- min_files:
+- min_frames:
 | Optional, defines a minimum number of raw data files in the scan directory. If number of files is less than minimum, the directory is not added to the data.
 | example:
 ::
 
-     min_files = 80
+     min_frames = 80
 
 - exclude_scans:
 | A list containing scan indexes that will be excluded from preparation.
