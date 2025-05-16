@@ -113,7 +113,7 @@ class nplib(cohlib):
 
     @staticmethod
     def fftconvolve(arr1, kernel):
-        return ndi.convolve(arr1, kernel)
+        return sig.fftconvolve(arr1, kernel, mode='same')
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='auto'):

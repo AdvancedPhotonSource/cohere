@@ -580,13 +580,18 @@ def histogram2d(arr1, arr2, n_bins=100, log=False):
     return devlib.histogram2d(devlib.ravel(arr1), devlib.ravel(norm * arr2), bins)
 
 
-def lucy_deconvolution(pristine, blurred, kernel, iterations):
+def lucy_deconvolution(pristine, blurred, kernel, iterations, diffbreak=0):
     blurred_mirror = devlib.flip(blurred)
     for i in range(iterations):
         conv = devlib.fftconvolve(kernel, blurred)
         conv = devlib.where(conv == 0.0, 1.0, conv)
         relative_blurr = pristine / conv
         kernel = kernel * devlib.fftconvolve(relative_blurr, blurred_mirror)
+        if diffbreak > 0:
+            resblurred = devlib.fftconvolve(pristine, kernel)
+            err = devlib.absolute(get_norm(resblurred) - get_norm(blurred)) / get_norm(blurred)
+            if err < diffbreak:
+                break
     kernel = devlib.real(kernel)
     coh_sum = devlib.sum(devlib.absolute(kernel))
     return devlib.absolute(kernel) / coh_sum
