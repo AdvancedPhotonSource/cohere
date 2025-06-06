@@ -23,7 +23,7 @@ __all__ = ['prep',
            ]
 
 
-def prep(beamline_full_datafile_name, auto, **kwargs):
+def prep(beamline_full_datafile_name, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
         - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
@@ -81,14 +81,12 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     beam_data = ut.read_tif(beamline_full_datafile_name)
-    # if no_verify:
-    #     print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
 
     prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
-        # assuming the directory structure and naming follows cohere-ui mechanism
+        # assuming the directory structure and naming follows cohere-ui experiment directory structure
         data_dir = prep_data_dir.replace(os.sep, '/').replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
@@ -96,45 +94,43 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     else:
         data = beam_data
 
-    if auto:
+    auto_intensity_threshold = kwargs.get('auto_intensity_threshold', False)
+    if auto_intensity_threshold:
         # the formula for auto threshold was found empirically, may be
         # modified in the future if more tests are done
         auto_threshold_value = 0.141 * beam_data[np.nonzero(beam_data)].mean().item() - 3.062
         intensity_threshold = max(2.0, auto_threshold_value)
         print(f'auto intensity threshold: {intensity_threshold}')
-    elif 'intensity_threshold' in kwargs:
-        intensity_threshold = kwargs['intensity_threshold']
     else:
-        print('define intensity threshold. Exiting')
-        return
-
+        intensity_threshold = kwargs.get('intensity_threshold', None)
+        if intensity_threshold is None:
+            print('define intensity threshold or set to auto, exiting.')
+            return
     # zero out the noise
     data = np.where(data <= intensity_threshold, 0.0, data)
 
     # square root data
     data = np.sqrt(data)
 
-    no_adjust_dims = kwargs.get('no_adjust_dims', False)
-    if not no_adjust_dims:
-        if 'crop_pad' in kwargs:
-            crops_pads = kwargs['crop_pad']
-            # the adjust_dimension parameter list holds adjustment in each direction. Append 0s, if shorter
-            if len(crops_pads) < 6:
-                for _ in range(6 - len(crops_pads)):
-                    crops_pads.append(0)
-        else:
-            # the size still has to be adjusted to the opencl supported dimension
-            crops_pads = (0, 0, 0, 0, 0, 0)
-        # adjust the size, either pad with 0s or crop array
-        pairs = []
-        for i in range(int(len(crops_pads) / 2)):
-            pair = crops_pads[2 * i:2 * i + 2]
-            pairs.append(pair)
+    if 'crop_pad' in kwargs:
+        crops_pads = kwargs['crop_pad']
+        # the adjust_dimension parameter list holds adjustment in each direction. Append 0s, if shorter
+        if len(crops_pads) < 6:
+            for _ in range(6 - len(crops_pads)):
+                crops_pads.append(0)
+    else:
+        # the size still has to be adjusted to the opencl supported dimension
+        crops_pads = (0, 0, 0, 0, 0, 0)
+    # adjust the size, either pad with 0s or crop array
+    pairs = []
+    for i in range(int(len(crops_pads) / 2)):
+        pair = crops_pads[2 * i:2 * i + 2]
+        pairs.append(pair)
 
-        data = ut.adjust_dimensions(data, pairs)
-        if data is None:
-            print('check "crop_pad" configuration')
-            return
+    data = ut.adjust_dimensions(data, pairs)
+    if data is None:
+        print('check "crop_pad" configuration')
+        return
 
     no_center_max = kwargs.get('no_center_max', False)
     shift = [0, 0, 0]
@@ -154,7 +150,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     except FileNotFoundError:
         pass
 
-    # if auto and kwargs['do_auto_binning']:
+    # auto_binning:
     #     # prepare data to make the oversampling ratio ~3
     #     wos = 3.0
     #     orig_os = ut.get_oversample_ratio(data)
@@ -185,6 +181,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     print(f'data ready for reconstruction, data dims: {data.shape}')
 
     # if auto save new config
-    if auto:
+    if auto_intensity_threshold:
         kwargs['intensity_threshold'] = intensity_threshold
+
     return kwargs

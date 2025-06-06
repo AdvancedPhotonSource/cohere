@@ -988,6 +988,59 @@ def ver_config_data(config_map):
     return ("")
 
 
+def ver_config_disp(config_map):
+    """
+    This function verifies experiment config_disp file
+
+    Parameters
+    ----------
+    fname : str
+        configuration file name
+
+    Returns
+    -------
+    error_message : str
+        message describing parameter error or empty string if all parameters are verified
+    """
+    config_map_file = 'config_disp_error_map_file'
+    fname = 'config_disp'
+
+    config_parameter = 'Resultsdir'
+    if 'results_dir' in config_map:
+        results_dir = config_map['results_dir']
+        if type(results_dir) != str:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('results_dir parameter should be string')
+            return (error_message)
+
+    config_parameter = 'Crop'
+    if 'crop' in config_map:
+        crop = config_map['crop']
+        if not issubclass(type(crop), list):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('crop should be list')
+            return (error_message)
+        for e in crop:
+            if type(e) != int and type(e) != float:
+                config_error = 1
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print('crop should be a list of int or float')
+                return (error_message)
+
+    config_parameter = 'Rampups'
+    if 'rampups' in config_map:
+        rampups = config_map['rampups']
+        if type(rampups) != int:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('rampups should be float')
+            return (error_message)
+
+    return ("")
+
+
 def verify(file_name, conf_map):
     """
     Verifies parameters.
@@ -1011,5 +1064,7 @@ def verify(file_name, conf_map):
         return ver_config_data(conf_map)
     elif file_name == 'config_rec':
         return ver_config_rec(conf_map)
+    elif file_name == 'config_disp':
+        return ver_config_disp(conf_map)
     else:
-        return ('verifier has no fumction to check config file named', file_name)
+        return ('verifier has no function to check config file named', file_name)

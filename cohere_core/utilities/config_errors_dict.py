@@ -131,6 +131,15 @@ config_rec_error = {'File':['No configuration file',
                     'Progresstrigger':['Trigger should be a list of int'],
                     }
 
+config_disp_error = {'File':['No configuration file',
+                             'Cannot read configuration file',
+                             'Parsing error, check parenthesis,quotation syntax'],
+                     'Resultsdir':['results_dir parameter should be string'],
+                     'Crop':['crop should be list',
+                             'crop should be a list of int or float'],
+                     'Rampups':['rampups should be int']}
+
 config_map_names = {'config_error_map_file':config_error,
                     'config_data_error_map_file':config_data_error,
-                    'config_rec_error_map_file':config_rec_error}
+                    'config_rec_error_map_file':config_rec_error,
+                    'config_disp_error_map_file':config_disp_error}
