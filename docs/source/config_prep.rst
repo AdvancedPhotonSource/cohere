@@ -55,6 +55,14 @@ Parameters
 
    Imult = 1000000
 
+
+- remove_outliers:
+| Optional, boolean parameter for auto removal of outlier scans in large data sets.
+| example:
+::
+
+    remove_outliers = True
+
 - outliers_scans:
 | This list is determined when running auto-data preprocessing.
 | example:

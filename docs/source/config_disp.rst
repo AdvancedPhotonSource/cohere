@@ -19,13 +19,6 @@ Parameters
 
     rampups = 2
 
-- crop:
-| Optional, defines a fraction of array at the center that will be subject of visualization. Defaults to [1.0, 1.0, 1.0], i.e. the size of the processed array.
-| example:
-::
-
-    crop = [.5, .5, .5]
-
 - unwrap:
 | Switch, if True the image.vts file will contain unwrapped phase in addition to phase and amplitude.
 | example:
@@ -39,3 +32,74 @@ Parameters
 ::
 
     make_twin = False
+
+- imcrop:
+| Optional, Defines how crop is determined. Supported values: "fraction' and "tight". If defined as fraction, the defined fraction of each dimension is cropped around maximum value. The "tight" defines crop being determined by imcrop_margin and imcrop_thresh parameters applied to the image. The extend subarray will be derived from image array by finding points greater than threshold multiplied by maximum value. A margin will be added to each side of the extend array.
+| example:
+::
+
+    imcrop = "tight"
+    imcrop = "fraction"
+
+-imcrop_fraction:
+| Required parameter when imcrop is configured "fraction". Defines size of the cropped array relative to the full image array. The full array is cropped around maximum value.
+| example:
+::
+
+    crop = [.5, .5, .5]
+
+- imcrop_margin:
+| Required parameter when imcrop is configured "tight". The margin will be added to each side of the extend array.
+| example:
+::
+
+    imcrop_margin = 10
+
+- imcrop_thresh:
+| Required parameter when imcrop is configured "tight". The threshold will determine the extend of the array.
+| example:
+::
+
+    imcrop_thresh = 0.5
+
+- complex_mode:
+| This mode determines arrays that will be saved in the direct space images file. If mode is "AmpPhase" the "imAmp" and "imPh" arrays will be saved that hold image amplitudes and image phases. if mode is "ReIm" the "imRe" and "imImag" arrays will be saved that hold real values and imaginary values.
+| example:
+::
+
+    complex_mode = "AmpPhase"
+
+- interpolation_mode:
+| Defines how the image is interpolated. Supported values: "AmpPhase" and "ReIm". If defined as "AmpPhase" the image amplitudes and image phases are interpolated. If defined as "ReIm" the image real values and imaginary are interpolated, and then the interpolated image amplitudes and image phases are calculated.
+| example:
+::
+
+    interpolation_mode = "AmpPhase"
+
+- interpolation_resolution:
+| Required parameter for interpolation. Supported values: "min-deconv_res", int value, float value, list. If set to "min-deconv_res" the resolution will be determined by including the deconvolution resolution. If defined as integer value the resolution will be set to this value in each dimension. If defined as list, the list will define resolution in corresponding dimension.
+| example:
+::
+
+    interpolation_resolution = "min_deconv_res"
+
+- determine_resolution:
+| If present, the resolution in direct and reciprocal spaces will be found. Supported value: "deconv".
+| example:
+::
+
+    determine_resolution = "deconv"
+
+- resolution_deconv_contrast:
+|
+| example:
+::
+
+    resolution_deconv_contrast = 0.25
+
+- write_recip:
+| If True the reciprocal_space.vts file will be saved with arrays of phasing data and inverse fourier of that data.
+| example:
+::
+
+    write_recip = True

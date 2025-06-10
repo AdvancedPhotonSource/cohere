@@ -82,8 +82,15 @@ Parameters
 
     AA1_expandcleanedsigma = 5.0
 
+- auto_intensity_threshold:
+| Optional, defaults to False. If True, the intensity threshold is calculated programmatically, otherwise must be provided.
+| example:
+::
+
+    auto_intensity_threshold = True
+
 - intensity_threshold:
-| Mandatory, data threshold.  Intensity values below this value are set to 0. The threshold is applied after removing aliens.
+| Mandatory, if auto_intensity_threshold is not set. Data threshold.  Intensity values below this value are set to 0. The threshold is applied after removing aliens.
 | If auto_data is configured in main config file, this value will be overridden by calculated value.
 | example:
 ::
@@ -103,6 +110,13 @@ Parameters
 ::
 
     center_shift = [0,0,0]
+
+- no_center_max:
+| Optional, defaults to False. If False the array maximum is centered, otherwise max is not moved.
+| example:
+::
+    
+    no_center_max = False
 
 - binning:
 | Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.

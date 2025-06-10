@@ -56,13 +56,6 @@ Parameters
 
    separate_scan_ranges = True
 
-- auto-data:
-| Optional, boolean parameter indicating automated data preprocessing, which includes exclusion of outlier scans in multi-scan data and auto calculation of intensity threshold. Defaults to False.
-| example:
-::
-
-    auto_data = True
-
 - converter_ver:
 | Mandatory after ver 3.0. If not configured, it will be auto-updated by scripts to match the latest converter version.
 | example:
