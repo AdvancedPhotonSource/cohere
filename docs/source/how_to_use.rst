@@ -52,7 +52,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/create_experiment.py <id> <scan ranges> <working_dir> --specfile <specfile> --beamline <beamline>
+        python cohere_ui/create_experiment.py <id> <scan ranges> <working_dir> --specfile <specfile> --beamline <beamline>
 
   The parameters are as follows:
      * id: an arbitrary literal value assign to this experiment
@@ -67,7 +67,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/copy_setup.py <id> <scan range> <conf_dir> --specfile <specfile> --copy_prep
+        python cohere_ui/copy_setup.py <id> <scan range> <conf_dir> --specfile <specfile> --copy_prep
 
   The parameters are as follows:
      * id: an arbitrary literal value assign to this experiment
@@ -88,7 +88,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/beamline_preprocess.py <experiment_dir> --no_verify --debug
+        python cohere_ui/beamline_preprocess.py <experiment_dir> --no_verify --debug
 
   The parameters are as follows:
      - experiment directory: directory of the experiment space
@@ -99,7 +99,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/standard_preprocess.py <experiment_dir> --no_verify --debug
+        python cohere_ui/standard_preprocess.py <experiment_dir> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -111,7 +111,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/run_reconstruction.py <experiment_dir> --rec_id <alternate reconstruction id> --no_verify --debug
+        python cohere_ui/run_reconstruction.py <experiment_dir> --rec_id <alternate reconstruction id> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space.
@@ -123,7 +123,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/beamline_visualization.py <experiment_dir> --rec_id <reconstruction id> --image_file <image_file> --no_verify --debug
+        python cohere_ui/beamline_visualization.py <experiment_dir> --rec_id <reconstruction id> --image_file <image_file> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -136,7 +136,7 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/everything.py <experiment_dir> --rec_id <reconstruction id> --no_verify --debug
+        python cohere_ui/everything.py <experiment_dir> --rec_id <reconstruction id> --no_verify --debug
 
   The parameters are as follows:
      * experiment directory: directory of the experiment space
@@ -148,5 +148,5 @@ Scripts
   Running this script:
   ::
 
-        python cohere-scripts/cdi_window.py --no_verify --debug
+        python cohere_ui/cdi_window.py --no_verify --debug
 

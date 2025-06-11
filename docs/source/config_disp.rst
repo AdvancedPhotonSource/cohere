@@ -1,7 +1,7 @@
 ===========
 config_disp
 ===========
-| The "config_disp" file defines parameters needed to process visualization of the reconstructed image.  
+| The "config_disp" file defines parameters needed to process visualization of the reconstructed image.  Through the configuration user can obtain various images viewable with Paraview. The reconstructed object, called image is processed for visualization by default. After running beamline_visualizaion.py script user will have image.vts file that contains image as amplitudes and phases (or real and imagnary if configured complex_mode = "ReIm"), support, and optionally unwrapped phases. User can add interpolation to the processing by configuring interpolation_mode. This option will create vts file containing interpolated image. Another optional return is reciprocal space visualization, i.e. phasing data and inverse fourier of that data. User can request it by setting write_recip = True. To view resolution in direct and reciprocal space user can set determine_resolution = "deconv". This will produce vts file containing resolution. If the interpolation is set, the resolution results are automatically saved.
 
 Parameters
 ==========
@@ -77,7 +77,7 @@ Parameters
     interpolation_mode = "AmpPhase"
 
 - interpolation_resolution:
-| Required parameter for interpolation. Supported values: "min-deconv_res", int value, float value, list. If set to "min-deconv_res" the resolution will be determined by including the deconvolution resolution. If defined as integer value the resolution will be set to this value in each dimension. If defined as list, the list will define resolution in corresponding dimension.
+| Required parameter for interpolation. Supported values: "min_deconv_res", int value, float value, list. If set to "min_deconv_res" the resolution will be determined by including the deconvolution resolution. If defined as integer value the resolution will be set to this value in each dimension. If defined as list, the list will define resolution in corresponding dimension.
 | example:
 ::
 

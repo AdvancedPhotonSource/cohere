@@ -49,7 +49,7 @@ Create environment, activate it and clone cohere repository. It contains the coh
     cd cohere
     git checkout Dev
     pip install .
-    pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1 scipy==1.14.1
+    pip install pyqt5 mayavi scikit-image xrayutilities pyvista vtk==9.3.1 scipy==1.14.1
     cd cohere-ui
     git checkout Dev
     python setup.py
@@ -65,4 +65,4 @@ For Windows make sure that numpy version is 1.23.5. The commands above will crea
     pip install hdf5plugin
 After installation you may start using scripts from this directory, for example::
 
-    python cohere-scripts/cdi_window.py
+    python cohere_ui/cdi_window.py
