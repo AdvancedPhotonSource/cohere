@@ -1,19 +1,15 @@
 .. _use:
 
-Using cohere with cohere-ui package
+Using cohere with cohere_ui package
 ========================================
-| User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-ui. The cohere-ui package, is a supplemental git repository that contains executable python scripts for every stage of BCDI phase retrieval, from raw data processing to final images. Part of package are classes encapsulating instruments that are used to collect experiment data at the 34-ID-C beamline. User with other instruments than those defined in 34-ID-C suite can easily add own code that would encapsulate user's beamline specifics. In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
+| User scripts can be obtained from https://github.com/AdvancedPhotonSource/cohere-ui. 
+| The cohere_ui package, is a supplemental git repository that contains executable python scripts for every stage of BCDI phase retrieval, from raw data processing to final images. The user scripts are used by all supported beamlines. Currently cohere_ui package suports the following beamlines: aps_1ide, aps_34idc, esrf_id01, Petra3_P10. Each of the beamlines has a directory containing code related to the beamline specific implementation encapsulating instruments that are used to collect experiment data. In addition the repository contains directory with sample configuration files for each stage, and a complete example including experimental data, and configuration files to phase the data.
 
 Installing Scripts
 ##################
-| There are three ways to get the cohere-ui package onto your local computer, or remote computer.
-| User should activate the environment where cohere was installed.
+| There are three ways to get the cohere-ui repository code onto your local computer, or remote computer.
 
-  ::
-
-    conda activate <env_name>
-
-1. The cohere-ui package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-ui and clicking the green “Code” button and selecting “Download ZIP”. Unzip this directory and rename to cohere-ui or a name of your choice.
+1. The cohere_ui package can be downloaded as a zip file by visiting https://github.com/advancedPhotonSource/cohere-ui and clicking the green “Code” button and selecting “Download ZIP”. Unzip this directory and rename to cohere-ui or a name of your choice.
 
 2. Alternatively one can clone the repository using git. This will create the cohere-ui directory containing all of the cohere-ui content. In this code below we clone it to cohere-ui directory.
 
@@ -28,19 +24,24 @@ Installing Scripts
         wget https://github.com/AdvancedPhotonSource/cohere-ui/archive/main.zip
         unzip main.zip
 
-| Go to the user directory.
-| The cohere-ui uses several packages. If they are not installed during cohere installation run the install command below.
+| The above will result in getting cohere-ui directory with the content.
+| Go to the directory. 
 
   ::
 
         cd cohere-ui
-        pip install pyqt5 mayavi scikit-image xrayutilities vtk==9.3.1
-
-| The setup.py script modifies paths from relative to absolute in the provided example configuration.
+ 
+| User should activate the environment where cohere_core was installed.
 
   ::
 
-        python setup.py
+    conda activate <env_name>
+    
+| Install the cohere_ui package with pypi command as shown below. The -e option makes the package editable. The setup.py script also modifies paths from relative to absolute in the provided example configuration.
+
+  ::
+
+        pip install -e .
 
 Scripts
 ####### 
