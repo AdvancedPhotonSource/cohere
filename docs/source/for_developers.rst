@@ -31,7 +31,7 @@ The best practice is to create conda environment dedicated for the development.
     # for Petra beamline only
     pip install hdf5plugin
 
-| Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py. 
+| Go to cohere-ui directory and checkout the Dev branch and create your own branch, then install the cohere_ui package. 
 
   ::
 
