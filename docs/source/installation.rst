@@ -58,7 +58,7 @@ For Windows make sure that numpy version is 1.23.5. The commands above will crea
     pip install torch
 | for Petra beamline install additional package::
 
-    pip install hdf5plugin
+    pip install hdf5plugin pandas
 After installation you may start using scripts from this directory, for example::
 
     python cohere_ui/cdi_window.py

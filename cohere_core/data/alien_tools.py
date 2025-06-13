@@ -185,7 +185,7 @@ def save_arr(arr, dir, fname):
         full_name = ut.join(dir, fname)
     else:
         full_name = fname  # save in the current dir
-    tif.imsave(full_name, arr.transpose().astype(np.float32))
+    tif.imwrite(full_name, arr.transpose().astype(np.float32))
 
 
 def save_arrays(arrs, iter, thresh, eps, dir):
