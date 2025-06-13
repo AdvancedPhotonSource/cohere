@@ -18,7 +18,7 @@ The best practice is to create conda environment dedicated for the development.
 
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
 
-| After the package is installed checkout the Dev environment and create your branch. Then install the cohere into the environment:
+| After the package is installed checkout the Dev environment and create your branch. Then install the cohere_core into the environment:
 
   ::
 
@@ -32,6 +32,7 @@ The best practice is to create conda environment dedicated for the development.
     pip install hdf5plugin
 
 | Go to cohere-ui directory and checkout the Dev branch and create your own branch, then run setup.py. 
+
   ::
 
     cd cohere-ui
