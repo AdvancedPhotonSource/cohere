@@ -9,7 +9,7 @@ The best practice is to create conda environment dedicated for the development.
 
   ::
 
-    conda create -n <dev_env> -c conda-forge python=3.11 mpi4py
+    conda create -n <dev_env> -c conda-forge python=3.11 mpi4py pyzmq
     conda activate <dev_env>
 
 | Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such users scripts and example.
