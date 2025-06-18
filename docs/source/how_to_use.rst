@@ -143,11 +143,11 @@ Scripts
      * experiment directory: directory of the experiment space
      * rec_id: optional parameter, when present, the alternate configuration will be used to run reconstruction
 
-- cdi_window.py
+- cohere_gui.py
 
   This script starts GUI that offers complete interface to run all the scripts described above. In addition GUI interface offers easy way to modify configuration.
   Running this script:
   ::
 
-        python cohere_ui/cdi_window.py --no_verify --debug
+        python cohere_ui/cohere_gui.py --no_verify --debug
 

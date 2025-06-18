@@ -447,6 +447,18 @@ class Rec:
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
         self.support = devlib.roll(self.support, shift_dist, axis=axis)
 
+    def get_image(self):
+        return self.ds_image
+
+    def get_support(self):
+        return self.support
+
+    def get_coherence(self):
+        if self.is_pc:
+            return self.pc_obj.kernel
+        else:
+            return None
+
 
 class Peak:
     """

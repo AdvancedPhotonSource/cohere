@@ -61,4 +61,4 @@ For Windows make sure that numpy version is 1.23.5. The commands above will crea
     pip install hdf5plugin pandas
 After installation you may start using scripts from this directory, for example::
 
-    python cohere_ui/cdi_window.py
+    python cohere_ui/cohere_gui.py
