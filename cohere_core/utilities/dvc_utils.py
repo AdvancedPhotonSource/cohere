@@ -67,7 +67,7 @@ def align_arrays_pixel(ref, arr):
     CC_shifted = devlib.ifftshift(CC)
     shape = devlib.array(CC_shifted.shape)
     amp = devlib.absolute(CC_shifted)
-    shift = devlib.unravel_index(amp.argmax(), shape)
+    shift = devlib.unravel_index(devlib.argmax(amp), shape)
     if devlib.sum(shift) == 0:
         return [arr, err]
     intshift = devlib.array(shift)
@@ -149,7 +149,7 @@ def arr_property(arr):
     print('sum', np.sum(arr))
     print('mean non zeros only', arr1[np.nonzero(arr1)].mean())
     print('std non zeros only', arr1[np.nonzero(arr1)].std())
-    max_coordinates = list(devlib.unravel_index(devlib.argmax(arr1), arr.shape))
+    max_coordinates = list(devlib.unravel_index(devlib.argmax(devlib.absolute(arr1)), arr.shape))
     print('max coords, value', max_coordinates, arr[max_coordinates[0], max_coordinates[1], max_coordinates[2]])
 
 
@@ -265,7 +265,7 @@ def center_sync(image, support):
     image = image * cmath.exp(-1j * phi0)
 
     # roll the max to the center to avoid distributing the mass at edges by center of mass
-    shift = [int(shape[i]/2 - devlib.unravel_index(devlib.argmax(image), shape)[i]) for i in range(len(shape))]
+    shift = [int(shape[i]/2 - devlib.unravel_index(devlib.argmax(devlib.absolute(image)), shape)[i]) for i in range(len(shape))]
     image = devlib.roll(image, shift, tuple(range(image.ndim)))
     support = devlib.roll(support, shift, tuple(range(image.ndim)))
 
@@ -397,7 +397,7 @@ def dftregistration(ref_arr, arr, usfac=2):
 
     # Compute crosscorrelation and locate the peak
     c_c = devlib.ifft(devlib.ifftshift(c_c))
-    max_coord = devlib.unravel_index(devlib.argmax(c_c), devlib.dims(c_c))
+    max_coord = devlib.unravel_index(devlib.argmax(devlib.absolute(c_c)), devlib.dims(c_c))
 
     if max_coord[0] > shape[0]:
         row_shift = max_coord[0] - large_shape[0]
@@ -424,7 +424,7 @@ def dftregistration(ref_arr, arr, usfac=2):
                    int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))) / \
               (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ^ 2)
         # Locate maximum and map back to original pixel grid
-        max_coord = devlib.unravel_index(devlib.argmax(c_c), devlib.dims(c_c))
+        max_coord = devlib.unravel_index(devlib.argmax(devlib.absolute(c_c)), devlib.dims(c_c))
         [rloc, cloc] = max_coord
 
         rloc = rloc - dftshift
