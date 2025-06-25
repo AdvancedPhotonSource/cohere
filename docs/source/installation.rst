@@ -14,7 +14,7 @@ It is highly recommended to install the cohere_core package in conda environment
 | Create and activate the environment.
 Run the commands below::
 
-    conda create -n <env_name> -c conda-forge python=3.11 mpi4py
+    conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
     pyzmq
     conda activate <env_name>
 then run the cohere installation command::
@@ -50,14 +50,13 @@ Create environment, activate it and clone cohere repository. It contains the coh
     cd cohere-ui
     git checkout Dev
     pip install -e .
-For Windows make sure that numpy version is 1.23.5. The commands above will create conda environment and activate it, clone the packages, get the Dev branch, install, initialize.
-| If using cupy library::
+If using cupy library::
 
     conda install cupy=12.2.0 -c conda-forge
-| If using torch library::
+If using torch library::
 
     pip install torch
-| for Petra beamline install additional package::
+For Petra beamline install additional package::
 
     pip install hdf5plugin pandas
 After installation you may start using scripts from this directory, for example::
