@@ -11,7 +11,6 @@ setuptools.setup(
                         'numpy<2',
                         'scikit-learn',
                         'tifffile',
-                        'gputil',
                         'psutil',
                         'tqdm',
                         'matplotlib'

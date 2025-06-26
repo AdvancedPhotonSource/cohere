@@ -51,18 +51,23 @@ def set_lib_from_pkg(pkg):
 
 class Rec:
     """
-    cohere_core.phasing.reconstruction(self, params, data_file)
-
     Class, performs phasing using iterative algorithm.
-
-    params : dict
-        parameters used in reconstruction. Refer to x for parameters description
-    data_file : str
-        name of file containing data to be reconstructed
-
     """
     __all__ = []
     def __init__(self, params, data_file, pkg, **kwargs):
+        """
+        Constructor. Sets / initializes reconstruction parameters.
+
+        :param params: dict
+            dictionary containing configuration parameters
+        :param data_file: str
+            path to the data file
+        :param pkg: str
+            an acronym of the package that will be utilized for reconstruction
+            "np" for numpy, "cp" for cupy, and "torch" for torch
+        :param kwargs: dict
+            can contain "debug" parameter
+        """
         set_lib_from_pkg(pkg)
         self.iter_functions = [self.next,
                                self.lowpass_filter_operation,
@@ -93,6 +98,7 @@ class Rec:
                 params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
         params['reconstructions'] = params.get('reconstructions', 1)
         params['hio_beta'] = params.get('hio_beta', 0.9)
+        params['raar_beta'] = params.get('raar_beta', 0.45)
         params['initial_support_area'] = params.get('initial_support_area', (.5, .5, .5))
         if 'twin_trigger' in params:
             params['twin_halves'] = params.get('twin_halves', (0, 0))
@@ -110,6 +116,16 @@ class Rec:
 
 
     def init_dev(self, device_id):
+        """
+        This function initializes GPU device that will be used for reconstruction. When running on CPU, the device_id
+        is set to -1, and the initialization is omitted.
+        After the device is allocated, the data array is loaded on that device or cpu memory. The data file can be
+        in tif or npy format.
+
+        :param device_id: int
+            device id or -1 if cpu
+        :return:
+        """
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         if device_id != -1:
             self.dev = device_id
@@ -380,9 +396,8 @@ class Rec:
 
     def raar(self):
         # Relaxed averaged alternating reflectors
-        # TODO make raar_beta config param
-        raar_beta = .9 / 2
-        self.ds_image = raar_beta * (self.support * self.ds_image_proj + self.ds_image) + (1 - 2 * raar_beta) * self.ds_image_proj
+        self.ds_image = self.params['raar_beta'] * (self.support * self.ds_image_proj + self.ds_image) +\
+                        (1 - 2 * self.params['raar_beta']) * self.ds_image_proj
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
