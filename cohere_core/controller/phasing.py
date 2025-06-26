@@ -39,6 +39,13 @@ __all__ = ['set_lib_from_pkg',
 
 
 def set_lib_from_pkg(pkg):
+    """
+    Imports package and sets the device library to this package.
+
+    :param pkg: str
+        'cp' for cupy, 'np' for numpy, and 'torch' for torch
+    :return:
+    """
     global devlib
 
     # get the lib object
@@ -119,7 +126,7 @@ class Rec:
         """
         This function initializes GPU device that will be used for reconstruction. When running on CPU, the device_id
         is set to -1, and the initialization is omitted.
-        After the device is allocated, the data array is loaded on that device or cpu memory. The data file can be
+        After the device is set, the data array is loaded on that device or cpu memory. The data file can be
         in tif or npy format.
 
         :param device_id: int
@@ -179,6 +186,15 @@ class Rec:
 
 
     def init_iter_loop(self, dir=None, gen=None):
+        """
+        Initializes iteration loop.
+
+        :param dir: str
+            optional, directory with 'image.npy' file if the reconstruction is continuation
+        :param gen: int
+            optional, generation number, when running GA algorithm
+        :return:
+        """
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
@@ -1191,30 +1207,45 @@ class TeRec(Rec):
 
 def create_rec(params, datainfo, pkg, dev, **kwargs):
     """
+    Factory for creating Rec object.
+
+    If the rec_type is "mp", it will create CoupledRec object used for multipeak
+    reconstruction, otherwise base Rec object.
+    After the object is instantiated it will be set to a given device. This operation
+    can fail, in which case no object is returned.
+    The function continues with initialization of iteration loop. If successful, the
+    Rec object is returned, otherwise None.
 
     :param params: dict, contains reconstruction parameters
-    :param datainfo: for 'basic' reconstruction contains data file name,
-                     for 'mp' reconstruction contains peak_dirs
-    :param pkg: python package that will be used as lib
-    :param dev: device
-    :param kwargs : var parameters
-        may contain:
+    :param datainfo:
+        for 'basic' reconstruction contains data file name,
+        for 'mp' reconstruction contains peak_dirs
+    :param pkg:
+        python package that will be used as lib
+        'cp' for cupy, 'np' for numpy, 'torch' for torch
+    :param dev: GPU device id or -1
+    :param kwargs:
+        var parameters
         rec_type: 'mp' for multipeak, defaults to 'basic'
         debug : if True the exceptions are not handled
     :return: created and initialized object if success, None if failure
+
     """
-    rec_type = kwargs.pop('rec_type', None)
+
+    rec_type = kwargs.pop('rec_type', 'basic')
     if rec_type == 'mp':
         worker = CoupledRec(params, datainfo, pkg, **kwargs)
     else:
         worker = Rec(params, datainfo, pkg, **kwargs)
 
     if worker.init_dev(dev) < 0:
+        del worker
         return None
 
     continue_dir = params.get('continue_dir')
     ret_code = worker.init_iter_loop(continue_dir)
     if ret_code < 0:
+        del worker
         return None
 
     return worker

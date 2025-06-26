@@ -1,7 +1,5 @@
 ===========
 Phasing API
 ===========
-.. automodule:: cohere_core.phasing
-   :members:
-.. automodule:: cohere_core.reconstruction_coupled
+.. automodule:: cohere_core.controller.phasing
    :members:
