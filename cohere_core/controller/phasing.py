@@ -6,12 +6,21 @@
 
 
 """
-cohere_core.phasing
-===================
-
 Provides phasing capabilities for the Bragg CDI data.
-The software can run code utilizing different library, such as numpy and cupy. User configures the choice depending on hardware and installed software.
 
+The reconstruction is based on known iterative algorithm, oscillating between direct and reciprocal space and applying projection algorithms. Cohere 
+supports the following projection algorithms: ER (error reduction), HIO (hybrid input-output), SF (solvent flipping), and RAAR (relaxed averaged alternating reflectors). The algorithms are described in this publication: https://pubs.aip.org/aip/rsi/article/78/1/011301/349838/Invited-Article-A-unified-evaluation-of-iterative 
+
+The cohere reconstruction can be tuned to specific cases. Typically every few iteration steps a shrink wrap is applied. 
+And typically a twin blocking is performed after a few first iterations. Other factors differentiating reconstruction and supported by cohere are: low pass filter, phase constrain, averaging amplitudes. These are direct space methods.
+Each of these features owns parameters that can be tuned to the projection algorithm. Cohere supports partial coherence feature that is performed in reciprocal space and is used to mitigate coherence of the light source. 
+
+The software can run code on GPU or CPU, utilizing different library, such as cupy, numpy or torch. User configures the choice depending on hardware and installed software.
+
+The reconstruction is utilized in the GA algorithm, where each generation creates multiple Rec objects, and executes parallel reconstructions. 
+
+The two subclasses provide functionality for different types of reconstruction. The CoupleRec class supports multipeak reconstruction. 
+The TeRec class supports reconstruction of of time-evolving samples with improved temporal resolution.
 """
 
 from pathlib import Path
@@ -40,10 +49,9 @@ __all__ = ['set_lib_from_pkg',
 
 def set_lib_from_pkg(pkg):
     """
-    Imports package and sets the device library to this package.
+    Imports package specified in input and sets the device library to this package.
 
-    :param pkg: str
-        'cp' for cupy, 'np' for numpy, and 'torch' for torch
+    :param pkg: supported values: 'cp' for cupy, 'np' for numpy, and 'torch' for torch
     :return:
     """
     global devlib
@@ -58,22 +66,24 @@ def set_lib_from_pkg(pkg):
 
 class Rec:
     """
-    Class, performs phasing using iterative algorithm.
+    Performs phasing using iterative algorithm.
+
+    The Rec object must have a device set, either to GPU id or set as CPU.
+    The functions executed in each iteration are determined at the beginning, during initializing of iteration loop. It is based on the reconstruction parameters and the order of the functions.
+    The order is internally defined in 'iter_functions' field. 
+    A factory for this class, 'create_rec' returns initialized Rec object.
+    The object is then called to run iterations. The results can be retrieved with getters or saved.
     """
-    __all__ = []
+
     def __init__(self, params, data_file, pkg, **kwargs):
         """
         Constructor. Sets / initializes reconstruction parameters.
 
-        :param params: dict
-            dictionary containing configuration parameters
-        :param data_file: str
-            path to the data file
-        :param pkg: str
-            an acronym of the package that will be utilized for reconstruction
+        :param params: dictionary containing configuration parameters
+        :param data_file: path to the data file
+        :param pkg: an acronym of the package that will be utilized for reconstruction: 
             "np" for numpy, "cp" for cupy, and "torch" for torch
-        :param kwargs: dict
-            can contain "debug" parameter
+        :param kwargs: can contain "debug" parameter. When activated, it will throw exception, if one happens. Otherwise, an error code of -1 is returned and error printed. The handling of the exception is needed in GA reconstruction.
         """
         set_lib_from_pkg(pkg)
         self.iter_functions = [self.next,
@@ -129,9 +139,8 @@ class Rec:
         After the device is set, the data array is loaded on that device or cpu memory. The data file can be
         in tif or npy format.
 
-        :param device_id: int
-            device id or -1 if cpu
-        :return:
+        :param device_id: device id or -1 if cpu
+        :return: 0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
         """
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         if device_id != -1:
@@ -187,13 +196,13 @@ class Rec:
 
     def init_iter_loop(self, dir=None, gen=None):
         """
-        Initializes iteration loop.
+        Initializes the iteration loop.
 
-        :param dir: str
-            optional, directory with 'image.npy' file if the reconstruction is continuation
-        :param gen: int
-            optional, generation number, when running GA algorithm
-        :return:
+        :param dir: directory containing 'image.npy' file that contains reconstructed object, if the reconstruction is continuation. 
+            It defaults to None.
+        :param gen: generation number, only used when running GA algorithm.
+            It defaults to None. 
+        :return:  0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
         """
         if self.ds_image is not None:
             first_run = False
@@ -214,8 +223,12 @@ class Rec:
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
-        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen)
-        if flow is None:
+        try:
+            self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen)
+        except Exception as e:
+            if self.debug:
+                raise
+            print(e)
             return -1
 
         self.flow = []
@@ -242,21 +255,18 @@ class Rec:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
 
         # create the trgger/sub-trigger objects
-        if 'shrink_wrap_trigger' in self.params:
-            self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
-            if self.shrink_wrap_obj is None:
-                print('failed to create shrink_wrap object')
-                return -1
-        if 'phc_trigger' in self.params:
-            self.phc_obj = ft.create('phc', self.params, feats)
-            if self.phc_obj is None:
-                print('failed to create phc object')
-                return -1
-        if 'lowpass_filter_trigger' in self.params:
-            self.lowpass_filter_obj = ft.create('lowpass_filter', self.params, feats)
-            if self.lowpass_filter_obj is None:
-                print('failed to create lowpass_filter object')
-                return -1
+        try:
+            if 'shrink_wrap_trigger' in self.params:
+                self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
+            if 'phc_trigger' in self.params:
+                self.phc_obj = ft.create('phc', self.params, feats)
+            if 'lowpass_filter_trigger' in self.params:
+                self.lowpass_filter_obj = ft.create('lowpass_filter', self.params, feats)
+        except Exception as e:
+            if self.debug:
+                raise
+            print(e)
+            return -1
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -287,6 +297,13 @@ class Rec:
 
 
     def iterate(self):
+        """
+        It iterates over function order that was determined during loop initialization. 
+
+        During iteration execution an exception can happen. The exception is handled in non debug mode and thrown otherwise. 
+    
+        :return: 0 if successful, -1 otherwise. In debug mode will throw exception instead of returning -1.
+        """
         self.iter = -1
         start_t = time.time()
         try:
@@ -313,7 +330,18 @@ class Rec:
 
         return 0
 
+
     def save_res(self, save_dir, only_image=False):
+        """
+        Saves reconstruction results.
+
+        It centers the maximum of image array and saves this array, support array, coherence if present, and errors. 
+        This function is typically called after iterations.
+
+        :param save_dir: directory where results will be saved
+        :param only_image: will save only image if True, otherwise all the results are saved. By default all results are saved.
+        :return:
+        """
         mx = devlib.amax(devlib.absolute(self.ds_image))
         self.ds_image = self.ds_image / mx
 
@@ -347,6 +375,9 @@ class Rec:
         return 0
 
     def get_metric(self):
+        """
+        Returns metrics such as: chi (the error after last iteration), summed phase, area, sharpness of the ds_image array that holds reconstructed image.
+        """
         return dvut.all_metrics(self.ds_image, self.errs)
 
     def next(self):
@@ -479,12 +510,21 @@ class Rec:
         self.support = devlib.roll(self.support, shift_dist, axis=axis)
 
     def get_image(self):
+        """
+        Returns image array.
+        """
         return self.ds_image
 
     def get_support(self):
+        """
+        Returns support array.
+        """
         return self.support
 
     def get_coherence(self):
+        """
+        returns coherence array, if exists.
+        """
         if self.is_pc:
             return self.pc_obj.kernel
         else:
@@ -1217,16 +1257,16 @@ def create_rec(params, datainfo, pkg, dev, **kwargs):
     Rec object is returned, otherwise None.
 
     :param params: dict, contains reconstruction parameters
-    :param datainfo:
-        for 'basic' reconstruction contains data file name,
-        for 'mp' reconstruction contains peak_dirs
+    :param datainfo: 
+        for 'basic' datainfo is data file name,
+        and for 'mp' reconstruction it is a list of peak directories
     :param pkg:
-        python package that will be used as lib
+        python package that will be used to run the reconstruction:
         'cp' for cupy, 'np' for numpy, 'torch' for torch
     :param dev: GPU device id or -1
     :param kwargs:
-        var parameters
-        rec_type: 'mp' for multipeak, defaults to 'basic'
+        var parameters:
+        rec_type: 'mp' for multipeak,
         debug : if True the exceptions are not handled
     :return: created and initialized object if success, None if failure
 

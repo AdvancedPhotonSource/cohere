@@ -25,18 +25,9 @@ def ver_list_int(param_name, param_value):
     """
     This function verifies if all elements in a given list are int.
 
-    Parameters
-    ----------
-    param_name : str
-        the parameter being evaluated
-
-    param_value : list
-        the list to evaluate for int values
-
-    Returns
-    -------
-    eval : boolean
-        True if all elements are int, False otherwise
+    :param param_name: name of the parameter being evaluated
+    :param param_value: the list to evaluate for int values 
+    :return:  True if all elements are int, False otherwise
     """
     if not issubclass(type(param_value), list):
         print (f'{param_name} is not a list')
@@ -52,18 +43,9 @@ def ver_list_float(param_name, param_value):
     """
     This function verifies if all elements in a given list are float.
 
-    Parameters
-    ----------
-    param_name : str
-        the parameter being evaluated
-
-    param_value : list
-        the list to evaluate for float values
-
-    Returns
-    -------
-    eval : boolean
-        True if all elements are float, False otherwise
+    :param param_name: name of the parameter being evaluated
+    :param param_value: the list to evaluate for float values 
+    :return:  True if all elements are float, False otherwise
     """
     if not issubclass(type(param_value), list):
         print (f'{param_name} is not a list')
@@ -96,17 +78,10 @@ def get_config_error_message(config_file_name, map_file, config_parameter, confi
 
 def ver_config(config_map):
     """
-    This function verifies experiment main config file
+    This function verifies parameters from config file
 
-    Parameters
-    ----------
-    fname : str
-        configuration file name
-
-    Returns
-    -------
-    error_message : str
-        message describing parameter error or empty string if all parameters are verified
+    :param config_map: dict with main configuration parameters
+    :return:  message describing parameter error or empty string if all parameters are verified
     """
     config_map_file = 'config_error_map_file'
     fname = 'config'
@@ -1041,30 +1016,22 @@ def ver_config_disp(config_map):
     return ("")
 
 
-def verify(file_name, conf_map):
+def verify(config_name, conf_map):
     """
     Verifies parameters.
 
-    Parameters
-    ----------
-    file_name : str
-        name of file the parameters are related to. Supported: config_prep, config_data, config_rec, config_disp
-
-    conf_map : dict
-        parameters
-
-    Returns
-    -------
-    str
-        a message with description of error or empty string if no error
+    :param config_name: name of config to be verified. Supported: config_data, config_rec, config_disp.
+    :param conf_map: dict with the parameters to verify.
+        It defaults to None. 
+    :return:  0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
     """
-    if file_name == 'config':
+    if config_name == 'config':
         return ver_config(conf_map)
-    elif file_name == 'config_data':
+    elif config_name == 'config_data':
         return ver_config_data(conf_map)
-    elif file_name == 'config_rec':
+    elif config_name == 'config_rec':
         return ver_config_rec(conf_map)
-    elif file_name == 'config_disp':
+    elif config_name == 'config_disp':
         return ver_config_disp(conf_map)
     else:
-        return ('verifier has no function to check config file named', file_name)
+        return ('verifier has no function to check config named', config_name)

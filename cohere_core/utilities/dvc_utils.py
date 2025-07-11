@@ -1,3 +1,18 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
+"""
+cohere_core.utilities.dvc_utils
+===============================
+
+This module is a suite of utility functions. 
+
+The function in this module operate on arrays loaded on device. The array can be in CPU memory or GPU memory, and is in format related to the package used to create the array. 
+Therefore, before using functions from this module user must set the global variable devlib by calling function set_lib_from_pkg.
+"""
 import cmath
 import math
 from matplotlib import pyplot as plt
@@ -41,6 +56,16 @@ __all__ = [
 
 
 def set_lib_from_pkg(pkg):
+    """
+    Sets the devlib according to the package specified in input.
+
+    This function must be called before using functions from this module.
+    The global variable devlib becomes the library that will be used in this file.
+    The library is referencing to cohere_core.lib.cplib, orcohere_core.lib.nplib, orcohere_core.lib.torchlib. 
+
+    :param pkg: acronym specifying library: 'cp' for cupy, 'np' for numpy, 'tprch' for torch
+    :return:
+    """
     global devlib
 
     # get the lib object
@@ -51,16 +76,11 @@ def set_lib_from_pkg(pkg):
 def align_arrays_pixel(ref, arr):
     """
     Aligns two arrays of the same dimensions with the pixel resolution. Used in reciprocal space.
-    Parameters
-    ----------
-    ref : ndarray
-        array to align with
-    arr : ndarray
-        array to align
 
-    Returns
-    -------
-    ndarray : aligned array
+    :param ref: ndarray, array to align with
+    :param arr: ndarray, array to align
+
+    :return: aligned array
     """
     CC = devlib.correlate(ref, arr, mode='same', method='fft')
     err = correlation_err(ref, arr, CC)
@@ -80,18 +100,10 @@ def align_arrays_subpixel(ref_arr, arr):
     """
     Shifts array to align with reference array.
 
-    Parameters
-    ----------
-    ref_arr : ndarray
-        reference array
+    :param ref_arr: ndarray, reference array
+    :param arr: ndarray, array to shift
 
-    arr : ndarray
-        array to shift
-
-    Returns
-    -------
-    arr : ndarray
-        shifted input array, aligned with reference array
+    :return: aligned array
     """
     (shift_2, shift_1, shift_0) = register_3d_reconstruction(abs(ref_arr), abs(arr))
     return sub_pixel_shift(arr, shift_2, shift_1, shift_0)
@@ -99,17 +111,12 @@ def align_arrays_subpixel(ref_arr, arr):
 
 def all_metrics(image, errs):
     """
-    Callculates array characteristic based on various formulas.
+    Calculates array characteristic based on various formulas and additional input.
+    Is used to quntify result of image reconstruction.
 
-    Parameters
-    ----------
-    arr : ndarray
-        array to get characteristic
-
-    Returns
-    -------
-    metrics : dict
-        calculated metrics for all types
+    :param image: ndarray, array to get characteristic
+    :param errs: list of floats
+    :return: dict, calculated metrics for different formulas
     """
     metrics = {}
     eval = errs[-1]
@@ -136,10 +143,7 @@ def arr_property(arr):
     """
     Used only in development. Prints array statistics.
 
-    Parameters
-    ----------
-    arr : ndarray
-        array to find max
+    :param arr: ndarray, array to find max
     """
     import numpy as np
     arr1 = abs(arr)
@@ -157,17 +161,10 @@ def breed(breed_mode, alpha, image):
     """
     Aligns the image to breed from with the alpha image, and applies breed formula, to obtain a 'child' image.
 
-    Parameters
-    ----------
-    breed_mode : str
-        literal defining the breeding process
-    alpha : ndarray
-        the best image in the generation
-    image : ndarray
-        the bred image
-    dirs : tuple
-        a tuple containing two elements: directory where the image to breed from is stored, a 'parent', and a directory where the bred image, a 'child', will be stored.
-
+    :param breed_mode: str, literal defining the breeding process
+    :param alpha: array, the best image in the generation
+    :param image: array, the image to breed with alpha
+    :return: array, the bred child
     """
     if devlib.array_equal(image, alpha):
         # it is alpha, no breeding
@@ -248,14 +245,10 @@ def calc_ehd(arr1, arr2=None, log=False):
 def center_sync(image, support):
     """
     Shifts the image and support arrays so the center of mass is in the center of array.
-    Parameters
-    ----------
-    image, support : ndarray, ndarray
-        image and support arrays to evaluate and shift
-    Returns
-    -------
-    image, support : ndarray, ndarray
-        shifted arrays
+
+    :param image: array, the image to shift
+    :param support: array, the support array to shift along with image
+    :return: shifted arrays
     """
     shape = image.shape
 
@@ -284,16 +277,10 @@ def check_get_conj_reflect(arr1, arr2):
     """
     It returns the array of interest or conjugate reflection of that array depending whether it is reflection of the
     reference array.
-    Parameters
-    ----------
-    arr1 : ndarray
-        reference array
-    arr2 : ndarray
-        array of interest
-    Returns
-    -------
-    ndarray
-        arr2 or conjugate reflection of it
+
+    :param arr1: array, reference array
+    :param arr2: array, array of interest
+    :return: arr2 or conjugate reflection of it
     """
     support1 = shrink_wrap(abs(arr1), .1, .1)
     support2 = shrink_wrap(abs(arr2), .1, .1)
@@ -308,14 +295,9 @@ def check_get_conj_reflect(arr1, arr2):
 def conj_reflect(arr):
     """
     This function computes conjugate reflection of array.
-    Parameters
-    ----------
-    a : ndarray
-        input array
-    Returns
-    -------
-    ndarray
-        conjugate reflection array
+
+    :param arr: array, input array
+    :return: conjugate reflection array
     """
     F = devlib.ifftshift(devlib.fft(devlib.fftshift(arr)))
     return devlib.ifftshift(devlib.ifft(devlib.fftshift(devlib.conj(F))))
@@ -327,16 +309,10 @@ def correlation_err(refarr, arr, CC=None):
     The method is based on "Invariant error metrics for image reconstruction" by J. R. Fienup.
     Returns correlation error between two arrays.
 
-    Parameters
-    ----------
-    refarr : ndarray
-        reference array
-    arr : ndarray
-        array to measure likeness with reference array
-
-    Returns
-    -------
-    float, correlation error
+    :param refarr: reference array
+    :param arr:  array to measure likeness with reference array
+    :param CC: cross-correlation, if computed before, defaults to None
+    :return: float, correlation error
     """
     if CC is None:
         CC = devlib.correlate(refarr, arr, mode='same', method='fft')
@@ -350,16 +326,10 @@ def correlation_err(refarr, arr, CC=None):
 def cross_correlation(a, b):
     """
     This function computes cross correlation of two arrays.
-    Parameters
-    ----------
-    a : ndarray
-        input array for cross correlation
-    b : ndarray
-        input array for cross correlation
-    Returns
-    -------
-    ndarray
-        cross correlation array
+
+    :param a: input array for cross correlation
+    :param b: input array for cross correlation
+    :return: cross correlation array
     """
     A = devlib.ifftshift(devlib.fft(devlib.fftshift(conj_reflect(a))))
     B = devlib.ifftshift(devlib.fft(devlib.fftshift(b)))
@@ -371,20 +341,10 @@ def dftregistration(ref_arr, arr, usfac=2):
     """
     Efficient subpixel image registration by crosscorrelation. Based on Matlab dftregistration by Manuel Guizar (Portions of this code were taken from code written by Ann M. Kowalczyk and James R. Fienup.)
 
-    Parameters
-    ----------
-    ref_arr : 2D ndarray
-        Fourier transform of reference image
-    arr : 2D ndarray
-        Fourier transform of image to register
-
-    usfac : int
-        Upsampling factor
-
-    Returns
-    -------
-    row_shift, col_shift : float, float
-        pixel shifts between images
+    :param ref_arr: 2D array, Fourier transform of reference image
+    :param arr: 2D array, Fourier transform of image to register
+    :param usfac: int, upsampling factor
+    :return: pixel shifts between images: (row_shift, col_shift)       
     """
     if usfac < 2:
         print('usfac less than 2 not supported')
@@ -439,22 +399,13 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
     """
     Upsample DFT by array multiplies.
 
-    Parameters
-    ----------
-    arr : ndarray
-        the subject of upsampling array
-    nor, noc : int, int
-        Number of pixels in the output upsampled DFT, in units of upsampled pixels
-
-    usfac : int
-        Upsampling factor (default usfac = 1)
-
-    roff, coff : int, int
-        Row and column offsets, allow to shift the output array to a region of interest on the DFT
-    Returns
-    -------
-    ndarray
-        upsampled array
+    :param arr: array, the subject of upsampling
+    :param nor: int, number of pixels in the output upsampled DFT, in units of upsampled pixels 
+    :param noc: int, number of pixels in the output upsampled DFT, in units of upsampled pixels
+    :param usfac: int, upsampling factor (default usfac = 1)
+    :param roff: int, row offset, allow to shift the output array to a region of interest on the DFT
+    :param coff: int, column offsets, allow to shift the output array to a region of interest on the DFT
+    :return: upsampled array
     """
     # arr is 2D
     [nr, nc] = devlib.dims(arr)
@@ -489,17 +440,11 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
 def fast_shift(arr, shifty, fill_val=0):
     """
     Shifts array by the shifty parameter.
-    Parameters
-    ----------
-    arr : ndarray
-        array to shift
-    shifty : ndarray
-        an array of integers/shifts in each dimension
-    fill_val : float
 
-    Returns
-    -------
-    ndarray, shifted array
+    :param arr:  array to shift
+    :param shifty: an array of integers/shifts in each dimension
+    :param fill_val: float, value to fill shifted, defaults to 0
+    :return: shifted array
     """
     dims = arr.shape
     result = devlib.full(dims, 1.0)
@@ -523,6 +468,13 @@ def fast_shift(arr, shifty, fill_val=0):
 
 
 def gauss_conv_fft(arr, distribution):
+    """
+    Calculates convolution of array and gaussian distribution.
+
+    :param arr: array
+    :param distribution: gaussian distribution array
+    :return: convolution array
+    """
     dims = devlib.dims(arr)
     arr_sum = devlib.sum(arr)
     arr_f = devlib.ifftshift(devlib.fft(devlib.ifftshift(arr)))
@@ -537,20 +489,13 @@ def gauss_conv_fft(arr, distribution):
 
 def get_metric(image, errs, metric_type):
     """
-    Callculates array characteristic based on various formulas.
+    Callculates array quantified characteristic for given metric type. 
+    Is used to quntify result of image reconstruction.
 
-    Parameters
-    ----------
-    arr : ndarray
-        array to get characteristic
-    errs : list
-        list of "chi" error by iteration
-    metric_type : str
-
-    Returns
-    -------
-    metric : float
-        calculated metric for a given type
+    :param arr: array to get the metric
+    :param errs: list of "chi" errors by iteration
+    :param metric_type: str defining metric type
+    :return: calculated metric for a given type
     """
     if metric_type == 'chi':
         eval = errs[-1]
@@ -568,10 +513,25 @@ def get_metric(image, errs, metric_type):
 
 
 def get_norm(arr):
+    """
+    Calculates norm of array.
+
+    :param arr: array to calculate norm for
+    :return: float, norm value
+    """
     return devlib.sum(devlib.square(devlib.absolute(arr)))
 
 
 def histogram2d(arr1, arr2, n_bins=100, log=False):
+    """
+    Returns histogram.
+
+    :param arr1: array
+    :param arr2: array
+    :param n_bins: number of bins, defaults to 100
+    :param log: boolean, if True, return logarhitmic histogram, linear otherwise
+    :return: histogram
+    """
     norm = devlib.amax(arr1) / devlib.amax(arr2)
     if log:
         bins = devlib.logspace(devlib.log10(devlib.amin(arr1[arr1 != 0])), devlib.log10(devlib.amax(arr1)), n_bins + 1)
@@ -581,6 +541,16 @@ def histogram2d(arr1, arr2, n_bins=100, log=False):
 
 
 def lucy_deconvolution(pristine, blurred, kernel, iterations, diffbreak=0):
+    """
+    Performs Richardson-Lucy deconvolution.
+
+    :param pristine: array, input degraded image
+    :param blurred: array, blurred image
+    :param kernel: array, point spread function
+    :param iterations: number of iteration
+    :diffbrake: float, if greater than 0, the iterations will brake if error reaches that value
+    :return: deconvolved array
+    """
     blurred_mirror = devlib.flip(blurred)
     for i in range(iterations):
         conv = devlib.fftconvolve(kernel, blurred)
@@ -598,6 +568,13 @@ def lucy_deconvolution(pristine, blurred, kernel, iterations, diffbreak=0):
 
 
 def pad_around(arr, shape, val=0):
+    """
+    Pads an array evenly at each side, to the given shape. It is assumed that the new shape is greater than shape of the array in each dimension.
+
+    :param arr: array to pad
+    :param shape: list or tuple, new shape
+    :return: padded array
+    """
     padded = devlib.full(shape, val)
     dims = devlib.dims(arr)
     principio = []
@@ -617,6 +594,13 @@ def pad_around(arr, shape, val=0):
 
 
 def pad_to_cube(data, size):
+    """
+    Pads a given 3D array to the cube of a given size. If any dimension is greater than the given size, the array will be cropped.
+
+    :param data: array to shape into cube
+    :param size: int, size of the cube
+    :return: the padded/cropped array to the cube
+    """
     import numpy as np
 
     shp = np.array([size, size, size]) // 2
@@ -636,17 +620,9 @@ def register_3d_reconstruction(ref_arr, arr):
     """
     Finds pixel shifts between reconstructed images
 
-    Parameters
-    ----------
-    ref_arr : ndarray
-        Fourier transform of reference image
-    arr : ndarray
-        Fourier transform of image to register
-
-    Returns
-    -------
-    shift_2, shift_1, shift_0 : float, float
-        pixel shifts between images
+    :param ref_arr: Fourier transform of reference image
+    :param arr: Fourier transform of image to register
+    :return: tuple of floats, pixel shifts between images
     """
     r_shift_2, c_shift_2 = dftregistration(devlib.fft(devlib.sum(ref_arr, 2)), devlib.fft(devlib.sum(arr, 2)), 4)
     r_shift_1, c_shift_1 = dftregistration(devlib.fft(devlib.sum(ref_arr, 1)), devlib.fft(devlib.sum(arr, 1)), 4)
@@ -660,17 +636,11 @@ def register_3d_reconstruction(ref_arr, arr):
 
 def remove_ramp(arr, ups=1):
     """
-    Smooths image array (removes ramp) by applaying math formula.
-    Parameters
-    ----------
-    arr : ndarray
-        array to remove ramp
-    ups : int
-        upsample factor
-    Returns
-    -------
-    ramp_removed : ndarray
-        smoothed array
+    Smooths image array.
+
+    :param arr: array to remove ramp
+    :param ups: int, upsample factor, defaults to 1
+    :return: smoothed array
     """
     # the remove ramp is called (now) by visualization when arrays are on cpu
     # thus using functions from utilities will be ok for now
@@ -689,6 +659,14 @@ def remove_ramp(arr, ups=1):
 
 
 def resample(data, matrix, plot=False):
+    """
+    Resamples data and creates plot.
+
+    :param data: data array
+    :param matrix: matrix array
+    :param plot: boolean, will plot if True, defaults to False.
+    :return: smoothed array
+    """
     import numpy as np
     s = data.shape
     corners = [
@@ -723,18 +701,9 @@ def shift_phase(arr, val=0):
     """
     Adjusts phase accross the array so the relative phase stays intact, but it shifts towards given value.
 
-    Parameters
-    ----------
-    arr : ndarray
-        array to adjust phase
-
-    val : float
-        a value to adjust the phase toward
-
-    Returns
-    -------
-    ndarray
-        input array with adjusted phase
+    :param arr: array to adjust phase
+    :param val: float, a value to adjust the phase toward
+    :return: input array with adjusted phase
     """
     ph = devlib.angle(arr)
     support = shrink_wrap(devlib.absolute(arr), .2, .5)  # get just the crystal, i.e very tight support
@@ -744,23 +713,12 @@ def shift_phase(arr, val=0):
 
 def shrink_wrap(arr, threshold, sigma):
     """
-    Calculates support array.
+    Calculates support array applying gaussian filter to the array. Support is array of 0 and 1 values, determined by threshold applyed to the filtered array.
 
-    Parameters
-    ----------
-    arr : ndarray
-        subject array
-
-    threshold : float
-        support is formed by points above this value
-    sigma: float
-
-    sigmas : list
-        sigmas in all dimensions
-    Returns
-    -------
-    support : ndarray
-        support array
+    :param arr: subject array
+    :param threshold: float, support is formed by points above this value
+    :param sigma: float, sigma for gaussian filter
+    :return: support array
     """
     filter = devlib.gaussian_filter(devlib.absolute(arr), sigma)
     max_filter = devlib.amax(filter)
@@ -773,19 +731,11 @@ def sub_pixel_shift(arr, row_shift, col_shift, z_shift):
     """
     Shifts pixels in a regularly sampled LR image with a subpixel precision according to local gradient.
 
-
-    Parameters
-    ----------
-    arr : ndarray
-        array to shift
-
-    row_shift, col_shift, z_shift : float, float, float
-        shift in each dimension
-
-    Returns
-    -------
-    ndarray
-        shifted array
+    :param arr: array to shift
+    :param row_shift: float, shift in x dimension
+    :param col_shift: float, shift in y dimension
+    :param z_shift: float, shift in z dimension
+    :return: shifted array
     """
     buf2ft = devlib.fft(arr)
     shape = arr.shape
@@ -804,20 +754,10 @@ def sub_pixel_shift(arr, row_shift, col_shift, z_shift):
 
 def zero_phase(arr):
     """
-    Adjusts phase accross the array so the relative phase stays intact, but it shifts towards given value.
+    Adjusts phase accross the array so the relative phase stays intact, but it shifts towards zero.
 
-    Parameters
-    ----------
-    arr : ndarray
-        array to adjust phase
-
-    val : float
-        a value to adjust the phase toward
-
-    Returns
-    -------
-    ndarray
-        input array with adjusted phase
+    :param arr: array to adjust phase
+    :return: input array with adjusted phase
     """
     ph = shift_phase(arr, 0)
     return devlib.absolute(arr) * devlib.exp(1j * ph)
@@ -828,18 +768,9 @@ def zero_phase_cc(arr1, arr2):
     """
     Sets avarage phase in array to reference array.
 
-    Parameters
-    ----------
-    arr1 : ndarray
-        array to adjust phase
-
-    arr2 : ndarray
-        reference array
-
-    Returns
-    -------
-    arr : ndarray
-        input array with adjusted phase
+    :param arr1: array to adjust phase
+    :param arr2: reference array
+    :return: input array with adjusted phase
     """
     # will set array1 avg phase to array2
     c_c = devlib.conj(arr1) * arr2

@@ -23,14 +23,14 @@ class Pcdi:
         if 'pc_LUCY_iterations' in params:
             self.iterations = params['pc_LUCY_iterations']
         else:
-            print('pc_LUCY_iterations parameter not defined')
-            raise
+            msg = 'pc_LUCY_iterations parameter not defined'
+            raise ValueError(msg)
         self.normalize = params.get('pc_normalize', True)
         if 'pc_LUCY_kernel' in params:
             self.kernel_area = params['pc_LUCY_kernel']
         else:
-            print('pc_LUCY_kernel parameter not defined')
-            raise
+            msg = 'pc_LUCY_kernel parameter not defined'
+            raise ValueError(msg)
         if dir is None:
             self.kernel = None
         else:
@@ -194,24 +194,24 @@ class ShrinkWrap(TriggeredOp):
         def check_Gauss_type():
             # for now cohere supports only Gauss type, so the following parameters are mandatory
             if 'shrink_wrap_gauss_sigma' not in params:
-                print('shrink_wrap_gauss_sigma parameter not defined')
-                raise
+                msg = 'shrink_wrap_gauss_sigma parameter not defined'
+                raise ValueError(msg)
             if 'shrink_wrap_threshold' not in params:
-                print('shrink_wrap_threshold parameter not defined')
-                raise
+                msg = 'shrink_wrap_threshold parameter not defined'
+                raise ValueError(msg)
 
         def check_Gauss1_type():
             # for now cohere supports only Gauss type, so the following parameters are mandatory
             if 'shrink_wrap_gauss_sigma' not in params:
-                print('shrink_wrap_gauss_sigma parameter not defined')
-                raise
+                msg = 'shrink_wrap_gauss_sigma parameter not defined'
+                raise ValueError(msg)
             if 'shrink_wrap_threshold' not in params:
-                print('shrink_wrap_threshold parameter not defined')
-                raise
+                msg = 'shrink_wrap_threshold parameter not defined'
+                raise ValueError(msg)
 
         if 'shrink_wrap_type' not in params:
-            print('shrink_wrap_type parameter not defined')
-            raise
+            msg = 'shrink_wrap_type parameter not defined'
+            raise ValueError(msg)
 
         if index is None:
             sw_type = params['shrink_wrap_type']
@@ -226,38 +226,38 @@ class ShrinkWrap(TriggeredOp):
                 threshold = params['shrink_wrap_threshold']
                 return self.Gauss1SW(sigma, threshold)
             else:
-                print(f'{sw_type} shrink wrap type is not supported')
-                raise
+                msg = f'{sw_type} shrink wrap type is not supported'
+                raise ValueError(msg)
         else:
             if len(params['shrink_wrap_type']) - 1 < index:
-                print(f'shrink_wrap_type not defined for sub-trigger {index}')
-                raise
+                msg = f'shrink_wrap_type not defined for sub-trigger {index}'
+                raise ValueError(msg)
             sw_type = params['shrink_wrap_type'][index]
             if sw_type == 'GAUSS':
                 check_Gauss_type()
                 if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
-                    print(f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}')
-                    raise
+                    msg = f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}'
+                    raise ValueError(msg)
                 sigma = params['shrink_wrap_gauss_sigma'][index]
                 if len(params['shrink_wrap_threshold']) - 1 < index:
-                    print(f'shrink_wrap_threshold not defined for sub-trigger {index}')
-                    raise
+                    msg = f'shrink_wrap_threshold not defined for sub-trigger {index}'
+                    raise ValueError(msg)
                 threshold = params['shrink_wrap_threshold'][index]
                 return self.GaussSW(sigma, threshold)
             elif sw_type == 'GAUSS1':
                 check_Gauss1_type()
                 if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
-                    print(f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}')
-                    raise
+                    msg = f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}'
+                    raise ValueError(msg)
                 sigma = params['shrink_wrap_gauss_sigma'][index]
                 if len(params['shrink_wrap_threshold']) - 1 < index:
-                    print(f'shrink_wrap_threshold not defined for sub-trigger {index}')
-                    raise
+                    msg = f'shrink_wrap_threshold not defined for sub-trigger {index}'
+                    raise ValueError(msg)
                 threshold = params['shrink_wrap_threshold'][index]
                 return self.Gauss1SW(sigma, threshold)
             else:
-                print(f'{sw_type} shrink wrap type is not supported')
-                raise
+                msg = f'{sw_type} shrink wrap type is not supported'
+                raise ValueError(msg)
 
 
 
@@ -278,22 +278,22 @@ class PhaseConstrain(TriggeredOp):
 
     def create_obj(self, params, index=None, beg=None, end=None):
         if 'phc_phase_min' not in params:
-            print('phc_phase_min parameter not defined')
-            raise
+            msg = 'phc_phase_min parameter not defined'
+            raise ValueError(msg)
         if 'phc_phase_max' not in params:
-            print('phc_phase_max parameter not defined')
-            raise
+            msg = 'phc_phase_max parameter not defined'
+            raise ValueError(msg)
         if index is None:
             phase_min = params['phc_phase_min']
             phase_max = params['phc_phase_max']
         else:
             if len(params['phc_phase_min']) - 1 < index:
-                print(f'phc_phase_min not defined for sub-trigger {index}')
-                raise
+                msg = f'phc_phase_min not defined for sub-trigger {index}'
+                raise ValueError(msg)
             phase_min = params['phc_phase_min'][index]
             if len(params['phc_phase_max']) - 1 < index:
-                print(f'phc_phase_max not defined for sub-trigger {index}')
-                raise
+                msg = f'phc_phase_max not defined for sub-trigger {index}'
+                raise ValueError(msg)
             phase_max = params['phc_phase_max'][index]
         return self.PhasePHC(phase_min, phase_max)
 
@@ -322,11 +322,11 @@ class LowPassFilter(TriggeredOp):
 
     def create_obj(self, params, index=None, beg=None, end=None):
         if 'lowpass_filter_sw_threshold' not in params:
-            print('lowpass_filter_sw_threshold parameter not defined')
-            raise
+            msg = 'lowpass_filter_sw_threshold parameter not defined'
+            raise ValueError(msg)
         if 'lowpass_filter_range' not in params:
-            print('lowpass_filter_range parameter not defined')
-            raise
+            msg = 'lowpass_filter_range parameter not defined'
+            raise ValueError(msg)
         # in case of a all_iteration configuration the lowpass filter
         # iteration can be read from lowpass_filter_trigger
         if index is None:
@@ -337,12 +337,12 @@ class LowPassFilter(TriggeredOp):
         else:
             iter_range = (beg, end)
             if len(params['lowpass_filter_range']) - 1 < index:
-                print(f'lowpass_filter_range not defined for sub-trigger {index}')
-                raise
+                msg = f'lowpass_filter_range not defined for sub-trigger {index}'
+                raise ValueError(msg)
             filter_range = params['lowpass_filter_range'][index]
             if len(params['lowpass_filter_sw_threshold']) - 1 < index:
-                print(f'lowpass_filter_sw_threshold not defined for sub-trigger {index}')
-                raise
+                msg = f'lowpass_filter_sw_threshold not defined for sub-trigger {index}'
+                raise ValueError(msg)
             threshold = params['lowpass_filter_sw_threshold'][index]
         if len(filter_range) == 1:
             filter_range.append(1.0)
@@ -357,11 +357,9 @@ def create(trig_op, params, trig_op_info):
         to = LowPassFilter(trig_op)
 
     # this function sets self.objs and self.f and creates all objects
-    try:
-        to.create_objs(params, trig_op_info)
-        return to
-    except:
-        return None
+    # It may throw exception
+    to.create_objs(params, trig_op_info)
+    return to
 
 
 

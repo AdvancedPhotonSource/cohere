@@ -1,6 +1,34 @@
 import os
 import cohere_core.utilities.utils as ut
 
+
+def read_results(read_dir):
+    """
+    Reads results of reconstruction: image, support, and coherence if exists, and returns array representation.
+
+    :param read_dir: directory to read the results from
+    :return: image, support, and coherence arrays
+    """
+    try:
+        imagefile = join(read_dir, 'image.npy')
+        image = np.load(imagefile)
+    except:
+        image = None
+
+    try:
+        supportfile = join(read_dir, 'support.npy')
+        support = np.load(supportfile)
+    except:
+        support = None
+
+    try:
+        cohfile = join(read_dir, 'coherence.npy')
+        coh = np.load(cohfile)
+    except:
+        coh = None
+
+    return image, support, coh
+
 class Tracing:
     def __init__(self, reconstructions, pars, dir):
         self.init_dirs = []
@@ -10,7 +38,7 @@ class Tracing:
         if pars['init_guess'] == 'continue':
             continue_dir = pars['continue_dir']
             for sub in os.listdir(continue_dir):
-                image, support, coh = ut.read_results(ut.join(continue_dir, sub))
+                image, support, coh = read_results(ut.join(continue_dir, sub))
                 if image is not None:
                     self.init_dirs.append(ut.join(continue_dir, sub))
                     self.report_tracing.append([ut.join(continue_dir, sub)])

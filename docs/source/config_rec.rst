@@ -71,11 +71,11 @@ General
     device = {'host1':'all', 'host2':[0,1,2,3,4]}
 
 - algorithm_sequence:
-| Mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. In second example the sequence contains sub-triggers, explained in  :ref:`formula` page.
+| Mandatory, defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus', 'RAAR' will invoke 'raar' and 'modulus', 'SF' will invoke 'sf' and 'modulus'. The pc_modulus is implementation of modulus with partial coherence correction. In second example the sequence contains sub-triggers, explained in  :ref:`formula` page.
 | examples:
 ::
 
-    algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
+    algorithm_sequence = "2* (20*SF + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
     algorithm_sequence = "20*ER.LPF0.PHC0 + 180*HIO.LPF1 + 2* (20*ER.SW0 + 180*HIO.SW1) + 20*ER.SW2"
 
 - hio_beta:

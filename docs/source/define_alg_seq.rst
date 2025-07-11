@@ -4,17 +4,17 @@
 Execution formula
 =================
 | The "config_rec" file defines parameters used during reconstruction process.
-| The execution flow is defined by algorithm_sequence parameter and triggers.
-| Algorithm_sequence defines the algorithms used in iterations. Algorithm is defined for each iteration.
+| The execution sequence is determined by algorithm_sequence parameter, triggers, and sub-triggers.
+| Algorithm sequence defines which projection algorithm is executed in each iteration. Cohere supports the following projection algorithms: ER (error reduction), HIO (hybrid input-output), SF (solvent flipping), and RAAR (relaxed averaged alternating reflectors). The algorithms are described in this publication: https://pubs.aip.org/aip/rsi/article/78/1/011301/349838/Invited-Article-A-unified-evaluation-of-iterative.
 | Triggers define iterations at which the corresponding triggered operations are active.
 | The triggered operations use applicable parameters that are grouped by the corresponding trigger.
-| If the trigger is not defined then the corresponding operation is not active during the execution.
-| Trigger can be defined as a single trigger or a list of sub-triggers.
-| The trigger and algorithm sequence are explained in the sections below.
+| Sub-trigger is a trigger applied for part of iterations, associated with the projection algorithm.
+| The trigger, sub-trigger, and algorithm sequence are explained in the sections below.
 
 Trigger
 =======
-| Trigger concludes at which iteration to apply the associated action. Trigger is defined as a list and can be configured for a single iteration, or multiple iterations.
+| Triggers are defined in config_req, for example: shrink_wrap_trigger = [10, 5]. Refer to :ref:`config_rec` for documentation on all available triggers.
+| Trigger defines at which iteration to apply the associated trigger action. Trigger is defined as a list and can be configured for a single iteration, or multiple iterations.
 | examples:
 | [3] trigger at iteration 3
 | [20, 5] trigger starts at iteration 20, repeats every 5 iteration for the rest of run.
@@ -22,14 +22,16 @@ Trigger
 
 Sub-Trigger
 ===========
-| For the following features: shrink wrap, lowpass filter, and phc (phase constrain), the trigger can be defined as a list of sub-triggers. In this case the algorithm_sequence should include the sub-triggers in the sequence, for example: 30*ER.SW0, and the trigger should be defined as a list of sub-triggers.
-| example:
-| [[5, 1, 100], [0, 3], [5]] three sub-triggers are defined and the rules of the trigger apply for sub-trigger with the difference that the span of iterations in sub-trigger is the same as the algorithm it is attached to. In this example 30*ER.SW0, the start iteration is when the ER begins, and last iteration is when the ER ends.
+| For sub-trigger configuration, the trigger is a list of triggers, i.e. a list of lists. Each internal list is a sub-trigger.
+| The following features: shrink wrap (SW), lowpass filter (LPF), and phase constrain (PHC) can be defined as sub-triggers. The literals listed in parenthesis are used to define the sub-triggers in algorithm_sequence.
+| For example a shrink_wrap_trigger = [[5, 1, 100], [0, 3], [5]] defines sub-triggers: SW0, SW1, SW2 respectively.
+| Since the sub-triggers are associated with algorithm sequence, they must be attached to the projection algorithm in algorithm_sequence parameter, for example: 20*ER.SW0 + 180*HIO.SW1 + 20*ER.SW2 + 180*HIO.SW1 +20*ER.SW0.
+| In this case the first sub-trigger SW0 will be applied during the first 20 iterations, then during next 180 iterations the trigger SW1 is applied, and so on.
 
 Algorithm Sequence
 ==================
-| This parameter defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus'. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi (partial coherence)) must be activated by configuring pc_interval and pcdi parameters.
-| Algorithm sequence can include sub-triggers attached to the algorithm, for example 30*ER.SW0.PHC1.
+| This parameter defines sequence of algorithms applied in each iteration during modulus projection and during modulus. The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: ER, ERpc, HIO, HIOpc, RAAR, SF  define algorithms used in this iteration. The entries will invoke functions as follows: ER definition will invoke 'er' and 'modulus' functions, the ERpc will invoke 'er' and 'pc_modulus', HIO will invoke 'hio' and 'modulus', and HIOpc will invoke 'hio' and 'pc_modulus', 'RAAR' will invoke 'raar' and modulus, and 'SF' will invoke 'sf' and modulus. The pc_modulus is implementation of modulus with partial coherence correction. If defining ERpc or HIOpc the pcdi (partial coherence) must be activated by configuring pc_interval and pcdi parameters.
+| Algorithm sequence can include sub-triggers attached to the algorithm, as described in Sub-Trigger section.
 
 Formula examples
 ================

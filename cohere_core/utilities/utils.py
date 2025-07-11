@@ -39,12 +39,10 @@ __all__ = [
            'pad_center',
            'read_config',
            'read_tif',
-           'read_results',
            'Resize',
            'select_central_object',
            'save_tif',
            'save_metrics',
-           'save_results',
            'threshold_by_edge',
            'write_config',
            'write_plot_errors',
@@ -56,18 +54,9 @@ def adjust_dimensions(arr, pads):
     This function adds to or subtracts from each dimension of the array elements defined by pad. If the pad is positive, the array is padded in this dimension. If the pad is negative, the array is cropped.
     The dimensions of the new array is then adjusted to be supported by the opencl library.
 
-    Parameters
-    ----------
-    arr : ndarray
-        the array to pad/crop
-
-    pad : list
-        list of three pad values, for each dimension
-
-    Returns
-    -------
-    ndarray
-        the padded/cropped array
+    :param arr: ndarray, the array to pad/crop
+    :param pad: list of pad values, a tuple of two int for each dimension. The values in each tuple will be added/subtracted to the sides of array in corresponding dimension. 
+    :return: the padded/cropped and adjusted to opencl compatible format array
     """
    # up the dimensions to 3D
     for _ in range(len(arr.shape), 3):
@@ -106,19 +95,10 @@ def binning(array, binsizes):
     This function does the binning of the array. The array is binned in each dimension by the corresponding binsizes elements.
     If binsizes list is shorter than the array dimensions, the remaining dimensions are not binned.
 
-    Parameters
-    ----------
-    array : ndarray
-        the original array to be binned
-    binsizes : list
-        a list defining binning factors for corresponding dimensions
-
-    Returns
-    -------
-    ndarray
-        binned array
+    :param array: ndarray the original array to be binned
+    :param binsizes: a list defining binning factors for corresponding dimensions
+    :return: binned array
     """
-
     data_dims = array.shape
     # trim array
     for ax in range(len(binsizes)):
@@ -140,17 +120,10 @@ def binning(array, binsizes):
 
 def center_max(arr):
     """
-    This function finds maximum value in the array, and puts it in a center of a new array.
+    Finds maximum value in the array, and shifts in each dimension to put the max in a center.
 
-    Parameters
-    ----------
-    arr : ndarray
-        the original array to be centered
-
-    Returns
-    -------
-    ndarray
-        centered array
+    :param arr: ndarray, array to be centered
+    :return: centered array
     """
     shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape)
     return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
@@ -158,18 +131,12 @@ def center_max(arr):
 
 def crop_center(arr, new_shape):
     """
-    This function crops the array to the new size, leaving the array in the center.
+    This function crops the array to the new size, keeping the center of the array.
     The new_size must be smaller or equal to the original size in each dimension.
-    Parameters
-    ----------
-    arr : ndarray
-        the array to crop
-    new_shape : tuple
-        new size
-    Returns
-    -------
-    cropped : ndarray
-        the cropped array
+
+    :param arr: ndarray, the array to crop
+    :param new_shape: tuple, new size
+    :return: cropped array
     """
     shape = arr.shape
     principio = []
@@ -190,8 +157,10 @@ def crop_center(arr, new_shape):
 
 def get_central_object_extent(fp: np.ndarray) -> list:
     """
-    :param fp:
-    :return:
+    Calculates extent of central cluster.
+
+    :param fp: ndarray tofind extend for
+    :return: list, an extend
     """
     fp_cut = threshold_by_edge(np.abs(fp))
     need = select_central_object(fp_cut)
@@ -203,19 +172,11 @@ def get_central_object_extent(fp: np.ndarray) -> list:
 
 def get_good_dim(dim):
     """
-    This function calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) and is closest to the given starting dimension.
-    If the dimension is not supported the function adds 1 and verifies the new dimension. It iterates until it finds supported value.
+    Calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) by increasing dimension and testing iteratively.
 
-    Parameters
-    ----------
-    dim : int
-        initial dimension
-    Returns
-    -------
-    int
-        a dimension that is supported by the opencl library, and closest to the original dimension
+    :param dim: int, initial dimension
+    :return: a smallest dimension that is supported by the opencl library and greater or equal original dimension
     """
-
     def is_correct(x):
         sub = x
         while sub % 3 == 0:
@@ -235,6 +196,12 @@ def get_good_dim(dim):
 
 
 def get_lib(pkg):
+    """
+    Dynamically imports library module specified in input.
+
+    :param pkg: package acronym
+    :return: object, library module
+    """
     if pkg == 'cp':
         devlib = importlib.import_module('cohere_core.lib.cplib').cplib
     elif pkg == 'np':
@@ -250,16 +217,10 @@ def get_lib(pkg):
 def get_logger(name, ldir=''):
     """
     Creates looger instance that will write to default.log file in a given directory.
-    Parameters
-    ----------
-    name : str
-        logger name
-    ldir : str
-        directory where to create log file
-    Returns
-    -------
-    logger
-        logger object from logging module
+
+    :param name: str, logger name
+    :param ldir: str, directory where to create log file
+    :return: logger object from logging module
     """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -274,7 +235,11 @@ def get_logger(name, ldir=''):
 
 def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
     """
-    :param fp: diffraction pattern
+    Author: Yudong Yao
+
+    Calculates oversampling ratio.
+
+    :param fp: ndarray to calculate oversampling ratio
     :return: oversample ratio in each dimension
     """
      # autocorrelation
@@ -300,26 +265,32 @@ def get_oversample_ratio(fp: np.ndarray) -> np.ndarray:
 
 
 def join(*args):
+    """
+    Operation on path. Joins arguments in Path string and replaces OS separators with Linux type separators.
+
+    :param args: variable number of arguments
+    :return: path
+    """
     return os.path.join(*args).replace(os.sep, '/')
 
 
 def normalize(vec):
+    """
+    Normalizes vector.
+
+    :param vec: vector
+    :return: normalized vector
+    """
     return vec / np.linalg.norm(vec)
 
 
 def pad_center(arr, new_shape):
     """
     This function pads the array with zeros to the new shape with the array in the center.
-    Parameters
-    ----------
-    arr : ndarray
-        the original array to be padded
-    new_shape : tuple
-        new dimensions
-    Returns
-    -------
-    ndarray
-        the zero padded centered array
+
+    :param arr: ndarray, the original array to be padded
+    :param new_shape: tuple, new dimensions
+    :return: the zero padded centered array
     """
     shape = arr.shape
     centered = np.zeros(new_shape, arr.dtype)
@@ -338,17 +309,10 @@ def pad_center(arr, new_shape):
 
 def read_config(config):
     """
-    This function gets configuration file. It checks if the file exists and parses it into a dictionary.
+    Checks if the file exists and parses it into a dictionary.
 
-    Parameters
-    ----------
-    config : str
-        configuration file name
-
-    Returns
-    -------
-    dict
-        dictionary containing parsed configuration, None if the given file does not exist
+    :param config: str, configuration file name
+    :return: dictionary containing parsed configuration, None if the given file does not exist
     """
     config = config.replace(os.sep, '/')
     if not os.path.isfile(config):
@@ -385,58 +349,21 @@ def read_tif(filename):
     """
     This method reads tif type file and returns the data as ndarray.
 
-    Parameters
-    ----------
-    filename : str
-        tif format file name
-
-    Returns
-    -------
-    ndarray
-        an array containing the data parsed from the file
+    :param filename: file name
+    :return: ndarray with the tif file data
     """
     return tf.imread(filename.replace(os.sep, '/')).transpose()
 
 
-def read_results(read_dir):
-    """
-    Reads results and returns array representation.
-
-    Parameters
-    ----------
-    read_dir : str
-        directory to read the results from
-    Returns
-    -------
-    ndarray, ndarray, ndarray (or None)
-        image, support, and coherence arrays
-    """
-    try:
-        imagefile = join(read_dir, 'image.npy')
-        image = np.load(imagefile)
-    except:
-        image = None
-
-    try:
-        supportfile = join(read_dir, 'support.npy')
-        support = np.load(supportfile)
-    except:
-        support = None
-
-    try:
-        cohfile = join(read_dir, 'coherence.npy')
-        coh = np.load(cohfile)
-    except:
-        coh = None
-
-    return image, support, coh
-
-
 def Resize(IN, dim):
     """
-    :param IN:
-    :param dim:
-    :return:
+    Author: Yudong Yao
+
+    Resizes to new dimensions and interpolates array.
+
+    :param IN: ndarray
+    :param dim: new dim
+    :return: resized array
     """
     ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
 
@@ -450,8 +377,12 @@ def Resize(IN, dim):
 
 def select_central_object(fp: np.ndarray) -> np.ndarray:
     """
-    :param fp:
-    :return:
+    Author: Yudong Yao
+
+    Returns array with central object from input array.
+
+    :param fp: array
+    :return: central object array
     """
     # import scipy.ndimage as ndimage
     zero = 1e-6
@@ -474,14 +405,10 @@ def select_central_object(fp: np.ndarray) -> np.ndarray:
 
 def save_tif(arr, filename):
     """
-    This method saves array in tif format file.
+    Saves array in tif format file.
 
-    Parameters
-    ----------
-    arr : ndarray
-        array to save
-    filename : str
-        tif format file name
+    :param arr: ndarray, array to save
+    :param filename: file name
     """
     tf.imwrite(filename.replace(os.sep, '/'), np.abs(arr).transpose().astype(np.float32))
 
@@ -490,16 +417,9 @@ def save_metrics(errs, dir, metrics=None):
     """
     Saves arrays metrics and errors by iterations in text file.
 
-    Parameters
-    ----------
-    errs : list
-        list of "chi" error by iteration
-
-    dir : str
-        directory to write the file containing array metrics
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
+    :param errs: list of "chi" error by iteration
+    :param dir: directory to write the file containing array metrics
+    :param metrics: dictionary with metric type keys, and metric values
     """
     metric_file = join(dir, 'summary')
     linesep = os.linesep
@@ -513,50 +433,6 @@ def save_metrics(errs, dir, metrics=None):
         for er in errs:
             mf.write(f'str({er}) ')
     mf.close()
-
-
-def save_results(image, support, coh, errs, save_dir, metric=None):
-    """
-    Saves results of reconstruction. Saves the following files: image.np, support.npy, errors.npy,
-    optionally coherence.npy, plot_errors.py, graph.npy, flow.npy, iter_array.npy
-
-
-    Parameters
-    ----------
-    image : ndarray
-        reconstructed image array
-
-    support : ndarray
-        support array related to the image
-
-    coh : ndarray
-        coherence array when pcdi feature is active, None otherwise
-
-    errs : ndarray
-        errors "chi" by iterations
-
-    save_dir : str
-        directory to write the files
-
-    metrics : dict
-        dictionary with metric type keys, and metric values
-    """
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    image_file = join(save_dir, 'image')
-    np.save(image_file, image)
-    support_file = join(save_dir, 'support')
-    np.save(support_file, support)
-
-    errs_file = join(save_dir, 'errors')
-    np.save(errs_file, errs)
-    if not coh is None:
-        coh_file = join(save_dir, 'coherence')
-        np.save(coh_file, coh)
-
-    write_plot_errors(save_dir)
-
-    save_metrics(errs, save_dir, metric)
 
 
 def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
@@ -579,12 +455,9 @@ def threshold_by_edge(fp: np.ndarray) -> np.ndarray:
 def write_config(param_dict, config):
     """
     Writes configuration to a file.
-    Parameters
-    ----------
-    param_dict : dict
-        dictionary containing configuration parameters
-    config : str
-        configuration name theparameters will be written into
+
+    :param param_dict: dictionary containing configuration parameters
+    :param config: configuration file name the parameters will be written into
     """
     with open(config.replace(os.sep, '/'), 'w+') as cf:
         cf.truncate(0)
@@ -600,10 +473,7 @@ def write_plot_errors(save_dir):
     Creates python executable that draw plot of error by iteration. It assumes that the given directory
     contains "errors.npy" file
 
-    Parameters
-    ----------
-    save_dir : str
-        directory containing errors.npy file
+    :param save_dir: directory containing errors.npy file
     """
     plot_file = join(save_dir, 'plot_errors.py')
     f = open(plot_file, 'w+')

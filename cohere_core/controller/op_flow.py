@@ -95,8 +95,8 @@ def get_alg_rows(s, pc_conf_start):
         repeat = entry[0]
         funs = entry[1].split('.')
         if funs[0] not in algs:
-            print(f'algorithm {funs[0]} is not defined in op_flow.py file, algs dict.')
-            raise
+            msg = f'algorithm {funs[0]} is not defined in op_flow.py file, algs dict.'
+            raise NameError(msg)
         # the pc will not be executed if pc_conf_start is None
         # this code will be revised after each generation has separate config
         if pc_conf_start is None:
@@ -121,8 +121,8 @@ def get_alg_rows(s, pc_conf_start):
                 (trig_op, idx) = match.groups(0)
                 sub_t = sub_triggers[trig_op]
                 if trig_op not in sub_triggers.keys():
-                    print(f'the sub-trigger {trig_op} must be defined in op_flow.py file, sub_triggers dict.')
-                    raise
+                    msg = f'the sub-trigger {trig_op} must be defined in op_flow.py file, sub_triggers dict.'
+                    raise NameError(msg)
                 if sub_t not in sub_rows:
                     sub_rows[sub_t] = []
                 sub_rows[sub_t].append((entry[2], entry[0] + entry[2], idx))
@@ -195,8 +195,8 @@ def fill_sub_trigger_row(sub_iters, sub_trigs, iter_no, last_trig):
         index = int(idx)
         sub_trig_idx_row[b:e] = index + 1
         if len(sub_trigs) - 1 < index:
-            print('not enough entries in sub-trigger')
-            raise
+            msg = 'not enough entries in sub-trigger'
+            raise RuntimeError(msg)
         trigger = sub_trigs[index].copy()
         trigger[0] += b
         if len(trigger) == 2:
@@ -289,11 +289,8 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
                 # determined in algorithm sequence parsing if the triggered operation is configured
                 # with sub-triggers or trigger
                 if trigger_name in sub_iters.keys():
-                    try:
-                        flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
-                    except:
-                        flow_arr = None
-                        break
+                    # may throw exception
+                    flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
                     # add entry to sub trigger operation dict with key of the trigger mnemonic
                     # and the value of a list with the row and sub triggers iterations chunks
                     sub_trig_op[trigger_name] = (flow_arr[i], sub_iters[trigger_name])

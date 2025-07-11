@@ -6,7 +6,7 @@
 
 
 """
-This script formats data for reconstruction according to configuration.
+Formats data for reconstruction according to configuration.
 """
 
 import os
@@ -26,22 +26,19 @@ __all__ = ['prep',
 def prep(beamline_full_datafile_name, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
-        - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
-        - clearing the noise: values below an amplitude threshold are set to zero
+        - removing the aliens which is effect of interference. The removal can be done by setting regions or mask file that requires manual inspection of the data file. The removal can be automatic with the AutoAlien1 algorithm.
+        - clearing the noise, where values below an amplitude threshold are set to zero. The threshold can be set as a parameter or auto determined.
         - amplitudes are set to sqrt
-        - cropping and padding. If the adjust_dimention is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions that have positive adjust dimension. After adjusting, the dimensions are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
+        - cropping and padding. If the crop-pad is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions with positive values. After adjusting, the dimensions are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
         - centering - finding the greatest amplitude and locating it at a center of array. If shift center is defined, the center will be shifted accordingly.
         - binning - adding amplitudes of several consecutive points. Binning can be done in any dimension.
 
-    Parameters
-    ----------
-    beamline_full_datafile_name : str
-        full name of tif file containing beamline preprocessed data
-    kwargs : keyword arguments
+    :param beamline_full_datafile_name: full path of tif file containing beamline preprocessed data
+    :param kwargs:
         data_dir : str
             directory where prepared data will be saved, default <experiment_dir>/phasing_data
         alien_alg : str
-            Name of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
+            Acronym of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
         aliens : list
             Needed when the ‘block_aliens’ method is configured. Used when the data contains regions with intensity produced by interference. The regions needs to be zeroed out. The aliens can be defined as regions each defined by coordinates of starting point, and ending point (i.e. [[xb0,yb0,zb0,xe0,ye0,ze0],[xb1,yb1,zb1,xe1,ye1,ze1],…[xbn,ybn,zbn,xen,yen,zen]] ).
         alien_file : str
@@ -63,18 +60,11 @@ def prep(beamline_full_datafile_name, **kwargs):
         intensity_threshold : float
             Mandatory, min data threshold. Intensity values below this are set to 0. The threshold is applied after removing aliens.
         crop_pad : list
-            Optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right] The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 or a*2^n, where a is 3, 5, or 9
+            Optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right] The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 multipled by powers of 3 multiplied by powers of5
         shift : list
             Optional, enter center shift list the array maximum is centered before binning, and moved according to shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
-        do_auto_binning : boolean
-            Optional, mandatory if auto_data is True. is True the auto binning wil be done, and not otherwise.
-        no_verify : boolean
-            If True, ignores verifier error.
-        no_adjust_dims : False
-            Used in time evolving reconstruction experiment type
-            True if the size should not be changed.
         no_center_max : False
             True if the max is not centered
     """
