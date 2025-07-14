@@ -17,10 +17,10 @@ Each of these features owns parameters that can be tuned to the projection algor
 
 The software can run code on GPU or CPU, utilizing different library, such as cupy, numpy or torch. User configures the choice depending on hardware and installed software.
 
-The reconstruction is utilized in the GA algorithm, where each generation creates multiple Rec objects, and executes parallel reconstructions. 
+The reconstruction is utilized by the GA algorithm, where each generation creates multiple Rec objects, and executes parallel reconstructions. 
 
-The two subclasses provide functionality for different types of reconstruction. The CoupleRec class supports multipeak reconstruction. 
-The TeRec class supports reconstruction of of time-evolving samples with improved temporal resolution.
+In addition two subclasses provide functionality for different types of reconstruction. The CoupleRec class supports multipeak reconstruction. 
+The TeRec class supports reconstruction of time-evolving samples with improved temporal resolution.
 """
 
 from pathlib import Path
@@ -69,8 +69,7 @@ class Rec:
     Performs phasing using iterative algorithm.
 
     The Rec object must have a device set, either to GPU id or set as CPU.
-    The functions executed in each iteration are determined at the beginning, during initializing of iteration loop. It is based on the reconstruction parameters and the order of the functions.
-    The order is internally defined in 'iter_functions' field. 
+    The functions executed in each iteration are determined at the beginning, during iteration loop initialization. It is based on the reconstruction parameters and the order of functions internally defined in 'iter_functions' field. 
     A factory for this class, 'create_rec' returns initialized Rec object.
     The object is then called to run iterations. The results can be retrieved with getters or saved.
     """
