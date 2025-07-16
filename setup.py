@@ -5,7 +5,7 @@ setuptools.setup(
       author='Barbara Frosik, Ross Harder',
       author_email='bfrosik@anl.gov',
       url='https://github.com/advancedPhotonSource/cohere',
-      version='4.2.0',
+      version='4.2.1',
       packages=setuptools.find_packages(),
       install_requires=[
                         'numpy<2',
