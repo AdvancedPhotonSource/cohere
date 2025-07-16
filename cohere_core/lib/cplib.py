@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np

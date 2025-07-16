@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import abc
 class cohlib(metaclass=abc.ABCMeta):
     # Interface

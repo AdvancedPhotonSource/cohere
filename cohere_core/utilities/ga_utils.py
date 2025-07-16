@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import os
 import cohere_core.utilities.utils as ut
 

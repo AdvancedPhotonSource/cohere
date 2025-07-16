@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import cohere_core.utilities.utils as ut
 import cohere_core.utilities.dvc_utils as dvut
 from abc import ABC, abstractmethod
