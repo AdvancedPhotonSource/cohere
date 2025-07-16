@@ -6,6 +6,7 @@
 
 import os
 import cohere_core.utilities.utils as ut
+import numpy as np
 
 
 def read_results(read_dir):
@@ -16,19 +17,19 @@ def read_results(read_dir):
     :return: image, support, and coherence arrays
     """
     try:
-        imagefile = join(read_dir, 'image.npy')
+        imagefile = ut.join(read_dir, 'image.npy')
         image = np.load(imagefile)
     except:
         image = None
 
     try:
-        supportfile = join(read_dir, 'support.npy')
+        supportfile = ut.join(read_dir, 'support.npy')
         support = np.load(supportfile)
     except:
         support = None
 
     try:
-        cohfile = join(read_dir, 'coherence.npy')
+        cohfile = ut.join(read_dir, 'coherence.npy')
         coh = np.load(cohfile)
     except:
         coh = None

@@ -96,8 +96,7 @@ def shift_com(amp, phi):
 
 def post_process(amp, phi, th=0.1, uw=0):
     if uw == 1:
-        # phi = np.unwrap(np.unwrap(np.unwrap(phi,0),1),2)
-        phi = unwrap_phase(phi)
+        phi = np.unwrap(np.unwrap(np.unwrap(phi,0),1),2)
 
     mask = np.where(amp > th, 1, 0)
     amp_out = mask * amp
