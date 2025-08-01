@@ -33,65 +33,65 @@ Parameters
 
     make_twin = False
 
-- imcrop:
+- crop_type:
 | Optional, Defines how crop is determined. Supported values: "fraction' and "tight". If defined as fraction, the defined fraction of each dimension is cropped around maximum value. The "tight" defines crop being determined by imcrop_margin and imcrop_thresh parameters applied to the image. The extend subarray will be derived from image array by finding points greater than threshold multiplied by maximum value. A margin will be added to each side of the extend array.
 | example:
 ::
 
-    imcrop = "tight"
-    imcrop = "fraction"
+    crop_type = "tight"
+    crop_type = "fraction"
 
--imcrop_fraction:
-| Required parameter when imcrop is configured "fraction". Defines size of the cropped array relative to the full image array. The full array is cropped around maximum value.
+- crop_fraction:
+| Required parameter when crop_type is configured "fraction". Defines size of the cropped array relative to the full image array. The full array is cropped around maximum value.
 | example:
 ::
 
-    crop = [.5, .5, .5]
+    crop_fraction = [.5, .5, .5]
 
-- imcrop_margin:
-| Required parameter when imcrop is configured "tight". The margin will be added to each side of the extend array.
+- crop_margin:
+| Required parameter when crop_type is configured "tight". The margin will be added to each side of the extend array.
 | example:
 ::
 
-    imcrop_margin = 10
+    crop_margin = 10
 
-- imcrop_thresh:
-| Required parameter when imcrop is configured "tight". The threshold will determine the extend of the array.
+- crop_thresh:
+| Required parameter when crop_type is configured "tight". The threshold will determine the extend of the array.
 | example:
 ::
 
-    imcrop_thresh = 0.5
+    crop_thresh = 0.5
 
 - complex_mode:
-| This mode determines arrays that will be saved in the direct space images file. If mode is "AmpPhase" the "imAmp" and "imPh" arrays will be saved that hold image amplitudes and image phases. if mode is "ReIm" the "imRe" and "imImag" arrays will be saved that hold real values and imaginary values.
+| This mode determines arrays that will be saved in the direct space images file. If mode is "AmpPhase" the "imAmp" and "imPh" arrays will be saved that hold image amplitudes and image phases. if mode is "ReIm" the "imRe" and "imImag" arrays will be saved that hold real values and imaginary values. Defaults to "AmpPhase".
 | example:
 ::
 
     complex_mode = "AmpPhase"
 
 - interpolation_mode:
-| Defines how the image is interpolated. Supported values: "AmpPhase" and "ReIm". If defined as "AmpPhase" the image amplitudes and image phases are interpolated. If defined as "ReIm" the image real values and imaginary are interpolated, and then the interpolated image amplitudes and image phases are calculated.
+| If present the reconstructed object will be interpolated. The parameter defines how the image is interpolated. Supported values: "AmpPhase" and "ReIm". If defined as "AmpPhase" the image amplitudes and image phases are interpolated. If defined as "ReIm" the image real values and imaginary are interpolated, and then the interpolated image amplitudes and image phases are calculated.
 | example:
 ::
 
     interpolation_mode = "AmpPhase"
 
 - interpolation_resolution:
-| Required parameter for interpolation. Supported values: "min_deconv_res", int value, float value, list. If set to "min_deconv_res" the resolution will be determined by including the deconvolution resolution. If defined as integer value the resolution will be set to this value in each dimension. If defined as list, the list will define resolution in corresponding dimension.
+| Required parameter for interpolation. Supported values: "min_deconv_res", int value, float value, list. If set to "min_deconv_res" the resolution will be determined by including the deconvolution resolution. If defined as integer value the resolution will be set to this value in each dimension. If defined as list, the list will define resolution in corresponding dimension. If set to "min_deconv_res" the resolution capability must be configured by setting the "determine_resolution_type" parameter.
 | example:
 ::
 
     interpolation_resolution = "min_deconv_res"
 
-- determine_resolution:
+- determine_resolution_type:
 | If present, the resolution in direct and reciprocal spaces will be found. Supported value: "deconv".
 | example:
 ::
 
-    determine_resolution = "deconv"
+    determine_resolution_type = "deconv"
 
 - resolution_deconv_contrast:
-|
+| A fraction less than 0, required when "determine_resolution_type" is set to "deconv".
 | example:
 ::
 
