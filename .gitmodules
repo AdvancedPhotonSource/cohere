@@ -1,3 +1,6 @@
 [submodule "cohere-ui"]
 	path = cohere-ui
 	url = https://github.com/AdvancedPhotonSource/cohere-ui.git
+[submodule "cohere_examples"]
+	path = cohere_examples
+	url = https://github.com/AdvancedPhotonSource/cohere_examples
