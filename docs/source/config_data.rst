@@ -1,19 +1,23 @@
+.. _config_dt:
+
 ===========
 config_data
 ===========
-| The "config_data" file defines parameters needed to format data. The input is a data file obtained in the preparation phase.
+| The "config_data" file defines parameters needed to format data for phasing. The input is an instrument corrected data file obtained in the beamline preprocessing phase.
 
 Parameters
 ==========
 - data_dir:
-| Optional, defines directory that contains data.tif file with preprocessed experiment data. Defaults to <experiment_dir>/preprocessed_data directory.
+| Optional, defaults to <experiment_dir>/preprocessed_data in cohere experiment directory structure.
+| Defines directory that contains data.tif file with beamline preprocessed experiment data.
 | example:
 ::
 
     data_dir = "/path/to/data_dir"
 
 - alien_alg:
-| Optional, name of method used to remove aliens. Possible options are: 'block_aliens', 'alien_file', and 'AutoAlien1'. The 'block_aliens' algorithm will zero out defined blocks, 'alien_file' method will use given file as a mask, and 'AutoAlien1' will use auto mechanism to remove aliens. Each of these algorithms require different parameters, explained below.
+| Optional, if not defined, no alien algorithm is used.
+| Name of method used to remove aliens. Possible options are: 'block_aliens', 'alien_file', and 'AutoAlien1'. The 'block_aliens' algorithm will zero out defined blocks, 'alien_file' method will use given file as a mask, and 'AutoAlien1' will use auto mechanism to remove aliens. Each of these algorithms require different parameters, explained below.
 | example:
 ::
 
@@ -27,7 +31,7 @@ Parameters
     aliens = [[170,220,112,195,245,123], [50,96,10,60,110,20]]
 
 - alien_file:
-| Needed when the 'alien_file' method is configured. User can produce a file in npy format that contains table of zeros and ones, where zero means to set the pixel to zero, and one to leave it. 
+| Needed when the 'alien_file' method is configured. User can produce a file in npy format that contains zeros and ones, where zero means to set the pixel to zero, and one to leave it.
 | example:
 ::
 
@@ -55,7 +59,7 @@ Parameters
     AA1_min_pts = 5
 
 - AA1_eps:
-| Used in the 'AutoAliens1' method. If not given it will default to 1.1. Used in the clustering algorithm.
+| Used in the 'AutoAliens1' method. If not given it will default to 1.1. Defines neighborhood Used in the clustering algorithm.
 | example:
 ::
 
@@ -83,22 +87,23 @@ Parameters
     AA1_expandcleanedsigma = 5.0
 
 - auto_intensity_threshold:
-| Optional, defaults to False. If True, the intensity threshold is calculated programmatically, otherwise must be provided.
+| Optional, defaults to False.
+| The intensity threshold is calculated programmatically if set to True, otherwise must be provided.
 | example:
 ::
 
     auto_intensity_threshold = True
 
 - intensity_threshold:
-| Mandatory, if auto_intensity_threshold is not set. Data threshold.  Intensity values below this value are set to 0. The threshold is applied after removing aliens.
-| If auto_data is configured in main config file, this value will be overridden by calculated value.
+| Mandatory, if auto_intensity_threshold is not set. Intensity values below this value are set to 0. The threshold is applied after removing aliens.
+| If auto_data is configured , this value is overridden by calculated value.
 | example:
 ::
 
     intensity_threshold = 25.0
 
 - crop_pad:
-| Optional, a list of numbers defining how to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right]. The final dimensions will be adjusted up to the good number for the FFT such as: powers of 2 or a*2^n, where a is 3, 5, or 9.
+| Optional, a list of numbers defining how to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right]. The final dimensions will be adjusted up to the good number for the FFT such as product of powers of 2, 3 or 5.
 | example:
 ::
 
@@ -120,7 +125,6 @@ Parameters
 
 - binning:
 | Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
-| If auto_data is configured in main config file, this list will be overridden by calculated values.
 | example:
 ::
 

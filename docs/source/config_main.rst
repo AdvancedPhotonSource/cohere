@@ -1,3 +1,5 @@
+.. _config:
+
 =====
 cofig
 =====
@@ -57,8 +59,8 @@ Parameters
    separate_scan_ranges = True
 
 - converter_ver:
-| Mandatory after ver 3.0. If not configured, it will be auto-updated by scripts to match the latest converter version.
+| Mandatory after cohere ver 3.0. If not configured, it will be auto-updated by scripts to match the latest converter version.
 | example:
 ::
 
-    converter_ver = 2
+    converter_ver = 3

@@ -14,7 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('../..'))
-
+sys.path.insert(0, os.path.abspath('../../cohere-ui'))
 
 # -- Project information -----------------------------------------------------
 
@@ -23,7 +23,7 @@ copyright = '2020, Barbara Frosik, Ross Harder'
 author = 'Barbara Frosik, Ross Harder'
 
 # The full version, including alpha/beta/rc tags
-release = '4.1'
+release = '4.3'
 
 
 # -- General configuration ---------------------------------------------------
@@ -71,6 +71,13 @@ autodoc_mock_imports = ['numpy',
                         'psutil',
                         'tqdm',
                         'scipy',
-                        'matplotlib']
+                        'matplotlib',
+                        'pyqt5',
+                        'scikit-image',
+                        'xrayutilities',
+                        'pyvista',
+                        'notebook',
+                        'gputil',
+                        ]
 
 master_doc = 'index'

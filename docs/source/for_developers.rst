@@ -3,50 +3,7 @@ develop
 =======
 | This chapter has info for developers.
 
-Installation for development
-============================
-The best practice is to create conda environment dedicated for the development.
-
-  ::
-
-    conda create -n <dev_env> -c conda-forge python=3.11 mpi4py pyzmq
-    conda activate <dev_env>
-
-| Clone the latest cohere repository from GitHub. This will include the cohere-ui directory with all of the cohere-ui content, such users scripts and example.
-
-  ::
-
-    git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
-
-| After the package is installed checkout the Dev environment and create your branch. Then install the cohere_core into the environment:
-
-  ::
-
-    cd cohere
-    git checkout Dev
-    #To create your own branch of Dev for your own development create and checkout a new branch as follows.
-    git checkout -b <dev_branch>
-    pip install -e .
-   
-    # for Petra beamline only
-    pip install hdf5plugin pandas
-
-| Go to cohere-ui directory and checkout the Dev branch and create your own branch, then install the cohere_ui package. 
-
-  ::
-
-    cd cohere-ui
-    git checkout Dev
-    #To create your own branch of Dev for your own development create and checkout a new branch as follows.
-    git checkout -b <dev_branch>
-    pip install -e .
-
-| If planning to use GPUs, install the packages/libraries that you wish to use.
-
-  ::
-
-    conda install cupy=12.2.0 -c conda-forge # if using cupy library
-    pip install torch # if using torch
+Install the cohere project as described in :ref:`latest`.
 
 Adding new trigger
 ==================
