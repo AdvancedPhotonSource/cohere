@@ -1,3 +1,5 @@
+.. _api_cohere_ui:
+
 =========
 cohere_ui
 =========

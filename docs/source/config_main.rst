@@ -1,8 +1,8 @@
-.. _config:
+.. _config_main:
 
-=====
-cofig
-=====
+======
+config
+======
 | The "config" file is a main configuration defining the experiment and is applicable to all parts of processing: beamline preprocessing, standard preprocessing, phasing, and beamline visualization.
 
 Parameters

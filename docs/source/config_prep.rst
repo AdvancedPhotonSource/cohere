@@ -1,7 +1,9 @@
-===========                                      
+.. _config_prep:
+
+===========
 config_prep
 ===========
-| The "config_prep" file defines parameters used during data preparation, when reading data. This file contains parameters used by script written for APS 34-IDC beamline.
+| The "config_prep" file defines parameters used during data preprocessing, when reading data. This file contains parameters used by script written for APS 34-IDC beamline.
 
 Parameters
 ==========
