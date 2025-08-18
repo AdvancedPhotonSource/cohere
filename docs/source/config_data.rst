@@ -1,4 +1,4 @@
-.. _config_dt:
+.. _config_data:
 
 ===========
 config_data
