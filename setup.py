@@ -13,7 +13,8 @@ setuptools.setup(
                         'tifffile',
                         'psutil',
                         'tqdm',
-                        'matplotlib'
+                        'matplotlib',
+                        'sphinx'
                         ],
       classifiers=[
             'Intended Audience :: Science/Research',
