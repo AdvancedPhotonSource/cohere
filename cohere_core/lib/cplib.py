@@ -11,6 +11,7 @@ import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
 import cupyx.scipy.special as sp
 import cupyx.scipy.signal as sig
+import cupyx.scipy.fft as fft
 
 
 class cplib(cohlib):
@@ -68,6 +69,10 @@ class cplib(cohlib):
         return arr.size
 
     @staticmethod
+    def next_fast_len(target):
+        return fft.next_fast_len(target)
+
+    @staticmethod
     def hasnan(arr):
         return cp.any(cp.isnan(arr))
 
@@ -103,19 +108,19 @@ class cplib(cohlib):
 
     @staticmethod
     def fftshift(arr):
-        return cp.fft.fftshift(arr)
+        return fft.fftshift(arr)
 
     @staticmethod
     def ifftshift(arr):
-        return cp.fft.ifftshift(arr)
+        return fft.ifftshift(arr)
 
     @staticmethod
     def fft(arr, norm='forward'):
-        return cp.fft.fftn(arr, norm=norm)
+        return fft.fftn(arr, norm=norm)
 
     @staticmethod
     def ifft(arr, norm='forward'):
-        return cp.fft.ifftn(arr, norm=norm)
+        return fft.ifftn(arr, norm=norm)
 
     @staticmethod
     def fftconvolve(arr1, kernel):

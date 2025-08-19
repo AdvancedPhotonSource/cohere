@@ -65,6 +65,10 @@ class nplib(cohlib):
         return arr.size
 
     @staticmethod
+    def next_fast_len(target):
+        return fft.next_fast_len(target)
+
+    @staticmethod
     def nan_to_num(arr, **kwargs):
         return np.nan_to_num(arr, **kwargs)
 

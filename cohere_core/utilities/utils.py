@@ -49,13 +49,14 @@ __all__ = [
            ]
 
 
-def adjust_dimensions(arr, pads):
+def adjust_dimensions(arr, pads, next_fast_len=False, pkg=None):
     """
     This function adds to or subtracts from each dimension of the array elements defined by pad. If the pad is positive, the array is padded in this dimension. If the pad is negative, the array is cropped.
-    The dimensions of the new array is then adjusted to be supported by the opencl library.
 
     :param arr: ndarray, the array to pad/crop
     :param pad: list of pad values, a tuple of two int for each dimension. The values in each tuple will be added/subtracted to the sides of array in corresponding dimension. 
+    :param next_fast_len: bool, whether or not to find the next fast length for each dimension
+    :param pkg: package acronym: 'cp' for cupy, 'torch' for torch, 'np' for numpy
     :return: the padded/cropped and adjusted to opencl compatible format array
     """
    # up the dimensions to 3D
@@ -75,8 +76,8 @@ def adjust_dimensions(arr, pads):
         pad = pads[i]
         # find a good dimension and find padding
         temp_dim = old_dims[i] + pad[0] + pad[1]
-        if temp_dim > 1:
-            new_dim = get_good_dim(temp_dim)
+        if next_fast_len and temp_dim > 1:
+            new_dim = get_good_dim(temp_dim, pkg)
         else:
             new_dim = temp_dim
         added = new_dim - temp_dim
@@ -170,28 +171,19 @@ def get_central_object_extent(fp: np.ndarray) -> list:
     return extent
 
 
-def get_good_dim(dim):
+def get_good_dim(dim, pkg):
     """
-    Calculates the dimension supported by opencl library (i.e. is multiplier of 2, 3, or 5) by increasing dimension and testing iteratively.
+    Returns the even dimension that the given package found to be good for fast Fourier transform and not smaller than given dimension. .
 
     :param dim: int, initial dimension
-    :return: a smallest dimension that is supported by the opencl library and greater or equal original dimension
+    :param pck: python package that will be used for reconstruction
+    :return: a new dimension
     """
-    def is_correct(x):
-        sub = x
-        while sub % 3 == 0:
-            sub = sub / 3
-        while sub % 5 == 0:
-            sub = sub / 5
-        while sub % 2 == 0:
-            sub = sub / 2
-        return sub == 1
-
-    new_dim = dim
-    if new_dim % 2 == 1:
+    devlib = get_lib(pkg)
+    new_dim = devlib.next_fast_len(dim)
+    while new_dim % 2 == 1:
         new_dim += 1
-    while not is_correct(new_dim):
-        new_dim += 2
+        new_dim = devlib.next_fast_len(new_dim)
     return new_dim
 
 
@@ -373,6 +365,56 @@ def Resize(IN, dim):
     ft_resize = adjust_dimensions(ft, pad)
     output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
     return output
+
+#
+# def Resize1(IN, dim):
+#     """
+#     :param IN: input array
+#     :param dim: target dimensions
+#     :return: resized array with exact target dimensions
+#     """
+#     ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
+#
+#     # Calculate exact padding needed for target dimensions
+#     current_shape = np.array(ft.shape)
+#     target_shape = np.array(dim)
+#
+#     # Calculate total padding needed for each dimension
+#     total_pad = target_shape - current_shape
+#
+#     # Split padding between front and back
+#     pad_front = total_pad // 2
+#     pad_back = total_pad - pad_front
+#
+#     # Create padding specification for np.pad
+#     pad_width = [(max(0, pf), max(0, pb)) for pf, pb in zip(pad_front, pad_back)]
+#
+#     # Handle cropping if any dimension needs to shrink
+#     if np.any(total_pad < 0):
+#         # Crop first
+#         crop_start = np.maximum(0, -pad_front)
+#         crop_end = current_shape - np.maximum(0, -pad_back)
+#         ft_cropped = ft[crop_start[0]:crop_end[0],
+#                      crop_start[1]:crop_end[1],
+#                      crop_start[2]:crop_end[2]]
+#
+#         # Recalculate padding for cropped array
+#         cropped_shape = np.array(ft_cropped.shape)
+#         remaining_pad = target_shape - cropped_shape
+#         pad_front = remaining_pad // 2
+#         pad_back = remaining_pad - pad_front
+#         pad_width = [(max(0, pf), max(0, pb)) for pf, pb in zip(pad_front, pad_back)]
+#
+#         ft_resize = np.pad(ft_cropped, pad_width, mode='constant', constant_values=0)
+#     else:
+#         # Only padding needed
+#         ft_resize = np.pad(ft, pad_width, mode='constant', constant_values=0)
+#
+#     # Ensure exact dimensions
+#     assert ft_resize.shape == tuple(dim), f"Output shape {ft_resize.shape} doesn't match target {tuple(dim)}"
+#
+#     output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
+#     return output
 
 
 def select_central_object(fp: np.ndarray) -> np.ndarray:

@@ -241,6 +241,8 @@ def run_AI(data, model_file, dir):
     pad_value = np.array(data.shape) // 2 - np.array(pred_obj.shape) // 2
     pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
            [pad_value[2], pad_value[2]]]
+    # not passing in 'next_fst_len' switch, so the dimensions will not be adjusted for fast processing of
+    # Fourier transforms
     guess = ut.adjust_dimensions(pred_obj, pad)
 
     np.save(ut.join(dir, 'image.npy'), guess)

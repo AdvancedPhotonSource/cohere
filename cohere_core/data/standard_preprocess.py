@@ -65,8 +65,12 @@ def prep(beamline_full_datafile_name, **kwargs):
             Optional, enter center shift list the array maximum is centered before binning, and moved according to shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
-        no_center_max : False
+        no_center_max : boolean, defaults to False
             True if the max is not centered
+        next_fast_len : boolean, defaults to False
+            Typically True, changes dimensions to numbers that allow fast fourier transform; depends on library
+        pkg : string
+            'cp' for cupy, 'torch' for torch, 'np' for numpy
     """
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
@@ -117,7 +121,9 @@ def prep(beamline_full_datafile_name, **kwargs):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
 
-    data = ut.adjust_dimensions(data, pairs)
+    next_fast_len = kwargs.get('next_fast_len', False)
+    pkg = kwargs.get('pkg', 'np')
+    data = ut.adjust_dimensions(data, pairs, next_fast_len, pkg)
     if data is None:
         print('check "crop_pad" configuration')
         return

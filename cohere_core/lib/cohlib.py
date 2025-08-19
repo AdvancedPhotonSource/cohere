@@ -35,6 +35,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.reshape) and
                 hasattr(subclass, 'size') and
                 callable(subclass.size) and
+                hasattr(subclass, 'next_fast_len') and
+                callable(subclass.next_fast_len) and
                 hasattr(subclass, 'hasnan') and
                 callable(subclass.hasnan) and
                 hasattr(subclass, 'copy') and
@@ -238,6 +240,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def size(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def next_fast_len(target):
         pass
 
     @staticmethod

@@ -103,6 +103,11 @@ class torchlib(cohlib):
         return torch.numel(arr)
 
     @staticmethod
+    def next_fast_len(target):
+        import scipy
+        return scipy.fft.next_fast_len(target)
+
+    @staticmethod
     def hasnan(arr):
         return torch.any(torch.isnan(arr))
 
