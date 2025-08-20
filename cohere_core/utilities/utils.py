@@ -39,7 +39,7 @@ __all__ = [
            'pad_center',
            'read_config',
            'read_tif',
-           'Resize',
+           'resample',
            'select_central_object',
            'save_tif',
            'save_metrics',
@@ -347,15 +347,15 @@ def read_tif(filename):
     return tf.imread(filename.replace(os.sep, '/')).transpose()
 
 
-def Resize(IN, dim):
+def resample(IN, dim):
     """
     Author: Yudong Yao
 
-    Resizes to new dimensions and interpolates array.
+    Resamples to new dimensions.
 
     :param IN: ndarray
     :param dim: new dim
-    :return: resized array
+    :return: resampled array
     """
     ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
 
@@ -365,56 +365,6 @@ def Resize(IN, dim):
     ft_resize = adjust_dimensions(ft, pad)
     output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
     return output
-
-#
-# def Resize1(IN, dim):
-#     """
-#     :param IN: input array
-#     :param dim: target dimensions
-#     :return: resized array with exact target dimensions
-#     """
-#     ft = np.fft.fftshift(np.fft.fftn(IN)) / np.prod(IN.shape)
-#
-#     # Calculate exact padding needed for target dimensions
-#     current_shape = np.array(ft.shape)
-#     target_shape = np.array(dim)
-#
-#     # Calculate total padding needed for each dimension
-#     total_pad = target_shape - current_shape
-#
-#     # Split padding between front and back
-#     pad_front = total_pad // 2
-#     pad_back = total_pad - pad_front
-#
-#     # Create padding specification for np.pad
-#     pad_width = [(max(0, pf), max(0, pb)) for pf, pb in zip(pad_front, pad_back)]
-#
-#     # Handle cropping if any dimension needs to shrink
-#     if np.any(total_pad < 0):
-#         # Crop first
-#         crop_start = np.maximum(0, -pad_front)
-#         crop_end = current_shape - np.maximum(0, -pad_back)
-#         ft_cropped = ft[crop_start[0]:crop_end[0],
-#                      crop_start[1]:crop_end[1],
-#                      crop_start[2]:crop_end[2]]
-#
-#         # Recalculate padding for cropped array
-#         cropped_shape = np.array(ft_cropped.shape)
-#         remaining_pad = target_shape - cropped_shape
-#         pad_front = remaining_pad // 2
-#         pad_back = remaining_pad - pad_front
-#         pad_width = [(max(0, pf), max(0, pb)) for pf, pb in zip(pad_front, pad_back)]
-#
-#         ft_resize = np.pad(ft_cropped, pad_width, mode='constant', constant_values=0)
-#     else:
-#         # Only padding needed
-#         ft_resize = np.pad(ft, pad_width, mode='constant', constant_values=0)
-#
-#     # Ensure exact dimensions
-#     assert ft_resize.shape == tuple(dim), f"Output shape {ft_resize.shape} doesn't match target {tuple(dim)}"
-#
-#     output = np.fft.ifftn(np.fft.ifftshift(ft_resize)) * np.prod(dim)
-#     return output
 
 
 def select_central_object(fp: np.ndarray) -> np.ndarray:

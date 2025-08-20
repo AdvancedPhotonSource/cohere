@@ -236,7 +236,7 @@ def run_AI(data, model_file, dir):
     pred_obj = preds_amp * np.exp(1j * preds_phi)
 
     # match object size with the input data
-    pred_obj = ut.Resize(pred_obj, inshape)
+    pred_obj = ut.resample(pred_obj, inshape)
 
     pad_value = np.array(data.shape) // 2 - np.array(pred_obj.shape) // 2
     pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
