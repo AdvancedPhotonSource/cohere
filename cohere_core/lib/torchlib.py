@@ -116,6 +116,10 @@ class torchlib(cohlib):
         return arr
 
     @staticmethod
+    def moveaxis(arr, src, dst):
+        raise NotImplementedError
+
+    @staticmethod
     def roll(arr, sft, axis):
         sft = [int(s) for s in sft]
         dims = tuple([i for i in range(len(sft))])

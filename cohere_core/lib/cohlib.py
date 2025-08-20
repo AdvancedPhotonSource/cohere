@@ -31,6 +31,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.size) and
                 hasattr(subclass, 'hasnan') and
                 callable(subclass.hasnan) and
+                hasattr(subclass, 'moveaxis') and
+                callable(subclass.moveaxis) and
                 hasattr(subclass, 'copy') and
                 callable(subclass.copy) and
                 hasattr(subclass, 'roll') and
@@ -247,6 +249,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def copy(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def moveaxis(arr, src, dst):
         pass
 
     @staticmethod

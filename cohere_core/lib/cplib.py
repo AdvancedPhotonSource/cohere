@@ -83,6 +83,10 @@ class cplib(cohlib):
         return cp.random.random(shape, dtype=cp.float32) + 1j * cp.random.random(shape, dtype=cp.float32)
 
     @staticmethod
+    def moveaxis(arr, src, dst):
+        return cp.moveaxis(arr, src, dst)
+
+    @staticmethod
     def roll(arr, sft, axis=None):
         if axis is None:
             axis = list(range(len(sft)))
@@ -277,7 +281,7 @@ class cplib(cohlib):
 
     @staticmethod
     def geomspace(start, stop, num):
-        return cp.geomspace(start, stop, num)
+        return cp.logspace(cp.log10(start), cp.log10(stop), num)
 
     @staticmethod
     def clip(arr, min, max=None):

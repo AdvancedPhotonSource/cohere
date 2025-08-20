@@ -54,6 +54,10 @@ class aflib(cohlib):
                                       seed=int(time.time() * 1000000) * os.getpid() + os.getpid())
         return af.random.randn(dims[0], dims[1], dims[2], dims[3], dtype=af.Dtype.c32, engine=eng)
 
+    @staticmethod
+    def moveaxis(arr, src, dst):
+        raise NotImplementedError
+
     def fftshift(arr):
         raise NotImplementedError
 

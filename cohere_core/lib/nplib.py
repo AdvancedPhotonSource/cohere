@@ -82,6 +82,10 @@ class nplib(cohlib):
         #return rng.random(*shape).astype(float)
 
     @staticmethod
+    def moveaxis(arr, src, dst):
+        return np.moveaxis(arr, src, dst)
+
+    @staticmethod
     def roll(arr, sft, axis=None):
         if type(sft) != list:
             sft = [sft]
