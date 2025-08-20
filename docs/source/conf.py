@@ -15,7 +15,6 @@ import sys
 
 # sys.path.insert(0, os.path.abspath('../../cohere-ui'))
 sys.path.insert(0, os.path.abspath('../..'))
-print('path',sys.path)
 
 # -- Project information -----------------------------------------------------
 

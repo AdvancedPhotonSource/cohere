@@ -36,7 +36,8 @@ Algorithm Sequence
 Formula examples
 ================
 | Algorithm sequence and corresponding trigger configuration
-| example1:
+
+| example 1
 ::
 
     algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
@@ -52,7 +53,7 @@ config_rec:
 | In addition, based on the triggers configuration, every three iterations starting from the first, for the rest of the run, the shrink wrap operation will be applied,
 | and every two iterations, starting at the beginning, until iteration 130, the lowpass operation will be applied.
 
-| example2:
+| example 2
 ::
 
     algorithm_sequence = "20*ER.SW0.PHC0 + 180*HIO.SW1.PHC1 + 20*ER.SW2"

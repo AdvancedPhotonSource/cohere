@@ -3,9 +3,8 @@ Cohere Experiment
 =================
 | The experiment executed at the beamline concludes in a collection of data files and metadata for many scans. It is typical that a number of scans are selected and grouped together for analysis. The analysis of selected scans constitute of cohere experiment.
 | In order to group the files associated with an cohere experiment in a structured manner user scripts will create a dedicated space. The space, cohere experiment directory, will be a sub-directory in working directory. The name of cohere experiment directory is descriptive as it contains an ID and scan ranges, for example: with experiment ID of "ABC", and scan "56-78", the experiment directory is ABC_56-78.
-| Cohere experiment can be configured for different cases. User can request to run the process separately for each scan, or scan range. User can also set the experiment to multipeak.
-Refer to :ref:`config_main` for description of configuration parameters that set a cohere experiment.
-Below we show experiment directory structure for various use cases.
+| Cohere experiment can be configured for different cases. User can request to run the process separately for each scan, or scan range. User can also set the experiment to multipeak. Refer to :ref:`config_main` for description of configuration parameters that set a cohere experiment.
+| Below we show experiment directory structure for various use cases.
 
 Single reconstruction
 +++++++++++++++++++++
