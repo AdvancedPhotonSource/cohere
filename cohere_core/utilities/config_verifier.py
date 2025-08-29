@@ -153,6 +153,43 @@ def ver_config(config_map):
     return ("")
 
 
+def ver_config_prep(config_map):
+    """
+    This function verifies experiment config_prep file
+
+    Parameters
+    ----------
+    fname : str
+        configuration file name
+
+    Returns
+    -------
+    error_message : str
+        message describing parameter error or empty string if all parameters are verified
+    """
+    config_map_file = 'config_prep_error_map_file'
+    fname = 'config_prep'
+
+    config_parameter = 'Excludescans'
+    if 'exclude_scans' in config_map:
+        if not ver_list_int('exclude_scans', config_map['exclude_scans']):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    config_parameter = 'MinFiles'
+    if 'min_frames' in config_map:
+        min_frames = config_map['min_frames']
+        if type(min_frames) != int:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    return ("")
+
+
 def ver_config_rec(config_map):
     """
     This function verifies experiment config_rec file
@@ -1027,6 +1064,8 @@ def verify(config_name, conf_map):
     """
     if config_name == 'config':
         return ver_config(conf_map)
+    if config_name == 'config_prep':
+        return ver_config_prep(conf_map)
     elif config_name == 'config_data':
         return ver_config_data(conf_map)
     elif config_name == 'config_rec':

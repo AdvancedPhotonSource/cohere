@@ -23,6 +23,12 @@ config_error = {'File':['File does not exist','Cannot Read File',
                 'Separatescanranges':['separate_scan_ranges parameter should be True or False'],
                 'Multipeak': ['multipeak parameter should be True or False']
                 }
+config_prep_error = {'File':['No configuration file',
+                             'cannot read configuration file',
+                             'Parsing error, check parenthesis,quotation syntax'],
+                     'Excludescans':['exclude scans should be a list'],
+                     'MinFiles':['min_frames should be int',
+                                 'min_frames parameter parsing error']}
 config_data_error = {'File':['No configuration file',
                              'Cannot read configuration file',
                              'Parsing error, check parenthesis,quotation syntax'],
@@ -140,6 +146,7 @@ config_disp_error = {'File':['No configuration file',
                      'Rampups':['rampups should be int']}
 
 config_map_names = {'config_error_map_file':config_error,
+                    'config_prep_error':config_prep_error,
                     'config_data_error_map_file':config_data_error,
                     'config_rec_error_map_file':config_rec_error,
                     'config_disp_error_map_file':config_disp_error}
