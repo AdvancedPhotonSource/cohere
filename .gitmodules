@@ -4,3 +4,6 @@
 [submodule "cohere_examples"]
 	path = cohere_examples
 	url = https://github.com/AdvancedPhotonSource/cohere_examples
+[submodule "cohere_beamlines"]
+	path = cohere_beamlines
+	url = https://github.com/AdvancedPhotonSource/cohere_beamlines
