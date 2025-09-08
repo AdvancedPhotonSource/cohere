@@ -69,7 +69,6 @@ def get_config_error_message(config_file_name, map_file, config_parameter, confi
     :return: An error string describing the error and where it was found
     """
     config_map_dic = config_map_names.get(map_file)
-
     error_string_message = config_map_dic.get(config_parameter)[config_error_no]
     # presented_message = "File=" + config_file_name, "Parameter=" + config_parameter, "Error=" + error_string_message
 
@@ -183,6 +182,19 @@ def ver_config_prep(config_map):
         min_frames = config_map['min_frames']
         if type(min_frames) != int:
             config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    config_parameter = 'Maxcrop'
+    if 'max_crop' in config_map:
+        if not ver_list_int('max_crop', config_map['max_crop']):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+        elif len(config_map['max_crop']) < 2:
+            config_error = 1
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
