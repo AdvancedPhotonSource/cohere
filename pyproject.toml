@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cohere_core"
+version = "4.2.1"
+authors = [
+  { name="Barbara Frosik", email="bfrosik@anl.gov" },
+  { name="Ross Harder", email="rharder@anl.gov" }
+]
+description = "cohere reconstruction tools"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = { file = "LICENSE" }
+
+dependencies = [
+                'numpy<2',
+                'scikit-learn',
+                'tifffile',
+                'psutil',
+                'tqdm',
+                'matplotlib',
+                'sphinx'
+                ]
+
+[tool.setuptools.packages.find]
+    where = ["src"]
+    include = ["cohere_core*", ]
+
+[project.urls]
+Homepage = "https://github.com/AdvancedPhotonSource/cohere_core"
