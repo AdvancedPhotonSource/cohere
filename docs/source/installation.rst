@@ -1,9 +1,10 @@
 ============
 Installation
 ============
+Currently we are working on a new cohere release. In the mean time the project can be loaded in the development mode. 
 The cohere project can be installed on Linux, Windows and Mac operating systems.
 
-Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and two submodules: cohere-ui and cohere_examples.
+Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and three submodules: cohere-ui, cohere_beamlines, and cohere_examples.
 Run the following commands::
 
     conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
@@ -12,7 +13,10 @@ Run the following commands::
     cd cohere
     git checkout Dev
     pip install -e .   # include the -e option if you intend to edit cohere_core
-    cd cohere-ui
+    cd cohere_beamlines
+    git checkout Dev
+    pip install -e .   # include the -e option if you intend to edit cohere_beamlines
+    cd ../cohere-ui
     git checkout Dev
     pip install -e .   # include the -e option if you intend to edit cohere_ui
 
