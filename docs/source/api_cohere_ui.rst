@@ -3,7 +3,6 @@
 =========
 cohere_ui
 =========
-.. module:: cohere-ui
 
 beamline_preprocess
 -------------------
