@@ -16,7 +16,7 @@ build:
     # golang: "1.19"
   commands:
     - git submodule update --init --recursive
-    - pip install .  # Or your package installation command
+    # - pip install .  # Or your package installation command
     - sphinx-build -b html . _build/html
     
 # Build documentation in the "docs/" directory with Sphinx
