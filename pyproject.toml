@@ -34,3 +34,15 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/AdvancedPhotonSource/cohere_core"
+
+[tool.sphinx-pyproject]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon", # Example of another extension
+]
+autodoc_default_options = {
+    "members": true,
+    "undoc-members": true,
+    "private-members": true,
+    "show-inheritance": true,
+}

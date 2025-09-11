@@ -12,9 +12,15 @@
 #
 import os
 import sys
+from pathlib import Path
+from sphinx_pyproject import SphinxConfig
 
-sys.path.insert(0, os.path.abspath('../../cohere-ui'))
-sys.path.insert(0, os.path.abspath('../..'))
+config = SphinxConfig("../pyproject.toml", globalns=globals())
+
+sys.path.insert(0, str(Path('../../cohere-ui/src').resolve()))
+sys.path.insert(0, str(Path('../../src').resolve()))
+# sys.path.insert(0, os.path.abspath('../../cohere-ui'))
+# sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
@@ -40,14 +46,14 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+# templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 
-exclude_patterns = globals().get('exclude_patterns', [])
-exclude_patterns.extend(['_build'])
+# exclude_patterns = globals().get('exclude_patterns', [])
+# exclude_patterns.extend(['_build'])
 
 
 # -- Options for HTML output -------------------------------------------------
