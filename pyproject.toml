@@ -25,7 +25,8 @@ dependencies = [
                 'psutil',
                 'tqdm',
                 'matplotlib',
-                'sphinx'
+                'sphinx',
+                'sphinx-pyproject'
                 ]
 
 [tool.setuptools.packages.find]
