@@ -28,9 +28,9 @@ If using torch library::
 
     pip install torch
 
-After installation you may start using scripts from this directory, for example::
+After installation you may start using scripts, for example::
 
-    python cohere_ui/cohere_gui.py
+    cohere_gui
 
 The examples are cloned as one of submodule to cohere project. The examples are in cohere_experiment subdirectory.
 

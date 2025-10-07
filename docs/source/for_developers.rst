@@ -3,8 +3,6 @@ develop
 =======
 | This chapter has info for developers.
 
-Install the cohere project as described in :ref:`latest`.
-
 Adding new trigger
 ==================
 The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications/additions need to be done to add a new feature:
@@ -18,7 +16,7 @@ Adding new sub-trigger
 If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
     - In cohere_core/controller/op_flow.py add entry in the sub_triggers dictionary, where key is the arbitrary assigned mnemonics, and value is the trigger name.
     - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same way as shrink_wrap_obj, and other features.
-    - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with *args.
+    - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with args.
     - in cohere_core/controller/features.py add new feature class.
 
        | The constructor factory function create should have a new lines to construct the new object.

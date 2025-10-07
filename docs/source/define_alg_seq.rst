@@ -38,6 +38,7 @@ Formula examples
 | Algorithm sequence and corresponding trigger configuration
 
 | example 1
+
 ::
 
     algorithm_sequence = "2* (20*ER + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
@@ -54,6 +55,7 @@ config_rec:
 | and every two iterations, starting at the beginning, until iteration 130, the lowpass operation will be applied.
 
 | example 2
+
 ::
 
     algorithm_sequence = "20*ER.SW0.PHC0 + 180*HIO.SW1.PHC1 + 20*ER.SW2"
