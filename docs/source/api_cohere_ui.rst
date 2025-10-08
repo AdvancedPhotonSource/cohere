@@ -13,6 +13,7 @@ To run this script from command line::
     cohere_gui
 
 optional arguments may follow:  --no_verify, --debug
+
 One can use --help to get explanation of command line parameters.
 
 beamline_preprocess
@@ -31,6 +32,7 @@ To run this script from command line::
     beamline_preprocess <experiment_dir>
 
 optional argument may follow:  --no_verify
+
 One can use --help to get explanation of command line parameters.
 
 
@@ -48,6 +50,7 @@ To run this script from command line::
     standard_preprocess <experiment_dir>
 
 optional argument may follow:  --no_verify
+
 One can use --help to get explanation of command line parameters.
 
 run_reconstruction
@@ -64,6 +67,7 @@ To run this script from command line::
     run_reconstruction <experiment_dir>
 
 optional argument may follow:  --no_verify, --rec_id <rec_id> --debug
+
 One can use --help to get explanation of command line parameters.
 
 beamline_visualization
@@ -85,6 +89,7 @@ To run this script from command line::
     beamline_visualization <experiment_dir>
 
 optional argument may follow:  --no_verify
+
 One can use --help to get explanation of command line parameters.
 
 everything
@@ -98,6 +103,7 @@ To run this script from command line::
     everything <experiment_dir> --rec_id <rec_id>
 
 optional argument may follow:  --no_verify, --rec_id, --debug
+
 One can use --help to get explanation of command line parameters.
 
 simple_phasing
@@ -116,6 +122,7 @@ To run this script from command line::
     simple_phasing <data_file>
 
 optional argument may follow:   --debug
+
 One can use --help to get explanation of command line parameters.
 
 create_aps34idc_experiment
