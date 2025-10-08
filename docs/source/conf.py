@@ -12,18 +12,12 @@
 #
 import os
 import sys
-from pathlib import Path
 from sphinx_pyproject import SphinxConfig
 
 config = SphinxConfig("../../pyproject.toml", globalns=globals())
 
-#sys.path.insert(0, str(Path('../../cohere-ui/src').resolve()))
-#sys.path.insert(0, str(Path('../../cohere_beamlines/src').resolve()))
-# sys.path.insert(0, str(Path('../../src').resolve()))
 sys.path.insert(0, os.path.abspath('../../cohere-ui/src'))
 sys.path.insert(0, os.path.abspath('../../src'))
-# sys.path.insert(0, os.path.abspath('../..'))
-#print('syspath', sys.path)
 # -- Project information -----------------------------------------------------
 
 project = 'cohere_core'
@@ -32,7 +26,6 @@ author = 'Barbara Frosik, Ross Harder'
 
 # The full version, including alpha/beta/rc tags
 release = '4.3'
-
 
 # -- General configuration ---------------------------------------------------
 
