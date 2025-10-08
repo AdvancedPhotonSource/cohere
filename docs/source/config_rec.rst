@@ -96,6 +96,14 @@ General
 
     hio_beta = .9
 
+- raar_beta
+
+| Optional, default is .45. A parameter used in raar algorithm.
+
+::
+
+    raar_beta = .45
+
 - initial_support_area
 
 | Optional, defaults to [.5,.5,.5]. The list define dimensions of initial support area. The support area is calculated by multiplying the fractions in this parameter by the corresponding data array dimensions. The support array is centered.
@@ -372,31 +380,31 @@ GA
 
     ga_cullings = [2,1]
 
-- ga_shrink_wrap_thresholds
+- ga_sw_thresholds
 
 | Optional, a list of threshold values for each generation. The support is recalculated with this threshold after breeding phase. Defaults to configured value of support_threshold.
 | If the list contains only one element, it will be used by all generations.
 
 ::
 
-    ga_shrink_wrap_thresholds = [.15, .1]
+    ga_sw_thresholds = [.15, .1]
 
-- ga_shrink_wrap_gauss_sigmas
+- ga_sw_gauss_sigmas
 
 | Optional, a list of sigma values for each generation. The support is recalculated with this sigma after breeding phase. Defaults to configured value of support_sigma.
 | If the list contains only one element, it will be used by all generations.
 
 ::
 
-    ga_shrink_wrap_gauss_sigmas = [1.1, 1.0]
+    ga_sw_gauss_sigmas = [1.1, 1.0]
 
-- ga_lowpass_filter_sigmas
+- ga_lpf_sigmas
 
 | Optional, a list of sigmas that will be used in subsequent generations to calculate Gaussian low-pass filter applied it to the data. In the example given below this feature will be used in first two generations.
 
 ::
 
-    ga_lowpass_filter_sigmas = [2.0, 1.5]
+    ga_lpf_sigmas = [2.0, 1.5]
 
 - ga_gen_pc_start
 
@@ -405,3 +413,11 @@ GA
 ::
 
     ga_gen_pc_start = 3
+
+- ga_fast
+
+| Defines which GA algorithm to use. If present and True, the number of reconstructions is limited to available resources. This reconstruction is very fast. Otherwise the number of reconstructions is unlimited but the performance is worse as the intermediate results must be stored.
+
+::
+
+    ga_fast = True

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cohere_core"
-version = "4.2.1"
+version = "4.3"
 authors = [
   { name="Barbara Frosik", email="bfrosik@anl.gov" },
   { name="Ross Harder", email="rharder@anl.gov" }
@@ -31,10 +31,9 @@ dependencies = [
 
 [tool.setuptools.packages.find]
     where = ["src"]
-    include = ["cohere_core*", ]
 
 [project.urls]
-Homepage = "https://github.com/AdvancedPhotonSource/cohere_core"
+Homepage = "https://github.com/AdvancedPhotonSource/cohere"
 
 [tool.sphinx-pyproject]
 extensions = [
