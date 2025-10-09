@@ -88,6 +88,7 @@ config_mp
 | Mandatory, the initial global weight to use when updating the shared object. A weight of 0 will not update the shared object at all, while a weight of 1 will replace the shared object (except the orthogonal displacement) after phasing each peak. In general, a high weight leads to rapid development, but only forces the object to agree with whichever peak it phased most recently. A low weight converges slowly, but favors information common to all of the peaks.
 
 ::
+
     weight_init = 1.0
 
 - weight_iters
@@ -96,6 +97,7 @@ config_mp
 | Optional, list of iterations and corresponding list of values. After each iteration in weight_iters, the global weights will be updated to the corresponding value in weight_vals. A good rule of thumb is to start high and end low.
 
 ::
+
     weight_iters = [200, 400, 600, 800]
     weight_vals = [0.75, 0.5, 0.25, 0.1]
 
