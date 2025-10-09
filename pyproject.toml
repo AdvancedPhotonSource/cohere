@@ -32,9 +32,6 @@ dependencies = [
 [tool.setuptools.packages.find]
     where = ["src"]
 
-[tool.setuptools.dynamic]
-    dependencies = {file = "./docs/requirements.txt"}
-
 [project.urls]
     Homepage = "https://github.com/AdvancedPhotonSource/cohere"
 
