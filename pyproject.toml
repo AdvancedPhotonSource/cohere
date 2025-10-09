@@ -32,13 +32,17 @@ dependencies = [
 [tool.setuptools.packages.find]
     where = ["src"]
 
+[tool.setuptools.dynamic]
+    dependencies = {file = "./docs/requirements.txt"}
+
 [project.urls]
-Homepage = "https://github.com/AdvancedPhotonSource/cohere"
+    Homepage = "https://github.com/AdvancedPhotonSource/cohere"
 
 [tool.sphinx-pyproject]
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon", # Example of another extension
+    extensions = [
+        "sphinx.ext.autodoc",
+        "sphinx.ext.napoleon",
+        'sphinx.ext.intersphinx',
 ]
 
-cohere_ui = { path = "cohere-ui/src", develop = true }
+cohere_ui = { path = "./cohere-ui/src", develop = true }

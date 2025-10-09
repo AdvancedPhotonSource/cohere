@@ -1,3 +1,4 @@
 sphinx_pyproject
 sphinx
 sphinx-rtd-theme
+-e ./cohere-ui/src
