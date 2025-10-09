@@ -34,7 +34,7 @@ simple_phasing
 
 create_aps34idc_experiment
 --------------------------
-create_aps34idc_experiment
+.. automodule:: create_aps34idc_experiment
 
 copy_setup
 ----------

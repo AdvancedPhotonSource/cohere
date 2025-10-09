@@ -6,7 +6,7 @@
 version: 2
 
 submodules:
-  include: all
+  include: ['cohere-ui']
 
 # Set the OS, Python version and other tools you might need
 build:
