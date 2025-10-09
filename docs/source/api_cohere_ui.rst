@@ -6,7 +6,15 @@ cohere_ui
 
 cohere_gui
 ----------
-.. automodule:: cohere_ui.cohere_gui
+This script provides GUI interface to cohere tools. User can create new cohere experiment or load an existing one. The GUI offers user friendly interface that allows to define configuration, set parameters to defaults, and run the scripts: beamline_preprocessing, standard_preprocessing, run_rec, and beamline_visualization, with push buttons.
+
+To run this script from command line::
+
+    cohere_gui
+
+optional arguments may follow:  --no_verify, --debug
+
+One can use --help to get explanation of command line parameters.
 
 beamline_preprocess
 -------------------
@@ -34,7 +42,7 @@ simple_phasing
 
 create_aps34idc_experiment
 --------------------------
-.. automodule:: create_aps34idc_experiment
+.. automodule:: cohere_ui.create_aps34idc_experiment
 
 copy_setup
 ----------
