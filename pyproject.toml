@@ -18,6 +18,24 @@ classifiers = [
 ]
 license = { file = "LICENSE" }
 
+dependencies = [
+                'numpy<2',
+                'scikit-learn',
+                'tifffile',
+                'psutil',
+                'tqdm',
+                'matplotlib',
+                'pyqt5',
+                'scikit-image',
+                'xrayutilities',
+                'pyvista',
+                'scipy==1.14.1',
+                'notebook',
+                'gputil',
+                'sphinx',
+                'sphinx-pyproject'
+                ]
+
 [tool.setuptools.packages.find]
     where = ["src"]
 
