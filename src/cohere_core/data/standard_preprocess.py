@@ -121,7 +121,11 @@ def prep(beamline_full_datafile_name, **kwargs):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
 
-    next_fast_len = kwargs.get('next_fast_len', False)
+    # next_fast_len parameter should be always True. But it needs to be included
+    # when calling adjust_dimensions functions, as depending on the pkg, the result
+    # could be different. So for the sake of flexibility, the parameter next_fast_len
+    # was added as option in kwargs.
+    next_fast_len = kwargs.get('next_fast_len', True)
     pkg = kwargs.get('pkg', 'np')
     data = ut.adjust_dimensions(data, pairs, next_fast_len, pkg)
     if data is None:

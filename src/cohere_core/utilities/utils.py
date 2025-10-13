@@ -49,7 +49,7 @@ __all__ = [
            ]
 
 
-def adjust_dimensions(arr, pads, next_fast_len=False, pkg=None):
+def adjust_dimensions(arr, pads, next_fast_len=True, pkg='np'):
     """
     This function adds to or subtracts from each dimension of the array elements defined by pad. If the pad is positive, the array is padded in this dimension. If the pad is negative, the array is cropped.
 
@@ -176,7 +176,7 @@ def get_good_dim(dim, pkg):
     Returns the even dimension that the given package found to be good for fast Fourier transform and not smaller than given dimension. .
 
     :param dim: int, initial dimension
-    :param pck: python package that will be used for reconstruction
+    :param pck: python package that will be used for reconstruction: 'np' for numpy, 'cp' for cupy, 'torch' for torch.
     :return: a new dimension
     """
     devlib = get_lib(pkg)
