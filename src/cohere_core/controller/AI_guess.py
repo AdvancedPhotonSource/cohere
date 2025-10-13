@@ -77,7 +77,7 @@ def match_oversample_diff(
     pad = [[pad_value1[0], pad_value2[0]], [pad_value1[1], pad_value2[1]],
            [pad_value1[2], pad_value2[2]]]
 
-    output = ut.adjust_dimensions(diff, pad)
+    output = ut.adjust_dimensions(diff, pad, next_fast_len=False)
     return output, diff.shape
 
 
@@ -243,7 +243,7 @@ def run_AI(data, model_file, dir):
            [pad_value[2], pad_value[2]]]
     # not passing in 'next_fst_len' switch, so the dimensions will not be adjusted for fast processing of
     # Fourier transforms
-    guess = ut.adjust_dimensions(pred_obj, pad)
+    guess = ut.adjust_dimensions(pred_obj, pad, next_fast_len=False)
 
     np.save(ut.join(dir, 'image.npy'), guess)
 
