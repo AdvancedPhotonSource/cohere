@@ -10,10 +10,12 @@ Create and activate conda environment::
     conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
     conda activate <env_name>
 
-Use install.sh script optionally followed by a package name. The package: cupy or torch will be installed when given the string argument and then the reconstruction code will use this package for computing. If no argument is given to the script, the numpy package will be used and GPU processing will be not available. ::
+The install script installs all cohere modules and required packages.
 
-    sh install.sh <optional_package_name>    # for Linux, macOS
-    install.bat                              # for Windows
+The script may be followed by a package name: cupy or torch. The package will be installed when given the string argument and then the reconstruction code will use this package for computing. If no argument is given to the script, the numpy package will be used and GPU processing will be not available. ::
+
+    sh install.sh <torch or cupy>    # for Linux, macOS
+    install.bat <torch or cupy>      # for Windows
 
 Refer to :ref:`api_cohere_ui` page, for instructions how to use cohere with cohere_ui.
 
