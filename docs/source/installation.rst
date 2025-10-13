@@ -5,38 +5,17 @@ The cohere project can be installed on Linux, Windows and Mac operating systems.
 
 Official Release Installation
 =============================
-It is recommended to install the cohere project packages in conda environment. Supported python versions are 3.10 - 3.11.
-
 Create and activate conda environment::
 
     conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
     conda activate <env_name>
 
-The cohere project contains three computational modules: cohere_core, cohere_ui, cohere_beamlines, and a module containing examples data: cohere_examples.
+Use install.sh script optionally followed by a package name. The package: cupy or torch will be installed when given the string argument and then the reconstruction code will use this package for computing. If no argument is given to the script, the numpy package will be used and GPU processing will be not available. ::
 
-The computational modules are installed as separate packages with pypi. The cohere_experiment package can be cloned or copied from the repository.
-The instructions below show steps to install the cohere project.
-
-PyPi installation::
-
-    pip install cohere_core
-    pip install cohere_ui
-    pip install cohere_beamlines
-
-The cohere_core package can be run utilizing numpy library. Other available libraries are cupy and torch.
-User has to install the preferred library if using other than numpy.
-
-If using cupy library::
-
-    conda install cupy=12.2.0 -c conda-forge
-
-If using torch library::
-
-    pip install torch
+    sh install.sh <optional_package_name>    # for Linux, macOS
+    install.bat                              # for Windows
 
 Refer to :ref:`api_cohere_ui` page, for instructions how to use cohere with cohere_ui.
-
-
 
 .. _latest:
 
