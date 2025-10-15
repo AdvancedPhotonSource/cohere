@@ -35,20 +35,19 @@ The algorithm sequence defines functions executed during modulus projection and 
 
 Pypi Build
 ==========
-For a new build change version in and setup.py files to the new version and run pypi build:
+For a new build change version in and pyproject.toml files to the new version and run pypi build:
 
   ::
 
-    pip install .
-    python setup.py check
-    python setup.py sdist
-    python setup.py bdist_wheel --universal
+    python3 -m pip install twine
+    python3 -m build --sdist
+    python3 -m build --wheel
+    twine check dist/*
 
 | Upload to the test server and test
 
   ::
 
-    pip install twine
     twine upload --repository testpypi dist/*
 
 | Test in a new environment
