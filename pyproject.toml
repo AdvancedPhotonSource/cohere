@@ -35,6 +35,8 @@ dependencies = [
 
 [project.urls]
     Homepage = "https://github.com/AdvancedPhotonSource/cohere"
+    Documentation = "https://readthedocs.org"
+    Repository = "https://github.com//AdvancedPhotonSource/cohere.git"
 
 [tool.sphinx-pyproject]
     extensions = [
