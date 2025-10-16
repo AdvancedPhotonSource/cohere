@@ -216,7 +216,7 @@ class torchlib(cohlib):
 
     @staticmethod
     def sum(arr, axis=None):
-        return torch.sum(arr)
+        return torch.sum(arr, dim=axis)
 
     @staticmethod
     def real(arr):

@@ -47,7 +47,7 @@ If using cupy library::
 
 If using torch library::
 
-    pip install torch
+    pip install torch==2.8.0
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 
