@@ -29,7 +29,7 @@ class nplib(cohlib):
         pass
 
     @staticmethod
-    def set_backend(proc):
+    def set_backend():
         pass
 
     @staticmethod

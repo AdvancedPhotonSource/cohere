@@ -17,7 +17,7 @@ import cmath
 import math
 from matplotlib import pyplot as plt
 import cohere_core.utilities.utils as ut
-
+import numpy as np
 
 _docformat__ = 'restructuredtext en'
 __all__ = [
@@ -375,15 +375,22 @@ def dftregistration(ref_arr, arr, usfac=2):
     if usfac > 2:
         # DFT computation
         # Initial shift estimate in upsampled grid
-        row_shift = devlib.round(row_shift * usfac) / usfac
-        col_shift = devlib.round(col_shift * usfac) / usfac
-        dftshift = devlib.fix(devlib.ceil(usfac * 1.5) / 2)  # Center of output array at dftshift
+        row_shift = np.round(row_shift * usfac) / usfac
+        col_shift = np.round(col_shift * usfac) / usfac
+        dftshift = np.fix(np.ceil(usfac * 1.5) / 2)  # Center of output array at dftshift
         # Matrix multiply DFT around the current shift estimate
-        c_c = devlib.conj(
-            dftups(arr * devlib.conj(ref_arr), int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
-                   int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))) / \
+        # arr and ref_arr are on device
+        # move the input to nparray for dftups calculations and convert result to device after
+        combined_np = devlib.to_numpy(arr * devlib.conj(ref_arr))
+
+        ups_np = dftups(combined_np, int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
+                   int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))
+
+        ups = devlib.from_numpy(ups_np)
+        c_c = devlib.conj(ups) / \
               (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ^ 2)
         # Locate maximum and map back to original pixel grid
+
         max_coord = devlib.unravel_index(devlib.argmax(devlib.absolute(c_c)), devlib.dims(c_c))
         [rloc, cloc] = max_coord
 
@@ -408,7 +415,7 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
     :return: upsampled array
     """
     # arr is 2D
-    [nr, nc] = devlib.dims(arr)
+    [nr, nc] = list(arr.shape)
     if nor < 0:
         nor = nr
     if noc < 0:
@@ -416,23 +423,22 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
 
     # Compute kernels and obtain DFT by matrix products
     yl = list(range(-int(math.floor(nc / 2)), nc - int(math.floor(nc / 2))))
-    y = devlib.ifftshift(devlib.array(yl)) * (-2j * math.pi / (nc * usfac))
+    y = np.fft.ifftshift(np.array(yl)) * (-2j * math.pi / (nc * usfac))
     xl = list(range(-coff, noc - coff))
-    x = devlib.array(xl)
-    yt = devlib.tile(y, (len(xl), 1))
-    xt = devlib.tile(x, (len(yl), 1))
-    kernc = devlib.exp(yt.T * xt)
+    x = np.array(xl)
+    yt = np.tile(y, (len(xl), 1))
+    xt = np.tile(x, (len(yl), 1))
+    kernc = np.exp(yt.T * xt)
 
     yl = list(range(-roff, nor - roff))
-    y = devlib.array(yl)
+    y = np.array(yl)
     xl = list(range(-int(math.floor(nr / 2)), nr - int(math.floor(nr / 2))))
-    x = devlib.ifftshift(devlib.array(xl))
-    yt = devlib.tile(y, (len(xl), 1))
-    xt = devlib.tile(x, (len(yl), 1))
-    kernr = devlib.exp(yt * xt.T * (-2j * math.pi / (nr * usfac)))
+    x = np.fft.ifftshift(np.array(xl))
+    yt = np.tile(y, (len(xl), 1))
+    xt = np.tile(x, (len(yl), 1))
+    kernr = np.exp(yt * xt.T * (-2j * math.pi / (nr * usfac)))
 
-    # return as device array
-    return devlib.dot(devlib.dot(kernr.T, arr), kernc)
+    return np.dot(np.dot(kernr.T, arr), kernc)
 
 
 # supposedly this is faster than np.roll or scipy interpolation shift.

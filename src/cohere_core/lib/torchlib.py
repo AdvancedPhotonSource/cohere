@@ -42,7 +42,7 @@ class torchlib(cohlib):
         # torchlib.device = torch.device("mps")
 
     @staticmethod
-    def set_backend(proc):
+    def set_backend():
         # this function is not used currently
         if sys.platform == 'darwin':
             # Check that MPS is available

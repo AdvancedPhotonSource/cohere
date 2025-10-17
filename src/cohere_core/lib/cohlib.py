@@ -199,7 +199,7 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def set_backend(proc):
+    def set_backend():
         pass
 
     @staticmethod
