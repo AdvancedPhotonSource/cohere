@@ -89,6 +89,7 @@ class Rec:
                                self.lowpass_filter_operation,
                                self.reset_resolution,
                                self.shrink_wrap_operation,
+                               self.reset_phc_correction,
                                self.phc_operation,
                                self.to_reciprocal_space,
                                self.new_func_operation,
@@ -129,6 +130,8 @@ class Rec:
         self.need_save_data = False
         self.saved_data = None
         self.debug = kwargs.get('debug', False)
+        # only when phc feature is configured this becomes array
+        self.phc_correction = 1
 
 
     def init_dev(self, device_id):
@@ -394,9 +397,12 @@ class Rec:
         args = (self.ds_image,)
         self.support = self.shrink_wrap_obj.apply_trigger(*args)
 
+    def reset_phc_correction(self):
+        self.phc_correction = 1
+
     def phc_operation(self):
         args = (self.ds_image,)
-        self.support *= self.phc_obj.apply_trigger(*args)
+        self.phc_correction = self.phc_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
@@ -431,20 +437,23 @@ class Rec:
         self.ds_image_proj = devlib.fft(self.rs_amplitudes)
 
     def er(self):
-        self.ds_image = self.ds_image_proj * self.support
+        self.ds_image = self.ds_image_proj * self.support * self.phc_correction
 
     def hio(self):
         combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
-        self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
+        self.ds_image = devlib.where((self.support * self.phc_correction > 0),
+                                     self.ds_image_proj,
+                                     combined_image)
 
     def sf(self):
         # solvent flipping
-        self.ds_image = 2.0 * (self.ds_image_proj * self.support) - self.ds_image_proj
+        self.ds_image = 2.0 * (self.ds_image_proj * self.support * self.phc_correction) - self.ds_image_proj
 
     def raar(self):
         # Relaxed averaged alternating reflectors
-        self.ds_image = self.params['raar_beta'] * (self.support * self.ds_image_proj + self.ds_image) +\
-                        (1 - 2 * self.params['raar_beta']) * self.ds_image_proj
+        self.ds_image = (self.params['raar_beta']
+                         * (self.support * self.phc_correction * self.ds_image_proj + self.ds_image)
+                         + (1 - 2 * self.params['raar_beta']) * self.ds_image_proj)
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
@@ -485,14 +494,14 @@ class Rec:
         [[ax.clear() for ax in row] for row in self.axs]
         img = self.ds_image[qtr:-qtr, qtr:-qtr, half]
         self.axs[0][0].set(title="Amplitude", xticks=[], yticks=[])
-        self.axs[0][0].imshow(devlib.absolute(img).get(), cmap="gray")
+        self.axs[0][0].imshow(devlib.absolute(img), cmap="gray")
         self.axs[0][1].set(title="Phase", xticks=[], yticks=[])
-        self.axs[0][1].imshow(devlib.angle(img).get(), cmap="hsv", interpolation_stage="rgba")
+        self.axs[0][1].imshow(devlib.angle(img), cmap="hsv", interpolation_stage="rgba")
 
         self.axs[1][0].set(title="Error", xlim=(0,self.iter_no), xlabel="Iteration", yscale="log")
         self.axs[1][0].plot(self.errs[1:])
         self.axs[1][1].set(title="Support", xticks=[], yticks=[])
-        self.axs[1][1].imshow(self.support[qtr:-qtr, qtr:-qtr, half].get(), cmap="gray")
+        self.axs[1][1].imshow(self.support[qtr:-qtr, qtr:-qtr, half], cmap="gray")
 
         plt.draw()
         plt.pause(0.15)
@@ -502,7 +511,7 @@ class Rec:
         return ratio
 
     def shift_to_center(self):
-        ind = devlib.center_of_mass(self.support.astype('int32'))
+        ind = devlib.center_of_mass(devlib.astype(self.support, 'int32'))
         shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
         shift_dist = devlib.to_numpy(shift_dist).tolist()
         axis = tuple(range(len(self.ds_image.shape)))
@@ -819,7 +828,7 @@ class CoupledRec(Rec):
 
     def make_binary(self):
         self.support = devlib.absolute(self.support)
-        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
+        self.support = devlib.where(self.support >= devlib.astype(0.9 * devlib.amax(self.support), 1, 0), ("?"))
 
     def get_phase_gradient(self):
         """Calculate the phase gradient for a given peak"""

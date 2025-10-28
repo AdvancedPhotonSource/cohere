@@ -743,7 +743,7 @@ def ver_config_rec(config_map):
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Resolutiontrigger'
+    config_parameter = 'Lpftrigger'
     if 'lowpass_filter_trigger' in config_map:
         if '.LPF' not in config_map['algorithm_sequence']:
             m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
@@ -755,11 +755,17 @@ def ver_config_rec(config_map):
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
+            if len(config_map['lowpass_filter_trigger']) < 3:
+                config_error = 1
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print(error_message)
+                return (error_message)
 
             config_parameter = 'Lowpassfilterswthreshold'
             if 'lowpass_filter_sw_threshold' in config_map:
                 lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
                 if type(lowpass_filter_sw_threshold) != float:
+                    config_error = 0
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)
@@ -780,7 +786,7 @@ def ver_config_rec(config_map):
         else:
             for t in config_map['lowpass_filter_trigger']:
                 if not ver_list_int('lowpass_filter_trigger', t):
-                    config_error = 1
+                    config_error = 2
                     error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                     print(error_message)
                     return (error_message)

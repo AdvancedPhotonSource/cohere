@@ -197,7 +197,8 @@ def fill_sub_trigger_row(sub_iters, sub_trigs, iter_no, last_trig):
     # create array indicating with index which sub-triggered operation may happen in the iterations
     sub_trig_idx_row = np.zeros(iter_no, dtype=int)
     # for each defined sub iteration chunk apply corresponding sub-trigger
-    for (b, e, idx) in sub_iters:
+    for i, sub_iter in enumerate(sub_iters):
+        (b, e, idx) = sub_iter
         index = int(idx)
         sub_trig_idx_row[b:e] = index + 1
         if len(sub_trigs) - 1 < index:
@@ -209,6 +210,8 @@ def fill_sub_trigger_row(sub_iters, sub_trigs, iter_no, last_trig):
             trigger.append(e)
         elif len(trigger) == 3:
             trigger[2] = min(e, trigger[0] + trigger[2])
+            # update the sub_iters
+            sub_iters[i] = (b, trigger[2], idx)
         sub_trig_row = fill_trigger_row(trigger, iter_no, last_trig, sub_trig_row)
 
     return sub_trig_row * sub_trig_idx_row
@@ -297,11 +300,21 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
                 if trigger_name in sub_iters.keys():
                     # may throw exception
                     flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
+                    # special case
+                    if flow_item == 'phc_operation':
+                        reset = [l[1] for l in list(sub_iters[trigger_name])]
+                        flow_arr[i-1][reset] = 1
+
                     # add entry to sub trigger operation dict with key of the trigger mnemonic
                     # and the value of a list with the row and sub triggers iterations chunks
                     sub_trig_op[trigger_name] = (flow_arr[i], sub_iters[trigger_name])
                 else:
                     flow_arr[i] = fill_trigger_row(params[trigger_name], iter_no, last_trig)
+                    # special case
+                    if flow_item == 'phc_operation':
+                        # Assuming phc trigger is configured with upper limit
+                        reset_iter = min(iter_no - 1, params[trigger_name][2] + 1)
+                        flow_arr[i-1][reset_iter] = 1
 
                 # handle special cases
                 if flow_item == 'shrink_wrap_operation':
