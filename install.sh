@@ -9,6 +9,6 @@ if [ "$#" -ne 0 ]; then
     conda install cupy=12.2.0 -c conda-forge
   fi
   if [ "$1" = "torch" ]; then
-    pip install torch==2.8.0
+    pip install torch torchvision torchaudio
   fi
 fi

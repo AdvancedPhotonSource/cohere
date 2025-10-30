@@ -17,8 +17,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.cross) and
                 hasattr(subclass, 'set_device') and
                 callable(subclass.set_device) and
-                hasattr(subclass, 'set_backend') and
-                callable(subclass.set_backend) and
                 hasattr(subclass, 'to_numpy') and
                 callable(subclass.to_numpy) and
                 hasattr(subclass, 'save') and
@@ -199,11 +197,6 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def set_backend():
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
     def to_numpy(arr):
         pass
 
@@ -214,12 +207,12 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def load(filename):
+    def load(filename, **kwargs):
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         pass
 
     @staticmethod

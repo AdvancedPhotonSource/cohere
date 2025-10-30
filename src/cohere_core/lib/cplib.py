@@ -33,15 +33,11 @@ class cplib(cohlib):
             cp.cuda.Device(dev_id).use()
 
     @staticmethod
-    def set_backend():
-        pass
-
-    @staticmethod
     def to_numpy(arr):
         return cp.asnumpy(arr)
 
     @staticmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         return cp.array(arr)
 
     @staticmethod
@@ -49,7 +45,7 @@ class cplib(cohlib):
         cp.save(filename, arr)
 
     @staticmethod
-    def load(filename):
+    def load(filename, **kwargs):
         return cp.load(filename, allow_pickle=True)
 
     @staticmethod

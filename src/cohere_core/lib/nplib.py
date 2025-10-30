@@ -29,19 +29,15 @@ class nplib(cohlib):
         pass
 
     @staticmethod
-    def set_backend():
-        pass
-
-    @staticmethod
     def to_numpy(arr):
         return arr
 
     @staticmethod
-    def load(filename):
+    def load(filename, **kwargs):
         return np.load(filename)
 
     @staticmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         return arr
 
     @staticmethod

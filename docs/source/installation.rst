@@ -47,7 +47,7 @@ If using cupy library::
 
 If using torch library::
 
-    pip install torch==2.8.0
+    pip install torch torchvision torchaudio
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 

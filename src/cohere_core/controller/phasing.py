@@ -145,7 +145,6 @@ class Rec:
         :return: 0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
         """
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        devlib.set_backend()
         if device_id != -1:
             self.dev = device_id
             if device_id != -1:

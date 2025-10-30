@@ -13,6 +13,6 @@ IF NOT "%~1"=="" (
     )
     IF "%~1"=="torch" (
         :: Install torch via pip
-        pip install torch==2.8.0
+        pip install torch torchvision torchaudio
     )
 )
