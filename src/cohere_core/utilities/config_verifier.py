@@ -259,8 +259,9 @@ def ver_config_rec(config_map):
 
 
     def verify_trigger(trigger, no_iter, trigger_name):
-        if type(trigger) != list:
-            return(f'{trigger_name} trigger type should be list')
+        if not ver_list_int(trigger_name, trigger):
+        #if type(trigger) != list:
+            return(f'{trigger_name} trigger type should be list of int')
         if len(trigger) == 0:
             return (f'empty {trigger_name} trigger {str(trigger)}')
         elif trigger[0] >= no_iter:
@@ -745,75 +746,34 @@ def ver_config_rec(config_map):
 
     config_parameter = 'Lpftrigger'
     if 'lowpass_filter_trigger' in config_map:
-        if '.LPF' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
-            if len(m) > 0:
-                print(m)
-                return(m)
-            if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
+        m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
+        if len(m) > 0:
+            print(m)
+            return(m)
+        if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+        if len(config_map['lowpass_filter_trigger']) < 3:
+            config_error = 1
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+        config_parameter = 'Lowpassfilterrange'
+        if 'lowpass_filter_range' in config_map:
+            lowpass_filter_range = config_map['lowpass_filter_range']
+            if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
-            if len(config_map['lowpass_filter_trigger']) < 3:
-                config_error = 1
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
-
-            config_parameter = 'Lowpassfilterswthreshold'
-            if 'lowpass_filter_sw_threshold' in config_map:
-                lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
-                if type(lowpass_filter_sw_threshold) != float:
-                    config_error = 0
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-
-            config_parameter = 'Lowpassfilterrange'
-            if 'lowpass_filter_range' in config_map:
-                lowpass_filter_range = config_map['lowpass_filter_range']
-                if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
-                    config_error = 0
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-            else:
-                config_error = 2
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
         else:
-            for t in config_map['lowpass_filter_trigger']:
-                if not ver_list_int('lowpass_filter_trigger', t):
-                    config_error = 2
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-
-            config_parameter = 'Lowpassfilterrange'
-            if 'lowpass_filter_range' in config_map:
-                for r in config_map['lowpass_filter_range']:
-                    if not ver_list_float('lowpass_filter_range', r):
-                        config_error = 1
-                        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                        print(error_message)
-                        return (error_message)
-            else:
-                config_error = 2
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
-
-            config_parameter = 'Lowpassfilterswthreshold'
-            if 'lowpass_filter_sw_threshold' in config_map:
-                lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
-                if not ver_list_float('lowpass_filter_sw_threshold', lowpass_filter_sw_threshold):
-                    config_error = 1
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-
+            config_error = 2
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
 
     config_parameter = 'Averagetrigger'
     if 'average_trigger' in config_map:

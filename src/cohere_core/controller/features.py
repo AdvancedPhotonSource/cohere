@@ -77,6 +77,28 @@ class Pcdi:
                                     self.kernel, self.iterations)
 
 
+class LowPassFilter():
+    def __init__(self, params):
+        iter_range = [params['lowpass_filter_trigger'][0], params['lowpass_filter_trigger'][2]]
+        iter_diff = params['lowpass_filter_trigger'][2] - params['lowpass_filter_trigger'][0]
+        if len(params['lowpass_filter_range']) == 1:
+            end_sigma = 1.0
+        else:
+            end_sigma = params['lowpass_filter_range'][1]
+        sigma_diff = end_sigma - params['lowpass_filter_range'][0]
+        self.filter_sigmas = [sigma_diff / iter_diff * iter + params['lowpass_filter_range'][0]
+                              for iter in range(iter_range[0], iter_range[1])]
+
+
+    def apply_trigger(self, *args):
+        # The filter is applied on data
+        data = args[0]
+        iter = args[1]
+
+        filter_sigma = self.filter_sigmas[iter]
+        return devlib.gaussian_filter(data, filter_sigma)
+
+
 class TriggeredOp(ABC):
     """
     Base class for Triggered operation. This class creates feature objects and manages the trigger or subtrigger depending on
@@ -266,7 +288,6 @@ class ShrinkWrap(TriggeredOp):
                 raise ValueError(msg)
 
 
-
 class PhaseConstrain(TriggeredOp):
     def __init__(self, trig_op):
         super().__init__(trig_op)
@@ -304,63 +325,11 @@ class PhaseConstrain(TriggeredOp):
         return self.PhasePHC(phase_min, phase_max)
 
 
-class LowPassFilter(TriggeredOp):
-    def __init__(self, trig_op):
-        super().__init__(trig_op)
-
-    class Filter:
-        def __init__(self, filter_range, iter_range, threshold):
-            self.iter_offset = iter_range[0]
-            self.filter_sigmas = [(filter_range[1] - filter_range[0]) / (iter_range[1] - iter_range[0]) *
-                                  (iter - self.iter_offset) + filter_range[0]
-                                  for iter in range(iter_range[0], iter_range[1])]
-            self.threshold = threshold
-
-        def apply_trigger(self, *args):
-            # The filter is applied on data
-            # simultaneously the sigma used in shrink wrap is changing to be reverse of the filter_sigma
-            data = args[0]
-            iter = args[1]
-            ds_image = args[2]
-            filter_sigma = self.filter_sigmas[iter - self.iter_offset]
-            return (devlib.gaussian_filter(data, filter_sigma), dvut.shrink_wrap(ds_image, self.threshold, 1/filter_sigma))
-
-
-    def create_obj(self, params, index=None, beg=None, end=None):
-        if 'lowpass_filter_sw_threshold' not in params:
-            msg = 'lowpass_filter_sw_threshold parameter not defined'
-            raise ValueError(msg)
-        if 'lowpass_filter_range' not in params:
-            msg = 'lowpass_filter_range parameter not defined'
-            raise ValueError(msg)
-        # in case of a all_iteration configuration the lowpass filter
-        # iteration can be read from lowpass_filter_trigger
-        if index is None:
-            iter_range = (params['lowpass_filter_trigger'][0], params['lowpass_filter_trigger'][2])
-            filter_range = params['lowpass_filter_range']
-            threshold = params['lowpass_filter_sw_threshold']
-        # otherwise the iterations to apply this instance are given as arguments
-        else:
-            iter_range = (beg, end)
-            if len(params['lowpass_filter_range']) - 1 < index:
-                msg = f'lowpass_filter_range not defined for sub-trigger {index}'
-                raise ValueError(msg)
-            filter_range = params['lowpass_filter_range'][index]
-            if len(params['lowpass_filter_sw_threshold']) - 1 < index:
-                msg = f'lowpass_filter_sw_threshold not defined for sub-trigger {index}'
-                raise ValueError(msg)
-            threshold = params['lowpass_filter_sw_threshold'][index]
-        if len(filter_range) == 1:
-            filter_range.append(1.0)
-        return self.Filter(filter_range, iter_range, threshold)
-
 def create(trig_op, params, trig_op_info):
     if trig_op == 'shrink_wrap':
         to = ShrinkWrap(trig_op)
     if trig_op == 'phc':
         to = PhaseConstrain(trig_op)
-    if trig_op == 'lowpass_filter':
-        to = LowPassFilter(trig_op)
 
     # this function sets self.objs and self.f and creates all objects
     # It may throw exception
