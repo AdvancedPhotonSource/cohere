@@ -86,7 +86,7 @@ General
 ::
 
     algorithm_sequence = "2* (20*SF + 180*HIO) + 2* (20*ERpc + 180*HIOpc) + 20*ERpc"
-    algorithm_sequence = "20*ER.LPF0.PHC0 + 180*HIO.LPF1 + 2* (20*ER.SW0 + 180*HIO.SW1) + 20*ER.SW2"
+    algorithm_sequence = "20*ER.PHC0 + 180*HIO.PHC1 + 2* (20*ER.SW0 + 180*HIO.SW1) + 20*ER.SW2"
 
 - hio_beta
 
@@ -251,17 +251,15 @@ Partial coherence
 
 Lowpass Filter
 ++++++++++++++
-| When active, a lowpass Gaussian filter is applied on data, with iteration dependent sigma calculated by line-spacing the lowpass_filter_range parameter over trigger span iterations. Simultaneously, the Gaussian type of shrink wrap is applied with the reverse sigma. The low resolution trigger is typically configured to be active at the first part of iterations.
+| When active, a lowpass Gaussian filter is applied on data, with iteration dependent sigma calculated by line-spacing the lowpass_filter_range parameter over trigger span iterations. The low resolution trigger is typically configured to be active at the first part of iterations.
 
 - lowpass_filter_trigger
 
 | Defines when to apply lowpass filter operation using the parameters below. Typically the last trigger is configured at half of total iterations.
-| Alternatively, it can be defined as list of sub-triggers. If sub-triggers are used, the parameters must be lists as well.
 
 ::
 
     lowpass_filter_trigger = [0, 1, 320]
-    lowpass_filter_trigger = [[0, 1], [0, 2, 100]]  # sub-triggers
 
 - lowpass_filter_range
 
@@ -270,16 +268,6 @@ Lowpass Filter
 ::
 
     lowpass_filter_range = [.7, 1.0]
-    lowpass_filter_range = [[.7, .8], [.8, 1.0]]  # sub-triggers
-
-- lowpass_filter_sw_threshold
-
-| During lowpass iterations a GAUSS type shrink wrap is applied with this threshold ans sigma calculated as reverse of low pass filter.
-
-::
-
-    lowpass_filter_sw_threshold = 2.0
-    lowpass_filter_sw_threshold = [2.0, 2.0]  # sub-triggers
 
 averaging
 +++++++++

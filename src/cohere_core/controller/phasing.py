@@ -256,14 +256,15 @@ class Rec:
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
 
+        if 'lowpass_filter_trigger' in self.params:
+            self.lowpass_filter_obj = ft.LowPassFilter( self.params)
+
         # create the trgger/sub-trigger objects
         try:
             if 'shrink_wrap_trigger' in self.params:
                 self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
             if 'phc_trigger' in self.params:
                 self.phc_obj = ft.create('phc', self.params, feats)
-            if 'lowpass_filter_trigger' in self.params:
-                self.lowpass_filter_obj = ft.create('lowpass_filter', self.params, feats)
         except Exception as e:
             if self.debug:
                 raise
@@ -386,8 +387,8 @@ class Rec:
         self.iter = self.iter + 1
 
     def lowpass_filter_operation(self):
-        args = (self.data, self.iter, self.ds_image)
-        (self.iter_data, self.support) = self.lowpass_filter_obj.apply_trigger(*args)
+        args = (self.data, self.iter)
+        self.iter_data = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
