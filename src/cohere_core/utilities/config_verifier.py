@@ -260,7 +260,6 @@ def ver_config_rec(config_map):
 
     def verify_trigger(trigger, no_iter, trigger_name):
         if not ver_list_int(trigger_name, trigger):
-        #if type(trigger) != list:
             return(f'{trigger_name} trigger type should be list of int')
         if len(trigger) == 0:
             return (f'empty {trigger_name} trigger {str(trigger)}')
