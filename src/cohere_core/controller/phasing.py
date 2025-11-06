@@ -492,16 +492,23 @@ class Rec:
             f"error: {self.errs[-1]}\n"
         )
         [[ax.clear() for ax in row] for row in self.axs]
-        img = self.ds_image[qtr:-qtr, qtr:-qtr, half]
+        if len(self.ds_image.shape) == 2:
+            img = self.ds_image
+        else:
+            img = self.ds_image[qtr:-qtr, qtr:-qtr, half]
         self.axs[0][0].set(title="Amplitude", xticks=[], yticks=[])
         self.axs[0][0].imshow(devlib.absolute(img), cmap="gray")
         self.axs[0][1].set(title="Phase", xticks=[], yticks=[])
         self.axs[0][1].imshow(devlib.angle(img), cmap="hsv", interpolation_stage="rgba")
 
+        if len(self.ds_image.shape) == 2:
+            sup = self.support
+        else:
+            sup = self.support[qtr:-qtr, qtr:-qtr, half]
         self.axs[1][0].set(title="Error", xlim=(0,self.iter_no), xlabel="Iteration", yscale="log")
         self.axs[1][0].plot(self.errs[1:])
         self.axs[1][1].set(title="Support", xticks=[], yticks=[])
-        self.axs[1][1].imshow(self.support[qtr:-qtr, qtr:-qtr, half], cmap="gray")
+        self.axs[1][1].imshow(sup, cmap="gray")
 
         plt.draw()
         plt.pause(0.15)
