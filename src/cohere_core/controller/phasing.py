@@ -937,7 +937,7 @@ class CoupledRec(Rec):
         self.to_working_image()
 
     def to_shared_image(self):
-        pk = self.peak_objs[self.pk]  # shorthand
+        pk = self.peak_objs[self.pk]  # shorthand for convenience
 
         if not self.fast_resample:
             # Resample the object
