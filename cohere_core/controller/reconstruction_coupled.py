@@ -36,7 +36,7 @@ def rec_process(pkg, pars, peak_dirs, dev):
     worker.save_res(save_dir)
 
 
-def reconstruction(lib, pars, peak_dirs, dev=None):
+def reconstruction(lib, pars, peak_dirs, dev=None, debug=None):  #TODO: implement debug argument
     """
     Controls multipeak reconstruction.
 
