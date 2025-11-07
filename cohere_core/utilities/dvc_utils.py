@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 
 _docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
+           'use_numpy',
            'arr_property',
            'pad_around',
            'center_sync',
@@ -40,6 +41,24 @@ def set_lib_from_pkg(pkg):
 
     # get the lib object
     devlib = ut.get_lib(pkg)
+
+
+def use_numpy(func):
+    """
+    Function decorator that converts devlib arrays (e.g. cupy arrays, torch tensors, etc.) into numpy arrays before
+    passing them into the function.
+    """
+    def wrapper(*args, **kwargs):
+        args = [x for x in args]
+        for i, arg in enumerate(args):
+            try:
+                _ = arg.shape
+                args[i] = devlib.to_numpy(arg)
+            except AttributeError:
+                pass
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 def arr_property(arr):
@@ -746,7 +765,7 @@ def breed(breed_mode, alpha, image):
 def histogram2d(arr1, arr2, n_bins=100, log=False):
     norm = devlib.amax(arr1) / devlib.amax(arr2)
     if log:
-        bins = devlib.logspace(devlib.log10(devlib.amin(arr1[arr1 != 0])), devlib.log10(devlib.amax(arr1)), n_bins + 1)
+        bins = devlib.geomspace(devlib.amin(arr1[arr1 != 0]), devlib.amax(arr1), n_bins + 1)
     else:
         bins = n_bins
     return devlib.histogram2d(devlib.ravel(arr1), devlib.ravel(norm * arr2), bins)
@@ -760,7 +779,7 @@ def calc_nmi(arr1, arr2=None, log=False):
     h0 = devlib.entropy(devlib.sum(hgram, axis=0))
     h1 = devlib.entropy(devlib.sum(hgram, axis=1))
     h01 = devlib.entropy(devlib.reshape(hgram, -1))
-    return (h0 + h1) / h01
+    return (h0 + h1) / h01 - 1
 
 
 def calc_ehd(arr1, arr2=None, log=False):
@@ -771,7 +790,6 @@ def calc_ehd(arr1, arr2=None, log=False):
     n = hgram.shape[0]
     x, y = devlib.meshgrid(devlib.arange(n), devlib.arange(n))
     return devlib.sum(hgram * devlib.abs(x - y)) / devlib.sum(hgram)
-
 
 
 def resample(data, matrix, plot=False):
