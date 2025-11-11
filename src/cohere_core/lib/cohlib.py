@@ -37,8 +37,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.next_fast_len) and
                 hasattr(subclass, 'hasnan') and
                 callable(subclass.hasnan) and
-                hasattr(subclass, 'moveaxis') and
-                callable(subclass.moveaxis) and
                 hasattr(subclass, 'copy') and
                 callable(subclass.copy) and
                 hasattr(subclass, 'roll') and
@@ -155,8 +153,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.uniform_filter) and
                 hasattr(subclass, 'binary_erosion') and
                 callable(subclass.binary_erosion) and
-                hasattr(subclass, 'binary_dilation') and
-                callable(subclass.binary_dilation) and
                 hasattr(subclass, 'stack') and
                 callable(subclass.stack) and
                 hasattr(subclass, 'affine_transform') and
@@ -226,7 +222,7 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def astype(arr, dtype):
+    def astype(arr):
         pass
 
     @staticmethod
@@ -257,11 +253,6 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def copy(arr):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def moveaxis(arr, src, dst):
         pass
 
     @staticmethod
@@ -452,11 +443,6 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def binary_dilation(arr, **kwargs):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
     def center_of_mass(arr):
         pass
 
@@ -522,6 +508,11 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
+    def moveaxis(arr, source, dest):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
     def lstsq(A, B):
         pass
 
@@ -582,12 +573,12 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def mean(arr, axis=None):
+    def mean(arr):
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def median(arr, axis=None):
+    def median(arr):
         pass
 
     @staticmethod

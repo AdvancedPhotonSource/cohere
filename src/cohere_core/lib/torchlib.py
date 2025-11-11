@@ -111,10 +111,6 @@ class torchlib(cohlib):
         return arr
 
     @staticmethod
-    def moveaxis(arr, src, dst):
-        raise NotImplementedError
-
-    @staticmethod
     def roll(arr, sft, axis):
         sft = [int(s) for s in sft]
         dims = tuple([i for i in range(len(sft))])
@@ -147,16 +143,16 @@ class torchlib(cohlib):
             print('not supported error: ' + repr(e))
 
     @staticmethod
-    def fft(arr, norm='forward'):
+    def fft(arr):
         try:
-            return torch.fft.fftn(arr, norm=norm)
+            return torch.fft.fftn(arr, norm='forward')
         except Exception as e:
             print('not supported error: ' + repr(e))
 
     @staticmethod
-    def ifft(arr, norm='forward'):
+    def ifft(arr):
         try:
-            return torch.fft.ifftn(arr, norm=norm)
+            return torch.fft.ifftn(arr, norm='forward')
         except Exception as e:
             print('not supported error: ' + repr(e))
 
@@ -334,9 +330,6 @@ class torchlib(cohlib):
     def binary_erosion(arr, **kwargs):
         raise NotImplementedError
 
-    def binary_dilation(arr, **kwargs):
-        raise NotImplementedError
-
     @staticmethod
     def center_of_mass(arr):
         normalizer = torch.sum(arr)
@@ -448,11 +441,11 @@ class torchlib(cohlib):
         raise NotImplementedError
 
     @staticmethod
-    def mean(arr, axis=None):
+    def mean(arr):
         raise NotImplementedError
 
     @staticmethod
-    def median(arr, axis=None):
+    def median(arr):
         raise NotImplementedError
 
     @staticmethod
