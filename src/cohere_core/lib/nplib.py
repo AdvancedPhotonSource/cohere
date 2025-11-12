@@ -1,5 +1,12 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
+import scipy.fft as fft
 import scipy.ndimage as ndi
 import scipy.signal as sig
 import scipy.stats as stats
@@ -22,19 +29,15 @@ class nplib(cohlib):
         pass
 
     @staticmethod
-    def set_backend(proc):
-        pass
-
-    @staticmethod
     def to_numpy(arr):
         return arr
 
     @staticmethod
-    def load(filename):
+    def load(filename, **kwargs):
         return np.load(filename)
 
     @staticmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         return arr
 
     @staticmethod
@@ -56,6 +59,10 @@ class nplib(cohlib):
     @staticmethod
     def size(arr):
         return arr.size
+
+    @staticmethod
+    def next_fast_len(target):
+        return fft.next_fast_len(target)
 
     @staticmethod
     def nan_to_num(arr, **kwargs):
@@ -108,15 +115,15 @@ class nplib(cohlib):
 
     @staticmethod
     def fft(arr, norm='forward'):
-        return np.fft.fftn(arr, norm=norm)
+        return fft.fftn(arr, norm=norm)
 
     @staticmethod
     def ifft(arr, norm='forward'):
-        return np.fft.ifftn(arr, norm=norm)
+        return fft.ifftn(arr, norm=norm)
 
     @staticmethod
     def fftconvolve(arr1, kernel):
-        return sig.fftconvolve(arr1, kernel)
+        return sig.fftconvolve(arr1, kernel, mode='same')
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):

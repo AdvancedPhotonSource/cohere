@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
 import torch
@@ -23,31 +29,16 @@ class torchlib(cohlib):
 
     @staticmethod
     def set_device(dev_id):
-        if dev_id == -1 or sys.platform == 'darwin':
-            torch.device("cpu")
-            torchlib.device = "cpu"
-        else:
-            torch.device(dev_id)
-            torchlib.device = dev_id
-
-        # the pytorch does not support very needed functions such as fft, ifft for
-        # the GPU M1 (backendMPS), so for this platform it will be set to cpu until the
-        # functions are supported
-        # torchlib.device = torch.device("mps")
-
-    @staticmethod
-    def set_backend(proc):
-        # this function is not used currently
         if sys.platform == 'darwin':
             # Check that MPS is available
             if not torch.backends.mps.is_available():
-                print("MPS not available because the current PyTorch install was not "
-                      "built with MPS enabled. Using cpu.")
+                print("MPS not available because the current PyTorch install was not built with MPS enabled. Using cpu.")
                 torch.device("cpu")
             else:
                 torch.device("mps")
-        elif torch.backends.cuda.is_built():
-                torch.device("cuda")
+        elif torch.backends.cuda.is_built() and dev_id != -1:
+            torch_dev = f"cuda:{str(dev_id)}"
+            torchlib.device = torch_dev
         else:
             torch.device("cpu")
 
@@ -68,12 +59,12 @@ class torchlib(cohlib):
         np.save(filename, arr)
 
     @staticmethod
-    def load(filename):
+    def load(filename, **kwargs):
         arr = np.load(filename)
         return torch.as_tensor(arr, device=torchlib.device)
 
     @staticmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         return torch.as_tensor(arr, device=torchlib.device)
 
     @staticmethod
@@ -97,6 +88,11 @@ class torchlib(cohlib):
         return torch.numel(arr)
 
     @staticmethod
+    def next_fast_len(target):
+        import scipy
+        return scipy.fft.next_fast_len(target)
+
+    @staticmethod
     def hasnan(arr):
         return torch.any(torch.isnan(arr))
 
@@ -111,7 +107,6 @@ class torchlib(cohlib):
     @staticmethod
     def random(shape, **kwargs):
         arr = torch.rand(shape, device=torchlib.device)
-        print(arr.dtype)
         # return torch.rand(shape, device=torchlib.device)
         return arr
 
@@ -209,7 +204,7 @@ class torchlib(cohlib):
 
     @staticmethod
     def sum(arr, axis=None):
-        return torch.sum(arr)
+        return torch.sum(arr, dim=axis)
 
     @staticmethod
     def real(arr):

@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import numpy as np
 import re
 
@@ -8,14 +14,15 @@ algs = {'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er'),
         'HIO': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'hio'),
         'ERpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'er'),
         'HIOpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'hio'),
+        'SF': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'sf'),
+        'RAAR': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'raar')
         }
 
 # This map keeps the names of triggers that can be configured as sub-trigger, i.e. be a trigger for the iteration span
 # defined by preceding algorithm. The key is the trigger name and value is the mnemonic. The mnemonic is used in the
 # configuration.
 sub_triggers = {'SW' : 'shrink_wrap_trigger',
-             'PHC' : 'phc_trigger',
-             'LPF' : 'lowpass_filter_trigger'}
+             'PHC' : 'phc_trigger'}
 
 # This list contains triggers that will be active at the last iteration defined by trigger, despite
 # not being a trigger calculated by the step formula.
@@ -93,8 +100,8 @@ def get_alg_rows(s, pc_conf_start):
         repeat = entry[0]
         funs = entry[1].split('.')
         if funs[0] not in algs:
-            print(f'algorithm {funs[0]} is not defined in op_flow.py file, algs dict.')
-            raise
+            msg = f'algorithm {funs[0]} is not defined in op_flow.py file, algs dict.'
+            raise NameError(msg)
         # the pc will not be executed if pc_conf_start is None
         # this code will be revised after each generation has separate config
         if pc_conf_start is None:
@@ -119,8 +126,8 @@ def get_alg_rows(s, pc_conf_start):
                 (trig_op, idx) = match.groups(0)
                 sub_t = sub_triggers[trig_op]
                 if trig_op not in sub_triggers.keys():
-                    print(f'the sub-trigger {trig_op} must be defined in op_flow.py file, sub_triggers dict.')
-                    raise
+                    msg = f'the sub-trigger {trig_op} must be defined in op_flow.py file, sub_triggers dict.'
+                    raise NameError(msg)
                 if sub_t not in sub_rows:
                     sub_rows[sub_t] = []
                 sub_rows[sub_t].append((entry[2], entry[0] + entry[2], idx))
@@ -189,18 +196,21 @@ def fill_sub_trigger_row(sub_iters, sub_trigs, iter_no, last_trig):
     # create array indicating with index which sub-triggered operation may happen in the iterations
     sub_trig_idx_row = np.zeros(iter_no, dtype=int)
     # for each defined sub iteration chunk apply corresponding sub-trigger
-    for (b, e, idx) in sub_iters:
+    for i, sub_iter in enumerate(sub_iters):
+        (b, e, idx) = sub_iter
         index = int(idx)
         sub_trig_idx_row[b:e] = index + 1
         if len(sub_trigs) - 1 < index:
-            print('not enough entries in sub-trigger')
-            raise
+            msg = 'not enough entries in sub-trigger'
+            raise RuntimeError(msg)
         trigger = sub_trigs[index].copy()
         trigger[0] += b
         if len(trigger) == 2:
             trigger.append(e)
         elif len(trigger) == 3:
             trigger[2] = min(e, trigger[0] + trigger[2])
+            # update the sub_iters
+            sub_iters[i] = (b, trigger[2], idx)
         sub_trig_row = fill_trigger_row(trigger, iter_no, last_trig, sub_trig_row)
 
     return sub_trig_row * sub_trig_idx_row
@@ -236,28 +246,20 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
     # do some checks to find if the sequence and configuration are runnable
     # and special cases
 
-    # this array is a mask blocking shrink wrap when low pass filter is active
-    apply_sw_row = np.ones(iter_no, dtype=int)
     last_lpf = None
     if 'lowpass_filter_trigger' in params:
-        if 'lowpass_filter_trigger' in sub_iters:
-            for b, e, i in sub_iters['lowpass_filter_trigger']:
-                apply_sw_row[b:e] = 0
-                last_lpf = e
-        elif len(params['lowpass_filter_trigger']) < 2:
+        if len(params['lowpass_filter_trigger']) < 2:
             print('Low pass trigger misconfiguration error. This trigger should have upper bound.')
             raise
         elif params['lowpass_filter_trigger'][2] >= iter_no:
             print('Low pass trigger misconfiguration error. The upper bound should be less than total iterations.')
             raise
         else:
-            apply_sw_row[params['lowpass_filter_trigger'][0]:params['lowpass_filter_trigger'][2]] = 0
             last_lpf = params['lowpass_filter_trigger'][2]
 
     if pc_start is not None:
         if pc_start == 0:
-            print('partial coherence is configured in first iteration, allow several ER before')
-            raise
+            raise ValueError('partial coherence is configured in first iteration, allow several ER before.')
         else:
             pc_interval = params['pc_interval']
             params['pc_trigger'] = [pc_start, pc_interval]
@@ -288,21 +290,23 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
                 # determined in algorithm sequence parsing if the triggered operation is configured
                 # with sub-triggers or trigger
                 if trigger_name in sub_iters.keys():
-                    try:
-                        flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
-                    except:
-                        flow_arr = None
-                        break
+                    # may throw exception
+                    flow_arr[i] = fill_sub_trigger_row(sub_iters[trigger_name], params[trigger_name], iter_no, last_trig)
+                    # special case
+                    if flow_item == 'phc_operation':
+                        reset = [l[1] for l in list(sub_iters[trigger_name])]
+                        flow_arr[i-1][reset] = 1
+
                     # add entry to sub trigger operation dict with key of the trigger mnemonic
                     # and the value of a list with the row and sub triggers iterations chunks
                     sub_trig_op[trigger_name] = (flow_arr[i], sub_iters[trigger_name])
                 else:
                     flow_arr[i] = fill_trigger_row(params[trigger_name], iter_no, last_trig)
-
-                # handle special cases
-                if flow_item == 'shrink_wrap_operation':
-                    # shrink wrap is blocked by low pass filter
-                    flow_arr[i] = flow_arr[i] * apply_sw_row
+                    # special case
+                    if flow_item == 'phc_operation':
+                        # Assuming phc trigger is configured with upper limit
+                        reset_iter = min(iter_no - 1, params[trigger_name][2] + 1)
+                        flow_arr[i-1][reset_iter] = 1
         elif flow_item == 'set_prev_pc' and pc_start is not None:
             # set_prev_pc is executed one iteration before pc_trigger
             pc_row = flow_items_list.index('pc_operation')

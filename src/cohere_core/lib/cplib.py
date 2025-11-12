@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 from cohere_core.lib.cohlib import cohlib
 import cupy as cp
 import numpy as np
@@ -5,6 +11,7 @@ import cupyx.scipy.stats as stats
 import cupyx.scipy.ndimage as sc
 import cupyx.scipy.special as sp
 import cupyx.scipy.signal as sig
+import cupyx.scipy.fft as fft
 
 
 class cplib(cohlib):
@@ -26,10 +33,6 @@ class cplib(cohlib):
             cp.cuda.Device(dev_id).use()
 
     @staticmethod
-    def set_backend(proc):
-        pass
-
-    @staticmethod
     def to_numpy(arr):
         try:
             return arr.get()
@@ -37,7 +40,7 @@ class cplib(cohlib):
             return arr
 
     @staticmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         return cp.array(arr)
 
     @staticmethod
@@ -45,7 +48,7 @@ class cplib(cohlib):
         cp.save(filename, arr)
 
     @staticmethod
-    def load(filename):
+    def load(filename, **kwargs):
         return cp.load(filename, allow_pickle=True)
 
     @staticmethod
@@ -63,6 +66,10 @@ class cplib(cohlib):
     @staticmethod
     def size(arr):
         return arr.size
+
+    @staticmethod
+    def next_fast_len(target):
+        return fft.next_fast_len(target)
 
     @staticmethod
     def hasnan(arr):
@@ -104,19 +111,19 @@ class cplib(cohlib):
 
     @staticmethod
     def fftshift(arr):
-        return cp.fft.fftshift(arr)
+        return fft.fftshift(arr)
 
     @staticmethod
     def ifftshift(arr):
-        return cp.fft.ifftshift(arr)
+        return fft.ifftshift(arr)
 
     @staticmethod
     def fft(arr, norm='forward'):
-        return cp.fft.fftn(arr, norm=norm)
+        return fft.fftn(arr, norm=norm)
 
     @staticmethod
     def ifft(arr, norm='forward'):
-        return cp.fft.ifftn(arr, norm=norm)
+        return fft.ifftn(arr, norm=norm)
 
     @staticmethod
     def fftconvolve(arr1, kernel):

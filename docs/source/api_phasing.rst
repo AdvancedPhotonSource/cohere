@@ -1,13 +1,10 @@
 ===========
 Phasing API
 ===========
-.. automodule:: cohere_core.phasing
+.. automodule:: cohere_core.controller.phasing
    :members:
-.. automodule:: cohere_core.reconstruction_single
-   :members:
-.. automodule:: cohere_core.reconstruction_multi
-   :members:
-.. automodule:: cohere_core.reconstruction_GA
-   :members:
-.. automodule:: cohere_core.reconstruction_coupled
-   :members:
+   :exclude-members: Rec
+
+   .. autoclass:: Rec
+      :members:
+      :special-members: __init__

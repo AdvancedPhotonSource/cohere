@@ -6,18 +6,26 @@
 
 
 """
-cohere_core.phasing
-===================
-
 Provides phasing capabilities for the Bragg CDI data.
-The software can run code utilizing different library, such as numpy and cupy. User configures the choice depending on hardware and installed software.
 
+The reconstruction is based on known iterative algorithm, oscillating between direct and reciprocal space and applying projection algorithms. Cohere
+supports the following projection algorithms: ER (error reduction), HIO (hybrid input-output), SF (solvent flipping), and RAAR (relaxed averaged alternating reflectors). The algorithms are described in this publication: https://pubs.aip.org/aip/rsi/article/78/1/011301/349838/Invited-Article-A-unified-evaluation-of-iterative
+
+The cohere reconstruction can be tuned to specific cases. Typically every few iteration steps a shrink wrap is applied.
+And typically a twin blocking is performed after a few first iterations. Other factors differentiating reconstruction and supported by cohere are: low pass filter, phase constrain, averaging amplitudes. These are direct space methods.
+Each of these features owns parameters that can be tuned to the projection algorithm. Cohere supports partial coherence feature that is performed in reciprocal space and is used to mitigate coherence of the light source.
+
+The software can run code on GPU or CPU, utilizing different library, such as cupy, numpy or torch. User configures the choice depending on hardware and installed software.
+
+The reconstruction is utilized by the GA algorithm, where each generation creates multiple Rec objects, and executes parallel reconstructions.
+
+In addition two subclasses provide functionality for different types of reconstruction. The CoupleRec class supports multipeak reconstruction.
+The TeRec class supports reconstruction of time-evolving samples with improved temporal resolution.
 """
 
 from pathlib import Path
 import time
 import os
-import sys
 from math import pi
 import random
 import tqdm
@@ -36,12 +44,17 @@ __author__ = "Barbara Frosik"
 __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['set_lib_from_pkg',
-           'reconstruction',
            'create_rec',
            'Rec']
 
 
 def set_lib_from_pkg(pkg):
+    """
+    Imports package specified in input and sets the device library to this package.
+
+    :param pkg: supported values: 'cp' for cupy, 'np' for numpy, and 'torch' for torch
+    :return:
+    """
     global devlib
 
     # get the lib object
@@ -54,23 +67,30 @@ def set_lib_from_pkg(pkg):
 
 class Rec:
     """
-    cohere_core.phasing.reconstruction(self, params, data_file)
+    Performs phasing using iterative algorithm.
 
-    Class, performs phasing using iterative algorithm.
-
-    params : dict
-        parameters used in reconstruction. Refer to x for parameters description
-    data_file : str
-        name of file containing data to be reconstructed
-
+    The Rec object must have a device set, either to GPU id or set as CPU.
+    The functions executed in each iteration are determined at the beginning, during iteration loop initialization. It is based on the reconstruction parameters and the order of functions internally defined in 'iter_functions' field.
+    A factory for this class, 'create_rec' returns initialized Rec object.
+    The object is then called to run iterations. The results can be retrieved with getters or saved.
     """
-    __all__ = []
-    def __init__(self, params, data_file, pkg):
+
+    def __init__(self, params, data_file, pkg, **kwargs):
+        """
+        Constructor. Sets / initializes reconstruction parameters.
+
+        :param params: dictionary containing configuration parameters
+        :param data_file: path to the data file
+        :param pkg: an acronym of the package that will be utilized for reconstruction:
+            "np" for numpy, "cp" for cupy, and "torch" for torch
+        :param kwargs: can contain "debug" parameter. When activated, it will throw exception, if one happens. Otherwise, an error code of -1 is returned and error printed. The handling of the exception is needed in GA reconstruction.
+        """
         set_lib_from_pkg(pkg)
         self.iter_functions = [self.next,
                                self.lowpass_filter_operation,
                                self.reset_resolution,
                                self.shrink_wrap_operation,
+                               self.reset_phc_correction,
                                self.phc_operation,
                                self.to_reciprocal_space,
                                self.new_func_operation,
@@ -81,7 +101,8 @@ class Rec:
                                self.to_direct_space,
                                self.er,
                                self.hio,
-                               self.new_alg,
+                               self.sf,
+                               self.raar,
                                self.twin_operation,
                                self.average_operation,
                                self.progress_operation,
@@ -95,6 +116,7 @@ class Rec:
                 params['AI_sigma'] = params['shrink_wrap_gauss_sigma']
         params['reconstructions'] = params.get('reconstructions', 1)
         params['hio_beta'] = params.get('hio_beta', 0.9)
+        params['raar_beta'] = params.get('raar_beta', 0.45)
         params['initial_support_area'] = params.get('initial_support_area', (.5, .5, .5))
         if 'twin_trigger' in params:
             params['twin_halves'] = params.get('twin_halves', (0, 0))
@@ -108,9 +130,21 @@ class Rec:
         self.ds_image = None
         self.need_save_data = False
         self.saved_data = None
+        self.debug = kwargs.get('debug', False)
+        # only when phc feature is configured this becomes array
+        self.phc_correction = 1
 
 
     def init_dev(self, device_id):
+        """
+        This function initializes GPU device that will be used for reconstruction. When running on CPU, the device_id
+        is set to -1, and the initialization is omitted.
+        After the device is set, the data array is loaded on that device or cpu memory. The data file can be
+        in tif or npy format.
+
+        :param device_id: device id or -1 if cpu
+        :return: 0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
+        """
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         if device_id != -1:
             self.dev = device_id
@@ -118,6 +152,8 @@ class Rec:
                 try:
                     devlib.set_device(device_id)
                 except Exception as e:
+                    if self.debug:
+                        raise
                     print(e)
                     print('may need to restart GUI')
                     return -1
@@ -127,19 +163,23 @@ class Rec:
                 data_np = ut.read_tif(self.data_file)
                 data = devlib.from_numpy(data_np)
             except Exception as e:
+                if self.debug:
+                    raise
                 print(e)
                 return -1
         elif self.data_file.endswith('npy'):
             try:
                 data = devlib.load(self.data_file)
             except Exception as e:
+                if self.debug:
+                    raise
                 print(e)
                 return -1
         else:
             print('no data file found')
             return -1
         # in the formatted data the max is in the center, we want it in the corner, so do fft shift
-        self.data = devlib.fftshift(devlib.absolute(data))
+        self.data = devlib.fftshift(data)
         self.dims = devlib.dims(self.data)
         print('data shape', self.dims)
 
@@ -156,6 +196,15 @@ class Rec:
 
 
     def init_iter_loop(self, dir=None, gen=None):
+        """
+        Initializes the iteration loop.
+
+        :param dir: directory containing 'image.npy' file that contains reconstructed object, if the reconstruction is continuation.
+            It defaults to None.
+        :param gen: generation number, only used when running GA algorithm.
+            It defaults to None.
+        :return:  0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
+        """
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
@@ -175,8 +224,12 @@ class Rec:
 
         self.flow_items_list = [f.__name__ for f in self.iter_functions]
 
-        self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen)
-        if flow is None:
+        try:
+            self.is_pc, flow, feats = of.get_flow_arr(self.params, self.flow_items_list, gen)
+        except Exception as e:
+            if self.debug:
+                raise
+            print(e)
             return -1
 
         self.flow = []
@@ -202,22 +255,20 @@ class Rec:
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
 
-        # create the trgger/sub-trigger objects
-        if 'shrink_wrap_trigger' in self.params:
-            self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
-            if self.shrink_wrap_obj is None:
-                print('failed to create shrink_wrap object')
-                return -1
-        if 'phc_trigger' in self.params:
-            self.phc_obj = ft.create('phc', self.params, feats)
-            if self.phc_obj is None:
-                print('failed to create phc object')
-                return -1
         if 'lowpass_filter_trigger' in self.params:
-            self.lowpass_filter_obj = ft.create('lowpass_filter', self.params, feats)
-            if self.lowpass_filter_obj is None:
-                print('failed to create lowpass_filter object')
-                return -1
+            self.lowpass_filter_obj = ft.LowPassFilter( self.params)
+
+        # create the trgger/sub-trigger objects
+        try:
+            if 'shrink_wrap_trigger' in self.params:
+                self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
+            if 'phc_trigger' in self.params:
+                self.phc_obj = ft.create('phc', self.params, feats)
+        except Exception as e:
+            if self.debug:
+                raise
+            print(e)
+            return -1
 
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
@@ -241,18 +292,28 @@ class Rec:
 
             # the line below are for testing to set the initial guess to support
             # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 1.0)
+            # self.ds_image = devlib.full(self.dims, 1.0) + 1j * devlib.full(self.dims, 0.0)
 
             self.ds_image *= self.support
         return 0
 
 
     def iterate(self):
+        """
+        It iterates over function order that was determined during loop initialization.
+
+        During iteration execution an exception can happen. The exception is handled in non debug mode and thrown otherwise.
+
+        :return: 0 if successful, -1 otherwise. In debug mode will throw exception instead of returning -1.
+        """
         self.iter = -1
         start_t = time.time()
         try:
             for f in self.flow:
                 f()
         except Exception as error:
+            if self.debug:
+                raise
             print(error)
             return -1
 
@@ -274,7 +335,21 @@ class Rec:
 
         return 0
 
+
     def save_res(self, save_dir, only_image=False):
+        """
+        Saves reconstruction results.
+
+        It centers the maximum of image array and saves this array, support array, coherence if present, and errors.
+        This function is typically called after iterations.
+
+        :param save_dir: directory where results will be saved
+        :param only_image: will save only image if True, otherwise all the results are saved. By default all results are saved.
+        :return:
+        """
+        mx = devlib.amax(devlib.absolute(self.ds_image))
+        self.ds_image = self.ds_image / mx
+
         # center image's center_of_mass and sync support
         self.ds_image, self.support = dvut.center_sync(self.ds_image, self.support)
 
@@ -305,14 +380,17 @@ class Rec:
         return 0
 
     def get_metric(self):
+        """
+        Returns metrics such as: chi (the error after last iteration), summed phase, area, sharpness of the ds_image array that holds reconstructed image.
+        """
         return dvut.all_metrics(self.ds_image, self.errs)
 
     def next(self):
         self.iter = self.iter + 1
 
     def lowpass_filter_operation(self):
-        args = (self.data, self.iter, self.ds_image)
-        (self.iter_data, self.support) = self.lowpass_filter_obj.apply_trigger(*args)
+        args = (self.data, self.iter)
+        self.iter_data = self.lowpass_filter_obj.apply_trigger(*args)
 
     def reset_resolution(self):
         self.iter_data = self.data
@@ -321,9 +399,12 @@ class Rec:
         args = (self.ds_image,)
         self.support = self.shrink_wrap_obj.apply_trigger(*args)
 
+    def reset_phc_correction(self):
+        self.phc_correction = 1
+
     def phc_operation(self):
         args = (self.ds_image,)
-        self.support *= self.phc_obj.apply_trigger(*args)
+        self.phc_correction = self.phc_obj.apply_trigger(*args)
 
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
@@ -341,14 +422,14 @@ class Rec:
         ratio = self.get_ratio(self.iter_data, devlib.absolute(converged))
         error = dvut.get_norm(
             devlib.where(devlib.absolute(converged) != 0.0, devlib.absolute(converged) - self.iter_data, 0.0)) / dvut.get_norm(self.iter_data)
-        self.errs.append(error)
+        self.errs.append(float(error))
         self.rs_amplitudes *= ratio
 
     def modulus(self):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
         error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
                                       0)) / dvut.get_norm(self.iter_data)
-        self.errs.append(error.get())
+        self.errs.append(float(error))
         self.rs_amplitudes *= ratio
 
     def set_prev_pc(self):
@@ -358,14 +439,23 @@ class Rec:
         self.ds_image_proj = devlib.fft(self.rs_amplitudes)
 
     def er(self):
-        self.ds_image = self.ds_image_proj * self.support
+        self.ds_image = self.ds_image_proj * self.support * self.phc_correction
 
     def hio(self):
         combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
-        self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
+        self.ds_image = devlib.where((self.support * self.phc_correction > 0),
+                                     self.ds_image_proj,
+                                     combined_image)
 
-    def new_alg(self):
-        self.ds_image = 2.0 * (self.ds_image_proj * self.support) - self.ds_image_proj
+    def sf(self):
+        # solvent flipping
+        self.ds_image = 2.0 * (self.ds_image_proj * self.support * self.phc_correction) - self.ds_image_proj
+
+    def raar(self):
+        # Relaxed averaged alternating reflectors
+        self.ds_image = (self.params['raar_beta']
+                         * (self.support * self.phc_correction * self.ds_image_proj + self.ds_image)
+                         + (1 - 2 * self.params['raar_beta']) * self.ds_image_proj)
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?
@@ -406,12 +496,33 @@ class Rec:
         return ratio
 
     def shift_to_center(self):
-        ind = devlib.center_of_mass(self.support.astype('int32'))
+        ind = devlib.center_of_mass(devlib.astype(self.support, 'int32'))
         shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
         shift_dist = devlib.to_numpy(shift_dist).tolist()
         axis = tuple(range(len(self.ds_image.shape)))
         self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
         self.support = devlib.roll(self.support, shift_dist, axis=axis)
+
+    def get_image(self):
+        """
+        Returns image array.
+        """
+        return self.ds_image
+
+    def get_support(self):
+        """
+        Returns support array.
+        """
+        return self.support
+
+    def get_coherence(self):
+        """
+        returns coherence array, if exists.
+        """
+        if self.is_pc:
+            return self.pc_obj.kernel
+        else:
+            return None
 
 
 class Peak:
@@ -560,8 +671,8 @@ class CoupledRec(Rec):
     __author__ = "Nick Porter"
     __all__ = []
 
-    def __init__(self, params, peak_dirs, pkg):
-        super().__init__(params, None, pkg)
+    def __init__(self, params, peak_dirs, pkg, **kwargs):
+        super().__init__(params, None, pkg, **kwargs)
 
         self.iter_functions = [self.adapt_operation] + self.iter_functions + [self.switch_peak_operation]
 
@@ -581,6 +692,8 @@ class CoupledRec(Rec):
                 try:
                     devlib.set_device(device_id)
                 except Exception as e:
+                    if self.debug:
+                        raise
                     print(e)
                     print('may need to restart GUI')
                     return -1
@@ -726,7 +839,7 @@ class CoupledRec(Rec):
 
     def make_binary(self):
         self.support = devlib.absolute(self.support)
-        self.support = devlib.where(self.support >= 0.9 * devlib.amax(self.support), 1, 0).astype("?")
+        self.support = devlib.where(self.support >= devlib.astype(0.9 * devlib.amax(self.support), 1, 0), ("?"))
 
     def get_phase_gradient(self):
         """Calculate the phase gradient for a given peak"""
@@ -777,8 +890,9 @@ class CoupledRec(Rec):
             for f in self.flow:
                 f()
         except Exception as error:
+            if self.debug:
+                raise
             print('error',error)
-            # raise error
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
@@ -953,7 +1067,7 @@ class CoupledRec(Rec):
         ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
         error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
                                       0)) / dvut.get_norm(self.iter_data)
-        self.errs.append(error)
+        self.errs.append(float(error))
         self.rs_amplitudes *= ratio
 
     def er(self):
@@ -1085,144 +1199,141 @@ class CoupledRec(Rec):
         self.support = devlib.roll(self.support, shift_dist, axis=axis)
 
 
-def reconstruction(datafile, **kwargs):
+class TeRec(Rec):
     """
-    Reconstructs the image from experiment data in datafile according to given parameters. The results: image.npy, support.npy, and errors.npy are saved in 'saved_dir' defined in kwargs, or if not defined, in the directory of datafile.
+    Coherent diffractive imaging of time-evolving samples with improved temporal resolution
 
-    example of the simplest kwargs parameters:
-        - device=[-1]
-        - algorithm_sequence='3*(20*ER+180*HIO)+20*ER'
-        - shrink_wrap_type="GAUSS"
-        - shrink_wrap_threshold=0.1
-        - shrink_wrap_gauss_sigma=1.0
-        - shrink_wrap_trigger=[1, 1]
-        - twin_trigger=[2]
-        - progress_trigger=[0, 20]
+    params : dict
+        parameters used in reconstruction. Refer to x for parameters description
+    data_file : str
+        name of file containing data
 
-    Parameters
-    ----------
-    datafile : str
-        filename of phasing data. Must be either .tif format or .npy type
-
-    kwargs : keyword arguments
-        save_dir : str
-            directory where results of reconstruction are saved as npy files. If not present, the reconstruction outcome will be save in the same directory where datafile is.
-        processing : str
-            the library used when running reconstruction. When the 'auto' option is selected the program will use the best performing library that is available, in the following order: cupy, numpy. The 'cp' option will utilize cupy, and 'np' will utilize numpy. Default is auto.
-        device : list of int
-            IDs of the target devices. If not defined, it will default to -1 for the OS to select device.
-        algorithm_sequence : str
-            Mandatory; example: "3* (20*ER + 180*HIO) + 20*ER". Defines algorithm applied in each iteration during modulus projection (ER or HIO) and during modulus (error correction or partial coherence correction). The "*" character means repeat, and the "+" means add to the sequence. The sequence may contain single brackets defining a group that will be repeated by the preceding multiplier. The alphabetic entries: 'ER', 'ERpc', 'HIO', 'HIOpc' define algorithms used in iterations.
-            If the defined algorithm contains 'pc' then during modulus operation a partial coherence correction is applied,  but only if partial coherence (pc) feature is activated. If not activated, the phasing will use error correction instead.
-        hio_beta : float
-             multiplier used in hio algorithm
-        twin_trigger : list
-             example: [2]. Defines at which iteration to cut half of the array (i.e. multiply by 0s)
-        twin_halves : list
-            defines which half of the array is zeroed out in x and y dimensions. If 0, the first half in that dimension is zeroed out, otherwise, the second half.
-        shrink_wrap_trigger : list
-            example: [1, 1]. Defines when to update support array using the parameters below.
-        shrink_wrap_type : str
-            supporting "GAUSS" only. Defines which algorithm to use for shrink wrap.
-        shrink_wrap_threshold : float
-            only point with relative intensity greater than the threshold are selected
-        shrink_wrap_gauss_sigma : float
-            used to calculate the Gaussian filter
-        initial_support_area : list
-            If the values are fractional, the support area will be calculated by multiplying by the data array dimensions. The support will be set to 1s to this dimensions centered.
-        phc_trigger : list
-            defines when to update support array using the parameters below by applaying phase constrain.
-        phc_phase_min : float
-            point with phase below this value will be removed from support area
-        phc_phase_max : float
-            point with phase over this value will be removed from support area
-        pc_interval : int
-            defines iteration interval to update coherence.
-        pc_type : str
-            partial coherence algorithm. 'LUCY' type is supported.
-        pc_LUCY_iterations : int
-            number of iterations used in Lucy algorithm
-        pc_LUCY_kernel : list
-            coherence kernel area.
-        lowpass_filter_trigger : list
-            defines when to apply lowpass filter using the parameters below.
-        lowpass_filter_sw_threshold : float
-            used in Gass type shrink wrap when applying lowpass filter.
-        lowpass_filter_range : list
-            used when applying low resolution data filter while iterating. The values are linespaced for lowpass filter iterations from first value to last. The filter is gauss with sigma of linespaced value. If only one number given, the last value will default to 1.
-        average_trigger : list
-            defines when to apply averaging. Negative start means it is offset from the last iteration.
-        progress_trigger : list of int
-            defines when to print info on the console. The info includes current iteration and error.
-        no_verify : boolean
-            if in no_verify mode the verifier will not stop the progress, only print message
     """
-    no_verify = kwargs.get('no_verify', False)
-    error_msg = ver.verify('config_rec', kwargs)
-    if len(error_msg) > 0:
-        print(error_msg)
-        if not no_verify:
-            return
 
-    if not os.path.isfile(datafile):
-        print(f'no file found {datafile}')
-        return
+    def __init__(self, params, data_file, pkg, comm):
+        super().__init__(params, data_file, pkg)
 
-    if 'reconstructions' in kwargs and kwargs['reconstructions'] > 1:
-        print('Use cohere_core-ui package to run multiple reconstructions. Processing single reconstruction.')
-    device = kwargs.get('device', [-1])
-    pkg = kwargs.get('processing', 'auto')
-    if pkg == 'auto':
-        if device == [-1] or sys.platform == 'darwin':
-            pkg = 'np'
+        self.comm = comm
+        self.size = comm.Get_size()
+        self.rank = comm.Get_rank()
+        self.weight = params['weight']
+
+
+    def exchange_data_info(self):
+        # The data with fewer frames comparing to full data
+        # has the missing frames filled with -1.
+        # Since data collected by detector is greater than 0,
+        # the data that does not have any negative values is full data,
+        # and partial data otherwise.
+        self.is_full_data = (self.data < 0).sum() == 0
+        # send to previous if full_data
+        if self.rank != 0:
+            self.comm.send(self.is_full_data, dest=self.rank - 1)
+        if self.rank != self.size - 1:
+            next_full_data = self.comm.recv(source=self.rank+1)
+        # send to next if full_data
+        if self.rank != self.size - 1:
+            self.comm.send(self.is_full_data, dest=self.rank + 1)
+        if self.rank != 0:
+            prev_full_data = self.comm.recv(source=self.rank-1)
+
+        # figure out if rank needs to send prev/next
+        self.send_to_prev = (self.rank > 0) and (not prev_full_data)
+        self.send_to_next = (self.rank < self.size - 1) and (not next_full_data)
+
+
+    def er(self):
+        if self.send_to_prev:
+            self.comm.send(self.ds_image, dest=self.rank - 1)
+        if not self.is_full_data:
+            ds_image_next = self.comm.recv(source=self.rank + 1)
+        if self.send_to_next:
+            self.comm.send(self.ds_image, dest=self.rank + 1)
+        if not self.is_full_data:
+            ds_image_prev = self.comm.recv(source=self.rank - 1)
+
+        if self.is_full_data:
+            # run the super er
+            self.ds_image = self.ds_image_proj * self.support
+
         else:
-            try:
-                import cupy as cp
-                pkg = 'cp'
-            except:
-                try:
-                    import torch
-                    pkg = 'torch'
-                except:
-                    pkg = 'np'
-
-    worker = create_rec(kwargs, datafile, pkg, device[0])
-    if worker is None:
-        return
-
-    if worker.iterate() < 0:
-        return
-
-    if 'save_dir' in kwargs:
-        save_dir = kwargs['save_dir']
-    else:
-        save_dir, filename = os.path.split(datafile)
-
-    worker.save_res(save_dir)
+            # use previous and next to run modified er
+            self.ds_image = (1/(1+2*self.weight)) * self.support * (self.ds_image_proj +
+            self.weight * (ds_image_prev + ds_image_next))
 
 
-def create_rec(params, datainfo, pkg, dev, rec_type='basic'):
+    def hio(self):
+        if self.send_to_prev:
+            self.comm.send(self.ds_image, dest=self.rank - 1)
+        if not self.is_full_data:
+            ds_image_next = self.comm.recv(source=self.rank + 1)
+        if self.send_to_next:
+            self.comm.send(self.ds_image, dest=self.rank + 1)
+        if not self.is_full_data:
+            ds_image_prev = self.comm.recv(source=self.rank - 1)
+
+        if self.is_full_data:
+            # run the super hio
+            combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
+            self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
+        else:
+            # use previous and next to run modified hio
+            combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
+            corr = self.weight * self.support * (2 * (self.ds_image) - (ds_image_prev + ds_image_next))
+            self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image) - corr
+
+    def modulus(self):
+        ratio = self.get_ratio(self.iter_data, devlib.absolute(self.rs_amplitudes))
+        error = dvut.get_norm(devlib.where((self.rs_amplitudes != 0), (devlib.absolute(self.rs_amplitudes) - self.iter_data),
+                                      0)) / dvut.get_norm(self.iter_data)
+        self.errs.append(float(error))
+        # do not change the frames with -1 value.
+        # This value is marking frames that were not collected, and the reconstruction
+        # is taking neighboring results (in hio and er)
+        self.rs_amplitudes[self.iter_data != -1.0] *= ratio[self.iter_data != -1.0]
+
+
+def create_rec(params, datainfo, pkg, dev, **kwargs):
     """
+    Factory for creating Rec object.
+
+    If the rec_type is "mp", it will create CoupledRec object used for multipeak
+    reconstruction, otherwise base Rec object.
+    After the object is instantiated it will be set to a given device. This operation
+    can fail, in which case no object is returned.
+    The function continues with initialization of iteration loop. If successful, the
+    Rec object is returned, otherwise None.
 
     :param params: dict, contains reconstruction parameters
-    :param datainfo: for 'basic' reconstruction contains data file name,
-                     for 'mp' reconstruction contains peak_dirs
-    :param pkg: python package that will be used as lib
-    :param dev: device
-    :param rec_type: 'mp' for multipeak, defaults to 'basic'
+    :param datainfo:
+        for 'basic' datainfo is data file name,
+        and for 'mp' reconstruction it is a list of peak directories
+    :param pkg:
+        python package that will be used to run the reconstruction:
+        'cp' for cupy, 'np' for numpy, 'torch' for torch
+    :param dev: GPU device id or -1
+    :param kwargs:
+        var parameters:
+        rec_type: 'mp' for multipeak,
+        debug : if True the exceptions are not handled
     :return: created and initialized object if success, None if failure
+
     """
-    if rec_type == 'basic':
-        worker = Rec(params, datainfo, pkg)
-    elif rec_type == 'mp':
-        worker = CoupledRec(params, datainfo, pkg)
+
+    rec_type = kwargs.pop('rec_type', 'basic')
+    if rec_type == 'mp':
+        worker = CoupledRec(params, datainfo, pkg, **kwargs)
+    else:
+        worker = Rec(params, datainfo, pkg, **kwargs)
 
     if worker.init_dev(dev) < 0:
+        del worker
         return None
 
     continue_dir = params.get('continue_dir')
     ret_code = worker.init_iter_loop(continue_dir)
     if ret_code < 0:
+        del worker
         return None
 
     return worker

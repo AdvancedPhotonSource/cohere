@@ -25,18 +25,9 @@ def ver_list_int(param_name, param_value):
     """
     This function verifies if all elements in a given list are int.
 
-    Parameters
-    ----------
-    param_name : str
-        the parameter being evaluated
-
-    param_value : list
-        the list to evaluate for int values
-
-    Returns
-    -------
-    eval : boolean
-        True if all elements are int, False otherwise
+    :param param_name: name of the parameter being evaluated
+    :param param_value: the list to evaluate for int values 
+    :return:  True if all elements are int, False otherwise
     """
     if not issubclass(type(param_value), list):
         print (f'{param_name} is not a list')
@@ -52,18 +43,9 @@ def ver_list_float(param_name, param_value):
     """
     This function verifies if all elements in a given list are float.
 
-    Parameters
-    ----------
-    param_name : str
-        the parameter being evaluated
-
-    param_value : list
-        the list to evaluate for float values
-
-    Returns
-    -------
-    eval : boolean
-        True if all elements are float, False otherwise
+    :param param_name: name of the parameter being evaluated
+    :param param_value: the list to evaluate for float values 
+    :return:  True if all elements are float, False otherwise
     """
     if not issubclass(type(param_value), list):
         print (f'{param_name} is not a list')
@@ -87,7 +69,6 @@ def get_config_error_message(config_file_name, map_file, config_parameter, confi
     :return: An error string describing the error and where it was found
     """
     config_map_dic = config_map_names.get(map_file)
-
     error_string_message = config_map_dic.get(config_parameter)[config_error_no]
     # presented_message = "File=" + config_file_name, "Parameter=" + config_parameter, "Error=" + error_string_message
 
@@ -96,17 +77,10 @@ def get_config_error_message(config_file_name, map_file, config_parameter, confi
 
 def ver_config(config_map):
     """
-    This function verifies experiment main config file
+    This function verifies parameters from config file
 
-    Parameters
-    ----------
-    fname : str
-        configuration file name
-
-    Returns
-    -------
-    error_message : str
-        message describing parameter error or empty string if all parameters are verified
+    :param config_map: dict with main configuration parameters
+    :return:  message describing parameter error or empty string if all parameters are verified
     """
     config_map_file = 'config_error_map_file'
     fname = 'config'
@@ -178,6 +152,56 @@ def ver_config(config_map):
     return ("")
 
 
+def ver_config_prep(config_map):
+    """
+    This function verifies experiment config_prep file
+
+    Parameters
+    ----------
+    fname : str
+        configuration file name
+
+    Returns
+    -------
+    error_message : str
+        message describing parameter error or empty string if all parameters are verified
+    """
+    config_map_file = 'config_prep_error_map_file'
+    fname = 'config_prep'
+
+    config_parameter = 'Excludescans'
+    if 'exclude_scans' in config_map:
+        if not ver_list_int('exclude_scans', config_map['exclude_scans']):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    config_parameter = 'MinFiles'
+    if 'min_frames' in config_map:
+        min_frames = config_map['min_frames']
+        if type(min_frames) != int:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    config_parameter = 'Maxcrop'
+    if 'max_crop' in config_map:
+        if not ver_list_int('max_crop', config_map['max_crop']):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+        elif len(config_map['max_crop']) < 2:
+            config_error = 1
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+    return ("")
+
+
 def ver_config_rec(config_map):
     """
     This function verifies experiment config_rec file
@@ -235,8 +259,8 @@ def ver_config_rec(config_map):
 
 
     def verify_trigger(trigger, no_iter, trigger_name):
-        if type(trigger) != list:
-            return(f'{trigger_name} trigger type should be list')
+        if not ver_list_int(trigger_name, trigger):
+            return(f'{trigger_name} trigger type should be list of int')
         if len(trigger) == 0:
             return (f'empty {trigger_name} trigger {str(trigger)}')
         elif trigger[0] >= no_iter:
@@ -719,71 +743,36 @@ def ver_config_rec(config_map):
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Resolutiontrigger'
+    config_parameter = 'Lpftrigger'
     if 'lowpass_filter_trigger' in config_map:
-        if '.LPF' not in config_map['algorithm_sequence']:
-            m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
-            if len(m) > 0:
-                print(m)
-                return(m)
-            if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
+        m = verify_trigger(config_map['lowpass_filter_trigger'], iter_no, 'lowpass filter')
+        if len(m) > 0:
+            print(m)
+            return(m)
+        if not ver_list_int('lowpass_filter_trigger', config_map['lowpass_filter_trigger']):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+        if len(config_map['lowpass_filter_trigger']) < 3:
+            config_error = 1
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
+
+        config_parameter = 'Lowpassfilterrange'
+        if 'lowpass_filter_range' in config_map:
+            lowpass_filter_range = config_map['lowpass_filter_range']
+            if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
                 config_error = 0
                 error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
                 print(error_message)
                 return (error_message)
-
-            config_parameter = 'Lowpassfilterswthreshold'
-            if 'lowpass_filter_sw_threshold' in config_map:
-                lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
-                if type(lowpass_filter_sw_threshold) != float:
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-
-            config_parameter = 'Lowpassfilterrange'
-            if 'lowpass_filter_range' in config_map:
-                lowpass_filter_range = config_map['lowpass_filter_range']
-                if not ver_list_float('lowpass_filter_range', lowpass_filter_range):
-                    config_error = 0
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-            else:
-                config_error = 2
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
         else:
-            for t in config_map['lowpass_filter_trigger']:
-                if not ver_list_int('lowpass_filter_trigger', t):
-                    config_error = 1
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-
-            config_parameter = 'Lowpassfilterrange'
-            if 'lowpass_filter_range' in config_map:
-                for r in config_map['lowpass_filter_range']:
-                    if not ver_list_float('lowpass_filter_range', r):
-                        config_error = 1
-                        error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                        print(error_message)
-                        return (error_message)
-            else:
-                config_error = 2
-                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                print(error_message)
-                return (error_message)
-
-            config_parameter = 'Lowpassfilterswthreshold'
-            if 'lowpass_filter_sw_threshold' in config_map:
-                lowpass_filter_sw_threshold = config_map['lowpass_filter_sw_threshold']
-                if not ver_list_float('lowpass_filter_sw_threshold', lowpass_filter_sw_threshold):
-                    config_error = 1
-                    error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
-                    print(error_message)
-                    return (error_message)
-
+            config_error = 2
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print(error_message)
+            return (error_message)
 
     config_parameter = 'Averagetrigger'
     if 'average_trigger' in config_map:
@@ -838,17 +827,17 @@ def ver_config_data(config_map):
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Adjustdimensions'
-    if 'adjust_dimensions' in config_map:
-        if not ver_list_int('pad_crop', config_map['adjust_dimensions']):
+    config_parameter = 'CropPad'
+    if 'crop_pad' in config_map:
+        if not ver_list_int('crop_pad', config_map['crop_pad']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
             return (error_message)
 
-    config_parameter = 'Centershift'
-    if 'center_shift' in config_map:
-        if not ver_list_int('center_shift', config_map['center_shift']):
+    config_parameter = 'Shift'
+    if 'shift' in config_map:
+        if not ver_list_int('shift', config_map['shift']):
             config_error = 0
             error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
             print(error_message)
@@ -988,28 +977,77 @@ def ver_config_data(config_map):
     return ("")
 
 
-def verify(file_name, conf_map):
+def ver_config_disp(config_map):
     """
-    Verifies parameters.
+    This function verifies experiment config_disp file
 
     Parameters
     ----------
-    file_name : str
-        name of file the parameters are related to. Supported: config_prep, config_data, config_rec, config_disp
-
-    conf_map : dict
-        parameters
+    fname : str
+        configuration file name
 
     Returns
     -------
-    str
-        a message with description of error or empty string if no error
+    error_message : str
+        message describing parameter error or empty string if all parameters are verified
     """
-    if file_name == 'config':
+    config_map_file = 'config_disp_error_map_file'
+    fname = 'config_disp'
+
+    config_parameter = 'Resultsdir'
+    if 'results_dir' in config_map:
+        results_dir = config_map['results_dir']
+        if type(results_dir) != str:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('results_dir parameter should be string')
+            return (error_message)
+
+    config_parameter = 'Crop'
+    if 'crop' in config_map:
+        crop = config_map['crop']
+        if not issubclass(type(crop), list):
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('crop should be list')
+            return (error_message)
+        for e in crop:
+            if type(e) != int and type(e) != float:
+                config_error = 1
+                error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+                print('crop should be a list of int or float')
+                return (error_message)
+
+    config_parameter = 'Rampups'
+    if 'rampups' in config_map:
+        rampups = config_map['rampups']
+        if type(rampups) != int:
+            config_error = 0
+            error_message = get_config_error_message(fname, config_map_file, config_parameter, config_error)
+            print('rampups should be float')
+            return (error_message)
+
+    return ("")
+
+
+def verify(config_name, conf_map):
+    """
+    Verifies parameters.
+
+    :param config_name: name of config to be verified. Supported: config_data, config_rec, config_disp.
+    :param conf_map: dict with the parameters to verify.
+        It defaults to None. 
+    :return:  0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
+    """
+    if config_name == 'config':
         return ver_config(conf_map)
-    elif file_name == 'config_data':
+    if config_name == 'config_prep':
+        return ver_config_prep(conf_map)
+    elif config_name == 'config_data':
         return ver_config_data(conf_map)
-    elif file_name == 'config_rec':
+    elif config_name == 'config_rec':
         return ver_config_rec(conf_map)
+    elif config_name == 'config_disp':
+        return ver_config_disp(conf_map)
     else:
-        return ('verifier has no fumction to check config file named', file_name)
+        return ('verifier has no function to check config named', config_name)

@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import abc
 class cohlib(metaclass=abc.ABCMeta):
     # Interface
@@ -11,8 +17,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.cross) and
                 hasattr(subclass, 'set_device') and
                 callable(subclass.set_device) and
-                hasattr(subclass, 'set_backend') and
-                callable(subclass.set_backend) and
                 hasattr(subclass, 'to_numpy') and
                 callable(subclass.to_numpy) and
                 hasattr(subclass, 'save') and
@@ -29,6 +33,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.reshape) and
                 hasattr(subclass, 'size') and
                 callable(subclass.size) and
+                hasattr(subclass, 'next_fast_len') and
+                callable(subclass.next_fast_len) and
                 hasattr(subclass, 'hasnan') and
                 callable(subclass.hasnan) and
                 hasattr(subclass, 'moveaxis') and
@@ -195,11 +201,6 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def set_backend(proc):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
     def to_numpy(arr):
         pass
 
@@ -210,12 +211,12 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def load(filename):
+    def load(filename, **kwargs):
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def from_numpy(arr):
+    def from_numpy(arr, **kwargs):
         pass
 
     @staticmethod
@@ -236,6 +237,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def size(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def next_fast_len(target):
         pass
 
     @staticmethod

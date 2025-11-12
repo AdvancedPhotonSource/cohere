@@ -1,0 +1,3 @@
+sphinx_pyproject
+sphinx
+sphinx-rtd-theme

@@ -12,10 +12,12 @@
 #
 import os
 import sys
+from sphinx_pyproject import SphinxConfig
 
-sys.path.insert(0, os.path.abspath('../..'))
+config = SphinxConfig("../../pyproject.toml", globalns=globals())
 
-
+sys.path.insert(0, os.path.abspath('../../cohere-ui/src'))
+sys.path.insert(0, os.path.abspath('../../src'))
 # -- Project information -----------------------------------------------------
 
 project = 'cohere_core'
@@ -23,8 +25,7 @@ copyright = '2020, Barbara Frosik, Ross Harder'
 author = 'Barbara Frosik, Ross Harder'
 
 # The full version, including alpha/beta/rc tags
-release = '4.1'
-
+release = '4.4.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -40,14 +41,14 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
 # Add any paths that contain templates here, relative to this directory.
-#templates_path = ['_templates']
+# templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 
-exclude_patterns = globals().get('exclude_patterns', [])
-exclude_patterns.extend(['_build'])
+# exclude_patterns = globals().get('exclude_patterns', [])
+# exclude_patterns.extend(['_build'])
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -57,6 +58,8 @@ exclude_patterns.extend(['_build'])
 #
 #html_theme = 'alabaster'
 html_theme = 'sphinxdoc'
+smartquotes = False
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
@@ -71,6 +74,15 @@ autodoc_mock_imports = ['numpy',
                         'psutil',
                         'tqdm',
                         'scipy',
-                        'matplotlib']
+                        'matplotlib',
+                        'pyqt5',
+                        'PyQt5',
+                        'scikit-image',
+                        'skimage',
+                        'xrayutilities',
+                        'pyvista',
+                        'notebook',
+                        'gputil',
+                        ]
 
 master_doc = 'index'

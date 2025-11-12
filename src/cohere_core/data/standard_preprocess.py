@@ -6,7 +6,7 @@
 
 
 """
-This script formats data for reconstruction according to configuration.
+Formats data for reconstruction according to configuration.
 """
 
 import os
@@ -23,25 +23,22 @@ __all__ = ['prep',
            ]
 
 
-def prep(beamline_full_datafile_name, auto, **kwargs):
+def prep(beamline_full_datafile_name, **kwargs):
     """
     This function formats data for reconstruction and saves it in data.tif file. The preparation consists of the following steps:
-        - removing the alien: aliens are areas that are effect of interference. The area is manually set in a configuration file after inspecting the data. It could be also a mask file of the same dimensions that data. Another option is AutoAlien1 algorithm that automatically removes the aliens.
-        - clearing the noise: values below an amplitude threshold are set to zero
+        - removing the aliens which is effect of interference. The removal can be done by setting regions or mask file that requires manual inspection of the data file. The removal can be automatic with the AutoAlien1 algorithm.
+        - clearing the noise, where values below an amplitude threshold are set to zero. The threshold can be set as a parameter or auto determined.
         - amplitudes are set to sqrt
-        - cropping and padding. If the adjust_dimention is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions that have positive adjust dimension. After adjusting, the dimensions are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
+        - cropping and padding. If the crop-pad is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions with positive values. After adjusting, the dimensions are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
         - centering - finding the greatest amplitude and locating it at a center of array. If shift center is defined, the center will be shifted accordingly.
         - binning - adding amplitudes of several consecutive points. Binning can be done in any dimension.
 
-    Parameters
-    ----------
-    beamline_full_datafile_name : str
-        full name of tif file containing beamline preprocessed data
-    kwargs : keyword arguments
+    :param beamline_full_datafile_name: full path of tif file containing beamline preprocessed data
+    :param kwargs:
         data_dir : str
             directory where prepared data will be saved, default <experiment_dir>/phasing_data
         alien_alg : str
-            Name of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
+            Acronym of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
         aliens : list
             Needed when the ‘block_aliens’ method is configured. Used when the data contains regions with intensity produced by interference. The regions needs to be zeroed out. The aliens can be defined as regions each defined by coordinates of starting point, and ending point (i.e. [[xb0,yb0,zb0,xe0,ye0,ze0],[xb1,yb1,zb1,xe1,ye1,ze1],…[xbn,ybn,zbn,xen,yen,zen]] ).
         alien_file : str
@@ -62,35 +59,28 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             Used in the ‘AutoAliens1’ method, optional. If given the algorithm will apply last step of cleaning the data using the configured sigma.
         intensity_threshold : float
             Mandatory, min data threshold. Intensity values below this are set to 0. The threshold is applied after removing aliens.
-        adjust_dimensions : list
-            Optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right] The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 or a*2^n, where a is 3, 5, or 9
-        center_shift : list
-            Optional, enter center shift list the array maximum is centered before binning, and moved according to center_shift, [0,0,0] has no effect
+        crop_pad : list
+            Optional, a list of number to adjust the size at each side of 3D data. If number is positive, the array will be padded. If negative, cropped. The parameters correspond to [x left, x right, y left, y right, z left, z right] The final dimensions will be adjusted up to the good number for the FFT which also is compatible with opencl supported dimensions powers of 2 multipled by powers of 3 multiplied by powers of5
+        shift : list
+            Optional, enter center shift list the array maximum is centered before binning, and moved according to shift, [0,0,0] has no effect
         binning : list
             Optional, a list that defines binning values in respective dimensions, [1,1,1] has no effect.
-        do_auto_binning : boolean
-            Optional, mandatory if auto_data is True. is True the auto binning wil be done, and not otherwise.
-        no_verify : boolean
-            If True, ignores verifier error.
+        no_center_max : boolean, defaults to False
+            True if the max is not centered
+        next_fast_len : boolean, defaults to False
+            Typically True, changes dimensions to numbers that allow fast fourier transform; depends on library
+        pkg : string
+            'cp' for cupy, 'torch' for torch, 'np' for numpy
     """
-    no_verify = kwargs.pop("no_verify", False)
-    er_msg = ver.verify('config_data', kwargs)
-    if len(er_msg) > 0:
-        # the error message is printed in verifier
-        if not no_verify:
-            return
-
     beamline_full_datafile_name = beamline_full_datafile_name.replace(os.sep, '/')
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     beam_data = ut.read_tif(beamline_full_datafile_name)
-    # if no_verify:
-    #     print(f"Loaded array (max={int(data.max())}) as {beamline_full_datafile_name}")
 
     prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
-        # assuming the directory structure and naming follows cohere-ui mechanism
+        # assuming the directory structure and naming follows cohere-ui experiment directory structure
         data_dir = prep_data_dir.replace(os.sep, '/').replace('preprocessed_data', 'phasing_data')
 
     if 'alien_alg' in kwargs:
@@ -98,26 +88,26 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     else:
         data = beam_data
 
-    if auto:
+    auto_intensity_threshold = kwargs.get('auto_intensity_threshold', False)
+    if auto_intensity_threshold:
         # the formula for auto threshold was found empirically, may be
         # modified in the future if more tests are done
         auto_threshold_value = 0.141 * beam_data[np.nonzero(beam_data)].mean().item() - 3.062
         intensity_threshold = max(2.0, auto_threshold_value)
         print(f'auto intensity threshold: {intensity_threshold}')
-    elif 'intensity_threshold' in kwargs:
-        intensity_threshold = kwargs['intensity_threshold']
     else:
-        print('define amplitude threshold. Exiting')
-        return
-
+        intensity_threshold = kwargs.get('intensity_threshold', None)
+        if intensity_threshold is None:
+            print('define intensity threshold or set to auto, exiting.')
+            return
     # zero out the noise
     data = np.where(data <= intensity_threshold, 0.0, data)
 
     # square root data
     data = np.sqrt(data)
 
-    if 'adjust_dimensions' in kwargs:
-        crops_pads = kwargs['adjust_dimensions']
+    if 'crop_pad' in kwargs:
+        crops_pads = kwargs['crop_pad']
         # the adjust_dimension parameter list holds adjustment in each direction. Append 0s, if shorter
         if len(crops_pads) < 6:
             for _ in range(6 - len(crops_pads)):
@@ -131,16 +121,26 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
 
-    data = ut.adjust_dimensions(data, pairs)
+    # next_fast_len parameter should be always True. But it needs to be included
+    # when calling adjust_dimensions functions, as depending on the pkg, the result
+    # could be different. So for the sake of flexibility, the parameter next_fast_len
+    # was added as option in kwargs.
+    next_fast_len = kwargs.get('next_fast_len', True)
+    pkg = kwargs.get('pkg', 'np')
+    data = ut.adjust_dimensions(data, pairs, next_fast_len, pkg)
     if data is None:
-        print('check "adjust_dimensions" configuration')
+        print('check "crop_pad" configuration')
         return
 
-    if 'center_shift' in kwargs:
-        center_shift = kwargs['center_shift']
-        data, shift = ut.center_max(data, center_shift)
-    else:
-        data, shift = ut.center_max(data, [0, 0, 0])
+    no_center_max = kwargs.get('no_center_max', False)
+    shift = [0, 0, 0]
+    if not no_center_max:
+        data, shift = ut.center_max(data)
+
+    if 'shift' in kwargs:
+        conf_shift = kwargs['shift']
+        data = np.roll(data, conf_shift, tuple(range(data.ndim)))
+        shift = [s + cs for s, cs in zip(shift, conf_shift)]
 
     try:
         # assuming the mask file is in directory of preprocessed data
@@ -150,7 +150,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     except FileNotFoundError:
         pass
 
-    # if auto and kwargs['do_auto_binning']:
+    # auto_binning:
     #     # prepare data to make the oversampling ratio ~3
     #     wos = 3.0
     #     orig_os = ut.get_oversample_ratio(data)
@@ -173,6 +173,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
             kwargs['binning'] = bins
         except:
             print('check "binning" configuration')
+            raise
 
     # save data
     data_file = ut.join(data_dir, 'data.tif')
@@ -180,6 +181,7 @@ def prep(beamline_full_datafile_name, auto, **kwargs):
     print(f'data ready for reconstruction, data dims: {data.shape}')
 
     # if auto save new config
-    if auto:
+    if auto_intensity_threshold:
         kwargs['intensity_threshold'] = intensity_threshold
+
     return kwargs

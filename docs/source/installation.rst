@@ -1,60 +1,90 @@
 ============
 Installation
 ============
-Currently we offer pip installation of the official release for Linux, Windows and Mac operating systems.
+The cohere project can be installed on Linux, Windows and Mac operating systems.
 
-The latest development can be installed with cloning the "Dev" branch. Look at the "Latest development installation" section for instructions.
+Official Release Installation
+=============================
+Create and activate conda environment::
 
-Conda Installation
-==================
-This will install latest official release.
-
-First you must have `Conda <http://continuum.io/downloads>` installed.
-It is highly recommended to install the cohere_core package in conda environment. Supported python versions are 3.6 - 3.10.
-
-| Create and activate the environment.
-Run the commands below::
-
-    conda create -n <env_name> -c conda-forge python=3.10 mpi4py=3.1.5
+    conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
     conda activate <env_name>
-then run the cohere installation command::
 
-    pip install cohere-core
-The cohere_core package can be run utilizing numpy library. Other available libraries are cupy and torch.
-User has to install the preferred library.
+The cohere project consists of three modules and each of them is a separate package in PyPi.::
+
+    pip install cohere_core cohere_ui cohere_beamlines
+
+Note: If the user's choice is own beamline dependent preprocessing and postprocessing and cohere_core package as a reconstruction engine, the user can access cohere_core APIs or use cohere_ui user's scripts. In the first case only the cohere_core package has to be installed, and in the second case, the cohere_ui has to be added.
 
 If using cupy library::
 
     conda install cupy=12.2.0 -c conda-forge
-If torch is preferred, install with command::
 
-    conda install -c conda-forge torch
-The cohere-core package does not install python packages used by user's scripts in cohere-ui package. If planning to use the scripts Refer to :ref:`use` page, section "Installing Scripts".
+If using torch library::
 
-Note: The cupy installation on Windows may result in incompatible libraries, which makes the environment unusable. Run the repack.bat script from cohere-ui package and try running again.
+    pip install torch torchvision torchaudio
+
+After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
+
+    cohere_gui
+    beamline_preprocess <dir_to_cohere_examples>/example_workspace/scan_54
+    standard_preprocess <dir_to_cohere_examples>/example_workspace/scan_54
+    run_reconstruction <dir_to_cohere_examples>/example_workspace/scan_54
+    beamline_visualization <dir_to_cohere_examples>/example_workspace/scan_54
+
+The cohere project provides examples in the cohere_examples submodule. The examples contain experiment data and configuration files in defined directory structure. To get the examples refer to :ref:`examples`
+
+.. _latest:
 
 Latest development installation
 ===============================
-This will install the latest development. It might be not 100 percent tested. This installation might be right for a user that is looking for new feature that has not been released yet or want to try the latest development. We appreciate reporting any issues.
+This will install the latest development. This installation might be right for a user that is looking for the latest development or do some development.
 
-Create environment, activate it and clone cohere repository. It contains the cohere-ui submodule. Run the following commands::
+Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and three submodules: cohere-ui, cohere_beamlines, and cohere_examples.
+Run the following commands::
 
-    conda create --name <env_name> -c conda-forge python=3.10 mpi4py=3.1.5 mayavi pyqt scikit-image xrayutilities
+    conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
     conda activate <env_name>
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
     git checkout Dev
-    pip install .
-    cd cohere-ui
+    pip install -e .   # include the -e option if you intend to edit cohere_core
+    cd cohere_beamlines
     git checkout Dev
-    python setup.py
-For Windows make sure that numpy version is 1.23.5. The commands above will create conda environment and activate it, clone the packages, get the Dev branch, install, initialize.
-| If using cupy library::
+    pip install -e .   # include the -e option if you intend to edit cohere_beamlines
+    cd ../cohere-ui
+    git checkout Dev
+    pip install -e .   # include the -e option if you intend to edit cohere_ui
+
+If using cupy library::
 
     conda install cupy=12.2.0 -c conda-forge
-| If using torch library::
 
-    pip install torch
-After installation you may start using scripts from this directory, for example::
+If using torch library::
 
-    python cohere-scripts/cdi_window.py
+    pip install torch torchvision torchaudio
+
+After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
+
+    cohere_gui
+
+The examples are cloned as one of submodule to cohere project. The examples are in cohere_experiment subdirectory.
+
+Beamlines specific installation
+===============================
+For Petra beamline install additional packages::
+
+    pip install hdf5plugin pandas
+
+Some of the modules can be installed with Pypi, as some can be cloned. A common scenario when developing on a beamline is installing release version of cohere_core and cohere_ui, and clone cohere_beamlines. Such arrangement offers reliability of the main modules and allows flexibility when dealing with changes on a beamline.
+
+.. _examples:
+
+Examples installation
+=====================
+To obtain the examples from cohere_examples module, clone the repository and initialize it to align with your directory structure::
+
+    git clone https://github.com/advancedPhotonSource/cohere_examples
+    cd cohere_examples
+    python init_examples.py
+

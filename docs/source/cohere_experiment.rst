@@ -1,13 +1,15 @@
-================
-Experiment Space
-================
-| In order to group the files associated with an experiment in a structured manner user scripts will create a space dedicated to the experiment. The space, experiment directory, will be a sub-directory in working directory. The name of experiment directory is descriptive as it contains an ID and scan ranges.
-| ex: with experiment ID of "ABC", and scan "56-78", the experiment directory is ABC_56-78.
+=================
+Cohere Experiment
+=================
+| The experiment executed at the beamline concludes in a collection of data files and metadata for many scans. It is typical that a number of scans are selected and grouped together for analysis. The analysis of selected scans constitute of cohere experiment.
+| In order to group the files associated with an cohere experiment in a structured manner user scripts will create a dedicated space. The space, cohere experiment directory, will be a sub-directory in working directory. The name of cohere experiment directory is descriptive as it contains an ID and scan ranges, for example: with experiment ID of "ABC", and scan "56-78", the experiment directory is ABC_56-78.
+| Cohere experiment can be configured for different cases. User can request to run the process separately for each scan, or scan range. User can also set the experiment to multipeak. Refer to :ref:`config_main` for description of configuration parameters that set a cohere experiment.
 | Below we show experiment directory structure for various use cases.
 
 Single reconstruction
 +++++++++++++++++++++
-| Below is a directory tree that is created for an experiment when using users scripts. Refer to :ref:`use` page for description and explanation how to use the scripts and to :doc:`configuration` page for configuration files and parameters.
+| The user starts with the experiment_dir containing conf subdirectory with the configuration files.
+| The other subdirectories of the tree are created during execution of users scripts. Refer to :ref:`api_cohere_ui` page for description and explanation how to use the scripts and to :doc:`configuration` page for configuration files and parameters.
 | <experiment_dir>
 |                \|
 |                \|--conf
@@ -21,9 +23,9 @@ Single reconstruction
 |                \|--results_phasing
 |                \|--results_viz
 |
-| The directory tree is created by users scripts.  Below is a sequence of events that produces the experiment directory tree.
+| Below is a sequence of events that produces the cohere experiment directory tree.
 
-- The experiment should be set up with "conf" subdirectory containing configuration files. There are scripts that create the initial experiment space.
+- The experiment should be set up with "conf" subdirectory containing configuration files. User can create it manually or use cohere_gui to create the initial cohere experiment space.
 - The script "beamline_preprocess.py" creates "prep_data.tif" file in "preprocessed_data" subdirectory. This is a file ready to be formatted.
 - The script "standard_preprocess.py" reads the "preprocessed_data.tif" file, formats it, and saves the result in the "phasing_data" subdirectory as "data.tif" file. This file is ready for reconstruction.
 - The "run_reconstruction.py" script reads "data.tif" file and runs phasing. The results are stored in the "results_phasing" subdirectory in "image.npy" file, along with "support.npy, and "coherence.npy" if partial coherence feature is configured.
@@ -98,7 +100,8 @@ Genetic Algorithm
 
 Separate scans
 ++++++++++++++
-| When the experiment is configured as separate reconstruction for each scan, the experiment directory will contain a subdirectory for each scan. This use case is configured in "config_prep" file by setting parameter "separate_scans" to True. Each scan directory is a concatination of "scan", underscore, and the scan number. Each of the scan subdirectories will have preprocessed_data, phasing_data, results_phasing, and results_viz subdirectories. The configuration is common for all scans. If running multiple reconstructions or GA, the directory structure in each scan directory will reflect it, as described in above sections.
+| When the cohere experiment is configured as separate reconstruction for each scan, the experiment directory will contain a subdirectory for each scan. This use case is configured in "config_prep" file by setting parameter "separate_scans" to True. Each scan directory is a concatenation of "scan", underscore, and the scan number. Each of the scan subdirectories will have preprocessed_data, phasing_data, results_phasing, and results_viz subdirectories. The configuration is common for all scans. If running multiple reconstructions or GA, the directory structure in each scan directory will reflect it, as described in above sections.
+| This is also mechanism when the cohere experiment is configured as separate scan ranges. The postscript after "scan" literal will end with scan range instead of scan.
 | Below is an example of directory structure for separate scans.
 | <experiment_dir>
 |                \|
@@ -141,7 +144,7 @@ Separate scans
 
 Alternate configuration
 +++++++++++++++++++++++
-| The "run_rec.py" script supports feature of running reconstruction with alternate configuration(s). Each alternate configuration must be named with arbitrary postfix (rec_id), preceded by "confic_rec" and underscore. This file should be created in the conf subdirectory. Refer to 'Scripts'  section below for instruction how to run a case with alternate reconstruction configuration.
+| The "run_rec.py" script supports feature of running reconstruction with alternate configuration(s). Each alternate configuration must be named with arbitrary postfix (rec_id), preceded by "confic_rec" and underscore. This file should be created in the conf subdirectory.
 | After running the "run_rec" script with this option, the results will be saved in the results_phasing_<rec_id> directory.
 | Below is an example of directory structure with alternate configuration.
 | <experiment_dir>

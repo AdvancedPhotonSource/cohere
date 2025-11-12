@@ -1,3 +1,9 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import numpy as np
 import os
 import cohere_core.utilities.utils as ut
@@ -71,7 +77,7 @@ def match_oversample_diff(
     pad = [[pad_value1[0], pad_value2[0]], [pad_value1[1], pad_value2[1]],
            [pad_value1[2], pad_value2[2]]]
 
-    output = ut.adjust_dimensions(diff, pad)
+    output = ut.adjust_dimensions(diff, pad, next_fast_len=False)
     return output, diff.shape
 
 
@@ -90,8 +96,7 @@ def shift_com(amp, phi):
 
 def post_process(amp, phi, th=0.1, uw=0):
     if uw == 1:
-        # phi = np.unwrap(np.unwrap(np.unwrap(phi,0),1),2)
-        phi = unwrap_phase(phi)
+        phi = np.unwrap(np.unwrap(np.unwrap(phi,0),1),2)
 
     mask = np.where(amp > th, 1, 0)
     amp_out = mask * amp
@@ -231,12 +236,14 @@ def run_AI(data, model_file, dir):
     pred_obj = preds_amp * np.exp(1j * preds_phi)
 
     # match object size with the input data
-    pred_obj = ut.Resize(pred_obj, inshape)
+    pred_obj = ut.resample(pred_obj, inshape)
 
     pad_value = np.array(data.shape) // 2 - np.array(pred_obj.shape) // 2
     pad = [[pad_value[0], pad_value[0]], [pad_value[1], pad_value[1]],
            [pad_value[2], pad_value[2]]]
-    guess = ut.adjust_dimensions(pred_obj, pad)
+    # not passing in 'next_fst_len' switch, so the dimensions will not be adjusted for fast processing of
+    # Fourier transforms
+    guess = ut.adjust_dimensions(pred_obj, pad, next_fast_len=False)
 
     np.save(ut.join(dir, 'image.npy'), guess)
 

@@ -1,5 +1,40 @@
+# #########################################################################
+# Copyright (c) , UChicago Argonne, LLC. All rights reserved.             #
+#                                                                         #
+# See LICENSE file.                                                       #
+# #########################################################################
+
 import os
 import cohere_core.utilities.utils as ut
+import numpy as np
+
+
+def read_results(read_dir):
+    """
+    Reads results of reconstruction: image, support, and coherence if exists, and returns array representation.
+
+    :param read_dir: directory to read the results from
+    :return: image, support, and coherence arrays
+    """
+    try:
+        imagefile = ut.join(read_dir, 'image.npy')
+        image = np.load(imagefile)
+    except:
+        image = None
+
+    try:
+        supportfile = ut.join(read_dir, 'support.npy')
+        support = np.load(supportfile)
+    except:
+        support = None
+
+    try:
+        cohfile = ut.join(read_dir, 'coherence.npy')
+        coh = np.load(cohfile)
+    except:
+        coh = None
+
+    return image, support, coh
 
 class Tracing:
     def __init__(self, reconstructions, pars, dir):
@@ -10,7 +45,7 @@ class Tracing:
         if pars['init_guess'] == 'continue':
             continue_dir = pars['continue_dir']
             for sub in os.listdir(continue_dir):
-                image, support, coh = ut.read_results(ut.join(continue_dir, sub))
+                image, support, coh = read_results(ut.join(continue_dir, sub))
                 if image is not None:
                     self.init_dirs.append(ut.join(continue_dir, sub))
                     self.report_tracing.append([ut.join(continue_dir, sub)])
@@ -27,10 +62,6 @@ class Tracing:
             for i in range(reconstructions):
                 self.init_dirs.append(None)
                 self.report_tracing.append([f'random{str(i)}'])
-
-
-    def set_map(self, map):
-        self.map = map
 
 
     def append_gen(self, gen_ranks):
@@ -97,6 +128,9 @@ class Tracing:
             rank_file.write(report_str)
             rank_file.flush()
 
+
+    def set_map(self, map):
+        self.map = map
 
 
 def set_ga_defaults(pars):
