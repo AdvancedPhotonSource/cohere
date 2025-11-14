@@ -8,9 +8,9 @@
 cohere_core.utilities.dvc_utils
 ===============================
 
-This module is a suite of utility functions. 
+This module is a suite of utility functions.
 
-The function in this module operate on arrays loaded on device. The array can be in CPU memory or GPU memory, and is in format related to the package used to create the array. 
+The function in this module operate on arrays loaded on device. The array can be in CPU memory or GPU memory, and is in format related to the package used to create the array.
 Therefore, before using functions from this module user must set the global variable devlib by calling function set_lib_from_pkg.
 """
 import cmath
@@ -50,6 +50,7 @@ __all__ = [
            'shift_phase',
            'shrink_wrap',
            'sub_pixel_shift',
+           'use_numpy',
            'zero_phase',
            'zero_phase_cc',
            ]
@@ -61,7 +62,7 @@ def set_lib_from_pkg(pkg):
 
     This function must be called before using functions from this module.
     The global variable devlib becomes the library that will be used in this file.
-    The library is referencing to cohere_core.lib.cplib, orcohere_core.lib.nplib, orcohere_core.lib.torchlib. 
+    The library is referencing to cohere_core.lib.cplib, orcohere_core.lib.nplib, orcohere_core.lib.torchlib.
 
     :param pkg: acronym specifying library: 'cp' for cupy, 'np' for numpy, 'tprch' for torch
     :return:
@@ -70,6 +71,24 @@ def set_lib_from_pkg(pkg):
 
     # get the lib object
     devlib = ut.get_lib(pkg)
+
+
+def use_numpy(func):
+    """
+    Function decorator that converts devlib arrays (e.g. cupy arrays, torch tensors, etc.) into numpy arrays before
+    passing them into the function.
+    """
+    def wrapper(*args, **kwargs):
+        args = [x for x in args]
+        for i, arg in enumerate(args):
+            try:
+                _ = arg.shape
+                args[i] = devlib.to_numpy(arg)
+            except AttributeError:
+                pass
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 
@@ -344,7 +363,7 @@ def dftregistration(ref_arr, arr, usfac=2):
     :param ref_arr: 2D array, Fourier transform of reference image
     :param arr: 2D array, Fourier transform of image to register
     :param usfac: int, upsampling factor
-    :return: pixel shifts between images: (row_shift, col_shift)       
+    :return: pixel shifts between images: (row_shift, col_shift)
     """
     if usfac < 2:
         print('usfac less than 2 not supported')
@@ -407,7 +426,7 @@ def dftups(arr, nor=-1, noc=-1, usfac=2, roff=0, coff=0):
     Upsample DFT by array multiplies.
 
     :param arr: array, the subject of upsampling
-    :param nor: int, number of pixels in the output upsampled DFT, in units of upsampled pixels 
+    :param nor: int, number of pixels in the output upsampled DFT, in units of upsampled pixels
     :param noc: int, number of pixels in the output upsampled DFT, in units of upsampled pixels
     :param usfac: int, upsampling factor (default usfac = 1)
     :param roff: int, row offset, allow to shift the output array to a region of interest on the DFT
@@ -495,7 +514,7 @@ def gauss_conv_fft(arr, distribution):
 
 def get_metric(image, errs, metric_type):
     """
-    Callculates array quantified characteristic for given metric type. 
+    Callculates array quantified characteristic for given metric type.
     Is used to quntify result of image reconstruction.
 
     :param arr: array to get the metric
@@ -540,7 +559,7 @@ def histogram2d(arr1, arr2, n_bins=100, log=False):
     """
     norm = devlib.amax(arr1) / devlib.amax(arr2)
     if log:
-        bins = devlib.logspace(devlib.log10(devlib.amin(arr1[arr1 != 0])), devlib.log10(devlib.amax(arr1)), n_bins + 1)
+        bins = devlib.geomspace(devlib.amin(arr1[arr1 != 0]), devlib.amax(arr1), n_bins + 1)
     else:
         bins = n_bins
     return devlib.histogram2d(devlib.ravel(arr1), devlib.ravel(norm * arr2), bins)
@@ -571,6 +590,17 @@ def lucy_deconvolution(pristine, blurred, kernel, iterations, diffbreak=0):
     kernel = devlib.real(kernel)
     coh_sum = devlib.sum(devlib.absolute(kernel))
     return devlib.absolute(kernel) / coh_sum
+
+
+def calc_nmi(arr1, arr2=None, log=False):
+    if arr2 is None:
+        hgram = arr1
+    else:
+        hgram = histogram2d(arr1, arr2, log=log)
+    h0 = devlib.entropy(devlib.sum(hgram, axis=0))
+    h1 = devlib.entropy(devlib.sum(hgram, axis=1))
+    h01 = devlib.entropy(devlib.reshape(hgram, -1))
+    return (h0 + h1) / h01 - 1
 
 
 def pad_around(arr, shape, val=0):
@@ -662,7 +692,6 @@ def remove_ramp(arr, ups=1):
     ramp_removed = ut.crop_center(ramp_removed_padded, arr.shape)
 
     return ramp_removed
-
 
 def resample(data, matrix, plot=False):
     """

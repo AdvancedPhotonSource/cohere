@@ -2,7 +2,8 @@
 config_mp
 =========
 
-**Data/geometry parameters**
+Data/geometry parameters
+------------------------
 
 - scan
 
@@ -73,7 +74,8 @@ config_mp
 
 | Autofilled, These are calculated from the experimental geometry and added to the config file automatically. Do not edit these unless you REALLY know what you're doing.
 
-**General reconstruction parameters**
+General reconstruction parameters
+---------------------------------
 
 - switch_peak_trigger
 
@@ -81,7 +83,7 @@ config_mp
 
 ::
 
-    switch_peak_trigger = [0, 50]
+    switch_peak_trigger = [5, 5]
 
 - weight_init
 
@@ -103,13 +105,14 @@ config_mp
 
 - calc_strain
 
-| Optional, boolean, toggles whether to calculate the strain after reconstruction.
+| Optional, boolean, toggles whether to calculate the strain after reconstruction. Still experimental.
 
 ::
 
     calc_strain = False
 
-**Adaptive reconstruction parameters**
+Adaptive coupling parameters
+----------------------------
 
 - adapt_trigger
 
@@ -125,7 +128,7 @@ config_mp
 
 ::
 
-    adapt_power = 2  #
+    adapt_power = 1  #
 
 - adapt_threshold_init
 - adapt_threshold_iters
@@ -145,7 +148,7 @@ config_mp
 
 ::
 
-    adapt_alien_start = 50
+    adapt_alien_start = 100
 
 - adapt_alien_threshold
 
@@ -153,4 +156,4 @@ config_mp
 
 ::
 
-    adapt_alien_threshold = 2
+    adapt_alien_threshold = 3

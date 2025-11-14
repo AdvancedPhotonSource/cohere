@@ -84,9 +84,13 @@ class nplib(cohlib):
         # return np.random.rand(*shape)
         #rng = np.random.default_rng((int(time.time()* 10000000) + os.getpid()))
         np.random.seed((int(time.time()  * os.getpid()) + os.getpid()) % 2**31)
-        r = np.random.rand(*shape)
+        r = np.random.rand(*shape) + 1j * np.random.rand(*shape)
         return r
         #return rng.random(*shape).astype(float)
+
+    @staticmethod
+    def moveaxis(arr, src, dst):
+        return np.moveaxis(arr, src, dst)
 
     @staticmethod
     def roll(arr, sft, axis=None):
@@ -110,19 +114,19 @@ class nplib(cohlib):
         return np.fft.ifftshift(arr)
 
     @staticmethod
-    def fft(arr):
-        return fft.fftn(arr, norm='forward')
+    def fft(arr, norm='forward'):
+        return fft.fftn(arr, norm=norm)
 
     @staticmethod
-    def ifft(arr):
-        return fft.ifftn(arr, norm='forward')
+    def ifft(arr, norm='forward'):
+        return fft.ifftn(arr, norm=norm)
 
     @staticmethod
     def fftconvolve(arr1, kernel):
         return sig.fftconvolve(arr1, kernel, mode='same')
 
     @staticmethod
-    def correlate(arr1, arr2, mode='same', method='auto'):
+    def correlate(arr1, arr2, mode='same', method='fft'):
         return sig.correlate(arr1, arr2, mode, method)
 
     @staticmethod
@@ -239,6 +243,10 @@ class nplib(cohlib):
         return ndi.binary_erosion(arr, iterations=1)
 
     @staticmethod
+    def binary_dilation(arr, **kwargs):
+        return ndi.binary_dilation(arr, iterations=1)
+
+    @staticmethod
     def center_of_mass(inarr):
         return ndi.center_of_mass(np.absolute(inarr))
 
@@ -291,10 +299,6 @@ class nplib(cohlib):
         return np.take_along_axis(a, indices, axis)
 
     @staticmethod
-    def moveaxis(arr, source, dest):
-        return np.moveaxis(arr, source, dest)
-
-    @staticmethod
     def lstsq(A, B):
         return np.linalg.lstsq(A, B, rcond=None)
 
@@ -345,12 +349,12 @@ class nplib(cohlib):
         return np.xlogy(x, y)
 
     @staticmethod
-    def mean(arr):
-        return np.mean(arr)
+    def mean(arr, axis=None):
+        return np.mean(arr, axis=axis)
 
     @staticmethod
-    def median(arr):
-        return np.median(arr)
+    def median(arr, axis=None):
+        return np.median(arr, axis=axis)
 
     @staticmethod
     def clean_default_mem():
