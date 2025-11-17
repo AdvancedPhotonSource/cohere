@@ -34,7 +34,10 @@ class cplib(cohlib):
 
     @staticmethod
     def to_numpy(arr):
-        return cp.asnumpy(arr)
+        try:
+            return arr.get()
+        except AttributeError:
+            return arr
 
     @staticmethod
     def from_numpy(arr, **kwargs):
@@ -88,6 +91,10 @@ class cplib(cohlib):
         seed = np.array([time.time() * 10000 * os.getpid(), os.getpid()])
         rs = cp.random.RandomState(seed=seed)
         return cp.random.random(shape, dtype=cp.float32) + 1j * cp.random.random(shape, dtype=cp.float32)
+
+    @staticmethod
+    def moveaxis(arr, src, dst):
+        return cp.moveaxis(arr, src, dst)
 
     @staticmethod
     def roll(arr, sft, axis=None):
@@ -247,8 +254,18 @@ class cplib(cohlib):
         return sc.uniform_filter(arr, size)
 
     @staticmethod
-    def binary_erosion(arr, **kwargs):
-        return sc.binary_erosion(arr, iterations=1)
+    def binary_erosion(arr, iterations=1, **kwargs):
+        if iterations > 1:
+            return cplib.binary_erosion(sc.binary_erosion(arr), iterations=iterations-1)
+        else:
+            return sc.binary_erosion(arr)
+
+    @staticmethod
+    def binary_dilation(arr, iterations=1, **kwargs):
+        if iterations > 1:
+            return cplib.binary_dilation(sc.binary_dilation(arr), iterations=iterations-1)
+        else:
+            return sc.binary_dilation(arr)
 
     @staticmethod
     def center_of_mass(inarr):
@@ -281,7 +298,7 @@ class cplib(cohlib):
 
     @staticmethod
     def geomspace(start, stop, num):
-        return cp.geomspace(start, stop, num)
+        return cp.logspace(cp.log10(start), cp.log10(stop), num)
 
     @staticmethod
     def clip(arr, min, max=None):
@@ -298,10 +315,6 @@ class cplib(cohlib):
     @staticmethod
     def take_along_axis(a, indices, axis):
         return cp.take_along_axis(a, indices, axis)
-
-    @staticmethod
-    def moveaxis(arr, source, dest):
-        return cp.moveaxis(arr, source, dest)
 
     @staticmethod
     def lstsq(A, B):
@@ -335,13 +348,6 @@ class cplib(cohlib):
     def histogram2d(arr1, arr2, bins):
         return cp.histogram2d(cp.ravel(arr1), cp.ravel(arr2), bins)[0]
 
-    # @staticmethod
-    # def calc_nmi(hgram):
-    #     h0 = stats.entropy(cp.sum(hgram, axis=0))
-    #     h1 = stats.entropy(cp.sum(hgram, axis=1))
-    #     h01 = stats.entropy(cp.reshape(hgram, -1))
-    #     return (h0 + h1) / h01
-    #
     @staticmethod
     def log(arr):
         return cp.log(arr)
@@ -357,27 +363,13 @@ class cplib(cohlib):
         return sp.xlogy(x, y)
 
     @staticmethod
-    def mean(arr):
-        return cp.mean(arr)
+    def mean(arr, axis=None):
+        return cp.mean(arr, axis=axis)
 
     @staticmethod
-    def median(arr):
-        return cp.median(arr)
+    def median(arr, axis=None):
+        return cp.median(arr, axis=axis)
 
-    # @staticmethod
-    # def calc_ehd(hgram):
-    #     n = hgram.shape[0] * 1j
-    #     x, y = cp.mgrid[0:1:n, 0:1:n]
-    #     return cp.sum(hgram * cp.abs(x - y)) / cp.sum(hgram)
-    #
-    # @staticmethod
-    # def integrate_jacobian(jacobian, dx=1):
-    #     nx, ny, nz, _, _ = jacobian.shape
-    #     u = cp.zeros((nx, ny, nz, 3))
-    #     for ax in range(3):
-    #         u = u + dx * cp.cumsum(jacobian[:, :, :, ax, :], axis=ax)
-    #     return u
-    #
     @staticmethod
     def clean_default_mem():
         cp._default_memory_pool.free_all_blocks()

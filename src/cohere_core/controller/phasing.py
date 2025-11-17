@@ -8,18 +8,18 @@
 """
 Provides phasing capabilities for the Bragg CDI data.
 
-The reconstruction is based on known iterative algorithm, oscillating between direct and reciprocal space and applying projection algorithms. Cohere 
-supports the following projection algorithms: ER (error reduction), HIO (hybrid input-output), SF (solvent flipping), and RAAR (relaxed averaged alternating reflectors). The algorithms are described in this publication: https://pubs.aip.org/aip/rsi/article/78/1/011301/349838/Invited-Article-A-unified-evaluation-of-iterative 
+The reconstruction is based on known iterative algorithm, oscillating between direct and reciprocal space and applying projection algorithms. Cohere
+supports the following projection algorithms: ER (error reduction), HIO (hybrid input-output), SF (solvent flipping), and RAAR (relaxed averaged alternating reflectors). The algorithms are described in this publication: https://pubs.aip.org/aip/rsi/article/78/1/011301/349838/Invited-Article-A-unified-evaluation-of-iterative
 
-The cohere reconstruction can be tuned to specific cases. Typically every few iteration steps a shrink wrap is applied. 
+The cohere reconstruction can be tuned to specific cases. Typically every few iteration steps a shrink wrap is applied.
 And typically a twin blocking is performed after a few first iterations. Other factors differentiating reconstruction and supported by cohere are: low pass filter, phase constrain, averaging amplitudes. These are direct space methods.
-Each of these features owns parameters that can be tuned to the projection algorithm. Cohere supports partial coherence feature that is performed in reciprocal space and is used to mitigate coherence of the light source. 
+Each of these features owns parameters that can be tuned to the projection algorithm. Cohere supports partial coherence feature that is performed in reciprocal space and is used to mitigate coherence of the light source.
 
 The software can run code on GPU or CPU, utilizing different library, such as cupy, numpy or torch. User configures the choice depending on hardware and installed software.
 
-The reconstruction is utilized by the GA algorithm, where each generation creates multiple Rec objects, and executes parallel reconstructions. 
+The reconstruction is utilized by the GA algorithm, where each generation creates multiple Rec objects, and executes parallel reconstructions.
 
-In addition two subclasses provide functionality for different types of reconstruction. The CoupleRec class supports multipeak reconstruction. 
+In addition two subclasses provide functionality for different types of reconstruction. The CoupleRec class supports multipeak reconstruction.
 The TeRec class supports reconstruction of time-evolving samples with improved temporal resolution.
 """
 
@@ -31,11 +31,12 @@ import random
 import tqdm
 
 import numpy as np
-from matplotlib import pyplot as plt
 import tifffile as tf
 
 import cohere_core.utilities.dvc_utils as dvut
 import cohere_core.utilities.utils as ut
+import cohere_core.utilities.config_verifier as ver
+import cohere_core.utilities.view_utils as view_ut
 import cohere_core.controller.op_flow as of
 import cohere_core.controller.features as ft
 
@@ -69,7 +70,7 @@ class Rec:
     Performs phasing using iterative algorithm.
 
     The Rec object must have a device set, either to GPU id or set as CPU.
-    The functions executed in each iteration are determined at the beginning, during iteration loop initialization. It is based on the reconstruction parameters and the order of functions internally defined in 'iter_functions' field. 
+    The functions executed in each iteration are determined at the beginning, during iteration loop initialization. It is based on the reconstruction parameters and the order of functions internally defined in 'iter_functions' field.
     A factory for this class, 'create_rec' returns initialized Rec object.
     The object is then called to run iterations. The results can be retrieved with getters or saved.
     """
@@ -80,7 +81,7 @@ class Rec:
 
         :param params: dictionary containing configuration parameters
         :param data_file: path to the data file
-        :param pkg: an acronym of the package that will be utilized for reconstruction: 
+        :param pkg: an acronym of the package that will be utilized for reconstruction:
             "np" for numpy, "cp" for cupy, and "torch" for torch
         :param kwargs: can contain "debug" parameter. When activated, it will throw exception, if one happens. Otherwise, an error code of -1 is returned and error printed. The handling of the exception is needed in GA reconstruction.
         """
@@ -183,11 +184,9 @@ class Rec:
         print('data shape', self.dims)
 
         if self.params.get("live_trigger", None) is not None:
-            self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
-            plt.show(block=False)
+            self.viewer = view_ut.LiveViewer()
         else:
-            self.fig = None
-            self.axs = None
+            self.viewer = None
 
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
@@ -200,10 +199,10 @@ class Rec:
         """
         Initializes the iteration loop.
 
-        :param dir: directory containing 'image.npy' file that contains reconstructed object, if the reconstruction is continuation. 
+        :param dir: directory containing 'image.npy' file that contains reconstructed object, if the reconstruction is continuation.
             It defaults to None.
         :param gen: generation number, only used when running GA algorithm.
-            It defaults to None. 
+            It defaults to None.
         :return:  0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
         """
         if self.ds_image is not None:
@@ -301,10 +300,10 @@ class Rec:
 
     def iterate(self):
         """
-        It iterates over function order that was determined during loop initialization. 
+        It iterates over function order that was determined during loop initialization.
 
-        During iteration execution an exception can happen. The exception is handled in non debug mode and thrown otherwise. 
-    
+        During iteration execution an exception can happen. The exception is handled in non debug mode and thrown otherwise.
+
         :return: 0 if successful, -1 otherwise. In debug mode will throw exception instead of returning -1.
         """
         self.iter = -1
@@ -328,8 +327,11 @@ class Rec:
             ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
             self.ds_image *= ratio / self.aver_iter
 
+        mx = devlib.amax(devlib.absolute(self.ds_image))
+        self.ds_image = self.ds_image / mx
+
         if self.params.get("live_trigger", None) is not None:
-            plt.show()
+            self.viewer.block()
 
         return 0
 
@@ -338,7 +340,7 @@ class Rec:
         """
         Saves reconstruction results.
 
-        It centers the maximum of image array and saves this array, support array, coherence if present, and errors. 
+        It centers the maximum of image array and saves this array, support array, coherence if present, and errors.
         This function is typically called after iterations.
 
         :param save_dir: directory where results will be saved
@@ -485,33 +487,9 @@ class Rec:
 
     def live_operation(self):
         self.shift_to_center()
-        half = self.dims[0] // 2
-        qtr = self.dims[0] // 4
-        plt.suptitle(
-            f"iteration: {self.iter}\n"
-            f"error: {self.errs[-1]}\n"
-        )
-        [[ax.clear() for ax in row] for row in self.axs]
-        if len(self.ds_image.shape) == 2:
-            img = self.ds_image
-        else:
-            img = self.ds_image[qtr:-qtr, qtr:-qtr, half]
-        self.axs[0][0].set(title="Amplitude", xticks=[], yticks=[])
-        self.axs[0][0].imshow(devlib.absolute(img), cmap="gray")
-        self.axs[0][1].set(title="Phase", xticks=[], yticks=[])
-        self.axs[0][1].imshow(devlib.angle(img), cmap="hsv", interpolation_stage="rgba")
-
-        if len(self.ds_image.shape) == 2:
-            sup = self.support
-        else:
-            sup = self.support[qtr:-qtr, qtr:-qtr, half]
-        self.axs[1][0].set(title="Error", xlim=(0,self.iter_no), xlabel="Iteration", yscale="log")
-        self.axs[1][0].plot(self.errs[1:])
-        self.axs[1][1].set(title="Support", xticks=[], yticks=[])
-        self.axs[1][1].imshow(sup, cmap="gray")
-
-        plt.draw()
-        plt.pause(0.15)
+        ctr = self.dims[0]//2
+        title = f"Iteration: {self.iter}/{self.iter_no}\nError: {self.errs[-1]}"
+        self.viewer.update_singlepeak(self.ds_image[ctr], self.errs, self.support[ctr], title)
 
     def get_ratio(self, divident, divisor):
         ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
@@ -597,8 +575,10 @@ class Peak:
         b3 = 2*pi*devlib.cross(a1, a2) / devlib.dot(a1, devlib.cross(a2, a3))
 
         self.g_vec = self.hkl[0]*b1 + self.hkl[1]*b2 + self.hkl[2]*b3
-        # print(self.g_vec.get())
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
+        geometry["g_vec"] = self.g_vec.get().tolist()
+        ut.write_config(geometry, f"{peak_dir}/geometry")
+
         self.size = geometry["final_size"]
         self.rs_lab_to_det = np.array(geometry["rmatrix"]) / geometry["rs_voxel_size"]
         # self.rs_lab_to_det = np.identity(3)  # FIXME
@@ -614,6 +594,7 @@ class Peak:
         self.full_data = dvut.pad_to_cube(self.full_data, self.full_size)
         self.data = dvut.pad_to_cube(self.full_data, self.size)
         self.mask = devlib.zeros(self.data.shape)
+        self.filter = devlib.zeros(self.data.shape)
 
         # Uncomment when phasing non-centered data
         # ind = devlib.center_of_mass(self.full_data)
@@ -623,8 +604,13 @@ class Peak:
 
         # Resample the diffraction patterns into the lab reference frame.
         self.res_data = dvut.resample(self.full_data, self.rs_det_to_lab)
+        self.window = dvut.resample(devlib.zeros(self.full_data.shape)+1, self.rs_det_to_lab)
         if self.size is not None:
             self.res_data = dvut.pad_to_cube(self.res_data, self.size)
+            self.window = dvut.pad_to_cube(self.window, self.size) > 0
+        blurred = devlib.gaussian_filter(devlib.where(self.res_data > 0, 1.0, 0.0), 10)
+        self.fillable = (blurred > 0.01) * (self.res_data == 0)
+        self.window_size = devlib.sum(self.window)**(1/3) / self.size
 
         tf.imwrite((Path(peak_dir) / "phasing_data/data_resampled.tif").as_posix(), devlib.to_numpy(self.res_data))
 
@@ -632,6 +618,9 @@ class Peak:
         self.full_data = devlib.fftshift(self.full_data)
         self.data = devlib.fftshift(self.data)
         self.res_data = devlib.fftshift(self.res_data)
+        self.window = devlib.fftshift(self.window)
+        self.fillable = devlib.fftshift(self.fillable)
+
         self.total = devlib.sum(self.res_data**2)
         self.max_lk = devlib.sum(devlib.xlogy(self.res_data**2, self.res_data**2) - self.res_data**2)
 
@@ -652,6 +641,9 @@ class Peak:
     def chi_square(self, proj):
         error = devlib.where((self.res_data != 0), (devlib.absolute(proj) - self.res_data), 0)
         return dvut.get_norm(error) / dvut.get_norm(self.res_data)
+
+    def element_ratio(self, proj):
+        return devlib.absolute(proj) / self.res_data
 
     def get_error(self, proj):
         pass
@@ -689,6 +681,7 @@ class CoupledRec(Rec):
         self.params["calc_strain"] = self.params.get("calc_strain", False)
 
         self.peak_dirs = peak_dirs
+        self.save_dir = Path(self.params.get('save_dir', ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing')))
         self.er_iter = False  # Indicates whether the last iteration done was ER
 
     def init_dev(self, device_id):
@@ -708,12 +701,9 @@ class CoupledRec(Rec):
         # Allows for a control peak to be left out of the reconstruction for comparison
         all_peaks = [Peak(d) for d in self.peak_dirs]
         norm = max([p.total for p in all_peaks])
+
         for p in all_peaks:
             p.normalize(norm)
-        # for pk in all_peaks:
-        #     plt.figure()
-        #     plt.imshow(np.log(devlib.fftshift(pk.res_data)[90].get() + 1))
-        # plt.show()
         if "control_peak" in self.params:
             control_peak = self.params["control_peak"]
             self.peak_objs = [p for p in all_peaks if p.hkl != control_peak]
@@ -728,6 +718,8 @@ class CoupledRec(Rec):
             self.ctrl_peak = None
             self.ctrl_error = None
         self.peak_confidence = [1.0 for _ in self.peak_objs]
+        self.mask_sums = [0 for _ in self.peak_objs]
+
 
         # Fast resampling means using the resampled data to reconstruct the object in a single common basis
         # When this is set to False, the reconstruction will need to be resampled each time the peak is switched
@@ -738,15 +730,26 @@ class CoupledRec(Rec):
         self.pk = 0  # index in list of current peak being reconstructed
         self.data = self.peak_objs[self.pk].res_data
         self.iter_data = self.data
+        self.proj = devlib.copy(self.data)
         self.dims = self.data.shape
         self.n_voxels = self.dims[0]*self.dims[1]*self.dims[2]
+        self.window = devlib.zeros(self.dims)
+        for i, pk in enumerate(self.peak_objs):
+            self.window = self.window + pk.window
+        self.window = self.window > 0
+
+        stack = devlib.array([devlib.gaussian_filter(pk.res_data, 2) for pk in self.peak_objs])
+        composite = devlib.median(stack, axis=0)
+        for pk in self.peak_objs:
+            peak = pk.res_data * devlib.sum(composite) / devlib.sum(pk.res_data)
+            pk.mask = (peak > (composite * self.params["adapt_alien_threshold"])) * pk.window
+            pk.mask = devlib.gaussian_filter((devlib.zeros(pk.mask.shape)+1)*pk.mask, 3) > 0.3
+            pk.filter = pk.mask
 
         if self.params.get("live_trigger", None) is not None:
-            self.fig, self.axs = plt.subplots(2, 2, figsize=(12, 13), layout="constrained")
-            plt.show(block=False)
+            self.viewer = view_ut.LiveViewer()
         else:
-            self.fig = None
-            self.axs = None
+            self.viewer = None
 
         if self.need_save_data:
             self.saved_data = devlib.copy(self.data)
@@ -775,11 +778,11 @@ class CoupledRec(Rec):
         self.iter_weights = []
         return 0
 
-    def save_res(self, save_dir):
+    def save_res(self, save_dir, only_image=False):
+        self.plot_all()
         from array import array
-        tight_support = devlib.binary_erosion(self.support)
-        self.rho_image = self.rho_image * tight_support
-        self.u_image = self.u_image * tight_support[:, :, :, None]
+        self.rho_image = self.rho_image * self.support
+        self.u_image = self.u_image * self.support[:, :, :, None]
         # for i in range(3):
         #     self.u_image[:, :, :, i] = devlib.median_filter(self.u_image[:, :, :, i], 3)
         self.shift_to_center()
@@ -823,9 +826,10 @@ class CoupledRec(Rec):
         with open(ut.join(save_dir, 'metrics.txt'), 'w+') as f:
             f.write(str(metric))
 
-        for pk in self.peak_objs:
-            np.savetxt(f"{save_dir}/conf_hist_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_hist)
-            np.savetxt(f"{save_dir}/conf_iter_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_iter)
+        np.savetxt(f"{save_dir}/peak_weights.txt", self.peak_weights)
+        # for pk in self.peak_objs:
+        #     np.savetxt(f"{save_dir}/conf_hist_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_hist)
+        #     np.savetxt(f"{save_dir}/conf_iter_{pk.hkl[0]}{pk.hkl[1]}{pk.hkl[2]}.txt", pk.conf_iter)
 
         if self.ctrl_error is not None:
             ctrl_error = np.array(self.ctrl_error)
@@ -894,7 +898,7 @@ class CoupledRec(Rec):
         print('iterate took ', (time.time() - start_t), ' sec')
 
         if self.params.get("live_trigger", None) is not None:
-            plt.show()
+            self.viewer.block()
 
         if devlib.hasnan(self.ds_image):
             print('reconstruction resulted in NaN')
@@ -910,23 +914,25 @@ class CoupledRec(Rec):
         return 0
 
     def switch_peak_operation(self):
-        self.calc_confidence()
         self.to_shared_image()
         self.get_control_error()
 
         if self.adapt_on:
             print("Adapting weights")
             self.update_weights()
+        # if self.iter % 100 == 0:
+        #     self.plot_all()
 
-        if self.params.get("live_view", False):
-            self.update_live()
-
-        # Use the peak weights as probabilities for projecting to that peak. High-confidence = more likely
-        p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
-        p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
-        self.peak_weights.append(p_weights / np.sum(p_weights))
+        self.peak_weights.append([pk.weight for pk in self.peak_objs])
         self.iter_weights.append(self.iter)
-        self.pk = random.choices([x for x in range(self.num_peaks)], p_weights)[0]
+
+        self.pk = (self.pk + 1) % self.num_peaks
+        # Use the peak weights as probabilities for projecting to that peak. High-confidence = more likely
+        # p_weights = [self.peak_objs[x].weight for x in range(self.num_peaks)]
+        # p_weights[self.pk] = 0  # Don't project back onto the same peak we just used
+        # self.peak_weights.append(p_weights / np.sum(p_weights))
+        # self.iter_weights.append(self.iter)
+        # self.pk = random.choices([x for x in range(self.num_peaks)], p_weights)[0]
 
         self.to_working_image()
 
@@ -979,38 +985,48 @@ class CoupledRec(Rec):
 
         # Define the exit wave for this peak based on the shared density/displacement
         self.ds_image = self.rho_image * devlib.exp(1j * devlib.dot(self.u_image, pk.g_vec))
+        # Calculate the diffraction amplitude from the current exit wave (which is based ONLY on shared object).
+        self.proj = devlib.absolute(devlib.ifft(self.ds_image * self.support))
 
         if self.fast_resample:
             # Use the resampled data
-            self.iter_data = pk.res_data
+            self.iter_data = devlib.copy(pk.res_data)
         else:
             # Use the original sampling
             self.iter_data = pk.data
 
+        # Because the projection doesn't have a limited dynamic range, it will always have some intensity in
+        # regions where the measurement has been thresholded to zero. This means that the average non-zero pixel
+        # in the measurement will be brighter than the corresponding pixels in the projection.
+        nonzero = self.iter_data > 0
+        mean_ratio = devlib.mean(self.iter_data[nonzero]) / devlib.mean(self.proj[nonzero])
+        max_ratio = devlib.amax(self.iter_data) / devlib.amax(self.proj)
+        mult = devlib.sqrt(mean_ratio*max_ratio)
+
+        # Blur the projected and measured diffraction amplitudes by one pixel (to mitigate HF noise)
+        proj_blurred = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(self.proj*mult), 1))
+        meas_blurred = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(self.iter_data), 1))
+        # Map the element-wise ratio between the two images and mask voxels where it is above a certain threshold.
+        error = meas_blurred / proj_blurred
+
         if self.iter > self.params["adapt_alien_start"]:
-            # Calculate the diffraction amplitude from the current exit wave (which is based ONLY on shared object).
-            proj = devlib.absolute(devlib.ifft(self.ds_image))
-
-            # Blur the projected and measured diffraction amplitudes by one pixel (to mitigate HF noise)
-            proj_blurred = devlib.gaussian_filter(proj, 1)
-            meas_blurred = devlib.gaussian_filter(self.iter_data, 1)
-
-            # Map the absolute difference between the two blurred images.
-            # Normalizing to the projected image makes bright artifacts in the measurement stand out:
-            #   proj  |  meas  | diff_map
-            # --------|--------|----------
-            #   high  |  high  |  low
-            #   low   |  low   |  low
-            #   high  |  low   |  low
-            #   low   |  high  |  HIGH
-            diff_map = devlib.absolute(meas_blurred - proj_blurred) / proj_blurred
-
-            # Mask voxels where the difference map is exceptionally high compared to its median. If there are no
-            # outliers, the difference map will be tightly clustered around the median.
-            pk.mask = diff_map > devlib.median(diff_map) * self.params["adapt_alien_threshold"]
+            threshold = self.params["adapt_alien_threshold"]
+            error = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(error), 3))
+            pk.filter = pk.mask + (error > threshold * pk.weight)
+            mask_sum = pk.filter.get().sum()
+            self.mask_sums[self.pk] = mask_sum
 
             # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
-            self.iter_data = devlib.where(pk.mask, proj, proj + pk.weight*(self.iter_data - proj))
+            if mask_sum > min(self.mask_sums):
+                zeros_mask = self.window * (pk.res_data == 0)
+                edges_mask = self.window * (pk.window == 0)
+                self.iter_data[pk.filter+zeros_mask+edges_mask] = self.proj[pk.filter+zeros_mask+edges_mask]
+        elif self.params["adapt_alien_start"] < self.iter_no:
+            self.iter_data[pk.filter] = 0
+
+        conf = (dvut.calc_nmi(meas_blurred, proj_blurred)*pk.window_size).get()
+        pk.conf_hist.append(conf)
+        pk.conf_iter.append(self.iter)
 
         if not self.fast_resample:
             # Resample the object and support
@@ -1021,20 +1037,6 @@ class CoupledRec(Rec):
                 self.support = dvut.pad_to_cube(self.support, self.dims[0])
             self.make_binary()
 
-    def calc_confidence(self):
-        pk = self.peak_objs[self.pk]  # shorthand
-
-        # Calculate the amplitude of the exit wave after phasing.
-        rho = devlib.absolute(self.ds_image)
-        cond = self.support > 0
-
-        # Compare the exit wave amplitude before and after phasing (only within the support region)
-        # conf = 1 / dvut.calc_ehd(self.rho_image[cond], rho[cond], log=False).get()
-        conf = dvut.calc_nmi(self.rho_image[cond], rho[cond], log=False).get() - 1
-
-        pk.conf_hist.append(conf)
-        pk.conf_iter.append(self.iter)
-
     def adapt_operation(self):
         self.adapt_on = True
 
@@ -1042,15 +1044,15 @@ class CoupledRec(Rec):
         # Grab the 75th %ile confidence for each peak. If a peak has not been phased, then its confidence history will
         # be empty, in which case it just gets a -1 and skips the weighting.
         confidences = [
-            sorted(p.conf_hist, reverse=True)[len(p.conf_hist) // 4]
+            sorted(p.conf_hist, reverse=True)[len(p.conf_hist) // 2]
             if len(p.conf_hist) > 0 else -1
             for p in self.peak_objs
         ]
         for pk, confidence in zip(self.peak_objs, confidences):
             if confidence == -1:
                 continue
-            # Assign the weights based on the RELATIVE confidence raised to a power (currently hard-coded at 2). The
-            # power determines how harshly bad peaks are punished.
+            # Assign the weights based on the RELATIVE confidence raised to a power.
+            # This power determines how harshly bad peaks are punished.
             pk.weight = (confidence / max(confidences)) ** self.params["adapt_power"]
         print(f"New weights: {[round(p.weight, 2) for p in self.peak_objs]}")
         self.adapt_on = False
@@ -1106,7 +1108,8 @@ class CoupledRec(Rec):
         prg = f'|  iter {self.iter:>4}  ' \
               f'|  peak {self.pk}  [{ornt[0]:>2}, {ornt[1]:>2}, {ornt[2]:>2}]  ' \
               f'|  err {self.errs[-1]:0.6f}  ' \
-              f'|  sup {devlib.sum(self.support):>8}  '
+              f'|  wt {self.peak_objs[self.pk].weight:0.4f}  '\
+              f'|  mask {devlib.sum(self.peak_objs[self.pk].filter):>6}'
         if self.ctrl_error is not None:
             prg += f"|  NMI {self.ctrl_error[-1][0]:0.6f}  "
             prg += f"|  LNMI {self.ctrl_error[-1][1]:0.6f}  "
@@ -1114,33 +1117,62 @@ class CoupledRec(Rec):
             prg += f"|  LEHD {self.ctrl_error[-1][3]:0.6f}  "
         print(prg)
 
+    def plot_fourier(self, save=False):
+        # s = self.dims[0] // 2
+        s = devlib.argmax(devlib.sum(devlib.ifftshift(self.peak_objs[self.pk].filter), axis=(1, 2)))
+
+        proj = devlib.ifftshift(devlib.sqrt(devlib.absolute(devlib.ifft(self.ds_image * self.support))))[s]
+        mask = devlib.ifftshift(self.peak_objs[self.pk].filter)[s]
+        meas = devlib.ifftshift(devlib.sqrt(self.peak_objs[self.pk].res_data))[s]
+        data = devlib.ifftshift(devlib.sqrt(self.iter_data))[s]
+        title = f"iteration: {self.iter}/{self.iter_no}\n" \
+                f"peak: {self.peak_objs[self.pk].hkl}\n" \
+                f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
+
+        self.viewer.update_multipeak_fourier(proj, mask, meas, data, title)
+        if save:
+            # self.viewer.block()
+            h,k,l = self.peak_objs[self.pk].hkl
+            self.viewer.save(f"{self.save_dir}/live_views/peak_{h}{k}{l}/peak{h}{k}{l}_iter{self.iter:04}.png")
+
+    def plot_physical(self, cut_axis, save=False):
+        top = self.save_dir / f"rec_{cut_axis}"
+        if save:
+            top.mkdir(exist_ok=True)
+
+        ctr = self.dims[0] // 2
+        crop = self.dims[0] // 4
+
+        rho = self.rho_image * self.support
+        ux = self.u_image[:, :, :, 0]
+        uy = self.u_image[:, :, :, 1]
+        uz = self.u_image[:, :, :, 2]
+        rho, ux, uy, uz = [devlib.moveaxis(u, cut_axis, 0)[ctr, crop:-crop, crop:-crop] for u in (rho, ux, uy, uz)]
+
+        title = f"Iteration: {self.iter}/{self.iter_no}"
+
+        self.viewer.update_multipeak_direct(rho, ux, uy, uz, title)
+        if save:
+            # self.viewer.block()
+            self.viewer.save(f"{self.save_dir}/live_views/axis{cut_axis}/axis{cut_axis}_iter{self.iter:04}.png")
+
     def live_operation(self):
-        half = self.dims[0] // 2
-        qtr = self.dims[0] // 4
-        plt.suptitle(
-            f"iteration: {self.iter}\n"
-            f"peak: {self.peak_objs[self.pk].hkl}\n"
-            f"global weight: {self.proj_weight[self.iter]}\n"
-            f"peak weight: {self.peak_objs[self.pk].weight:0.3f}\n"
-            f"confidence threshold: {self.peak_threshold[self.iter]}\n"
-        )
-        [[ax.clear() for ax in row] for row in self.axs]
-        self.axs[0][0].set_title("XY amplitude")
-        self.axs[0][0].imshow(devlib.absolute(self.ds_image[qtr:-qtr, qtr:-qtr, half]).get(), cmap="gray")
-        self.axs[0][1].set_title("XY phase")
-        self.axs[0][1].imshow(devlib.angle(self.ds_image[qtr:-qtr, half, qtr:-qtr]).get(), cmap="hsv",
-                              interpolation_stage="rgba")
+        self.plot_fourier()
+        pass
 
-        self.axs[1][0].set_title("Measurement")
-        meas = devlib.sum(devlib.ifftshift(self.peak_objs[self.pk].res_data), axis=0)
-        self.axs[1][0].imshow(devlib.sqrt(meas).get(), cmap="magma")
-        self.axs[1][1].set_title("Fourier Constraint")
-        data = devlib.sum(devlib.ifftshift(self.iter_data), axis=0)
-        self.axs[1][1].imshow(devlib.sqrt(data).get(), cmap="magma")
-        plt.setp(self.fig.get_axes(), xticks=[], yticks=[])
-
-        plt.draw()
-        plt.pause(0.15)
+    def plot_all(self):
+        if self.params.get("live_trigger", None) is None:
+            return
+        pk = self.pk
+        for i in range(self.num_peaks):
+            self.pk = i
+            self.to_working_image()
+            self.plot_fourier(save=True)
+            self.peak_objs[self.pk].conf_hist.pop()
+            self.peak_objs[self.pk].conf_iter.pop()
+        self.pk = pk
+        for i in range(3):
+            self.plot_physical(i, save=True)
 
     def switch_resampling_operation(self):
         self.fast_resample = False
@@ -1273,7 +1305,7 @@ def create_rec(params, datainfo, pkg, dev, **kwargs):
     Rec object is returned, otherwise None.
 
     :param params: dict, contains reconstruction parameters
-    :param datainfo: 
+    :param datainfo:
         for 'basic' datainfo is data file name,
         and for 'mp' reconstruction it is a list of peak directories
     :param pkg:
