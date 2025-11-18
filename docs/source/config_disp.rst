@@ -120,3 +120,20 @@ Parameters
 ::
 
     write_recip = True
+
+- Bragg_displacement
+
+| If configured the vts file with image will also include displacement array. Currently supporting a float value and "Q", where the Q vector from the diffractometer is used for the projection of the derivative of displacement field.
+
+::
+
+    Bragg_displacement = "Q"
+    Bragg_displacement = 2.33  #nm
+
+- compute strain
+
+| If True the vts file with image will also include strain. For this to work the Bragg_displacement parameter has to be configured.
+
+::
+
+    compute strain = True

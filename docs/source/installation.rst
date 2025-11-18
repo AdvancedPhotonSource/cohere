@@ -74,7 +74,7 @@ Beamlines specific installation
 ===============================
 For Petra beamline install additional packages::
 
-    pip install hdf5plugin pandas
+    pip install hdf5plugin
 
 Some of the modules can be installed with Pypi, as some can be cloned. A common scenario when developing on a beamline is installing release version of cohere_core and cohere_ui, and clone cohere_beamlines. Such arrangement offers reliability of the main modules and allows flexibility when dealing with changes on a beamline.
 
