@@ -265,6 +265,7 @@ def auto_alien1(data, config, data_dir=None):
 
     expandcleanedsig = config.get('AA1_expandcleanedsigma', 0.0)
 
+    print('data shape', data.shape)
     cuboid = crop_center(data)
     cuboid = np.where(cuboid >= threshold, cuboid, 0)
     if (save_arrs):
@@ -305,6 +306,9 @@ def auto_alien1(data, config, data_dir=None):
         cuboid = gaussian_filter(cuboid, sig)
         no_thresh_cuboid = crop_center(data)
         cuboid = np.where(cuboid > 0.1, no_thresh_cuboid, 0.0)
+
+    # restore the original data shape
+    cuboid = ut.pad_center(cuboid, data.shape)
     return cuboid
 
 
