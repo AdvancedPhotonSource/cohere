@@ -456,6 +456,10 @@ class torchlib(cohlib):
         raise NotImplementedError
 
     @staticmethod
+    def norm(arr, ord=None, axis=None, keepdims=True):
+        return torch.linalg.norm(arr, ord=None, axis=None, keepdims=keepdims)
+
+    @staticmethod
     def clean_default_mem():
         pass
 

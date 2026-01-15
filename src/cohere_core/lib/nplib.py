@@ -357,5 +357,9 @@ class nplib(cohlib):
         return np.median(arr, axis=axis)
 
     @staticmethod
+    def norm(arr, ord=None, axis=None, keepdims=True):
+        return np.linalg.norm(arr, ord=None, axis=None, keepdims=keepdims)
+
+    @staticmethod
     def clean_default_mem():
         pass

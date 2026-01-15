@@ -36,6 +36,7 @@ __all__ = [
            'dftregistration',
            'dftups',
            'fast_shift',
+           'get_ccamax_cc',
            'gauss_conv_fft',
            'get_metric',
            'get_norm',
@@ -92,7 +93,7 @@ def use_numpy(func):
 
 
 
-def align_arrays_pixel(ref, arr):
+def align_arrays_pixel(ref, arr, shift=None, CC=None):
     """
     Aligns two arrays of the same dimensions with the pixel resolution. Used in reciprocal space.
 
@@ -101,18 +102,20 @@ def align_arrays_pixel(ref, arr):
 
     :return: aligned array
     """
-    CC = devlib.correlate(ref, arr, mode='same', method='fft')
-    err = correlation_err(ref, arr, CC)
-    CC_shifted = devlib.ifftshift(CC)
-    shape = devlib.array(CC_shifted.shape)
-    amp = devlib.absolute(CC_shifted)
-    shift = devlib.unravel_index(devlib.argmax(amp), shape)
+    if shift is None:
+        if CC is None:
+            CC = devlib.correlate(ref, arr, mode='same', method='fft')
+        # err = correlation_err(ref, arr, CC)
+        CC_shifted = devlib.ifftshift(CC)
+        shape = devlib.array(CC_shifted.shape)
+        amp = devlib.absolute(CC_shifted)
+        shift = devlib.unravel_index(devlib.argmax(amp), shape)
     if devlib.sum(shift) == 0:
-        return [arr, err]
+        return arr
     intshift = devlib.array(shift)
     pixelshift = devlib.where(intshift >= shape / 2, intshift - shape, intshift)
     shifted_arr = fast_shift(arr, pixelshift)
-    return [shifted_arr, err]
+    return shifted_arr
 
 
 def align_arrays_subpixel(ref_arr, arr):
@@ -510,6 +513,28 @@ def gauss_conv_fft(arr, distribution):
     correction = arr_sum / devlib.sum(convag)
     convag *= correction
     return convag
+
+
+def get_ccamax_cc(ref, arr, mode='same', method='fft', CC=None):
+    """
+    Calculates index of max cross correlation and correlation
+
+    :param ref: referrence array
+    :param arr: array
+    :param mode:
+    :param method:
+    :param CC: cross correlation array if exists
+    :return: index of max in cross correlation array and correlation
+    """
+
+    if CC is None:
+        CC = devlib.correlate(ref, arr, mode, method)
+
+    CC_shifted = devlib.ifftshift(CC)
+    shape = devlib.array(CC_shifted.shape)
+    amp = devlib.absolute(CC_shifted)
+    ccamax = devlib.unravel_index(devlib.argmax(amp), shape)
+    return (ccamax, amp[ccamax])
 
 
 def get_metric(image, errs, metric_type):

@@ -371,6 +371,10 @@ class cplib(cohlib):
         return cp.median(arr, axis=axis)
 
     @staticmethod
+    def norm(arr, ord=None, axis=None, keepdims=True):
+        return cp.linalg.norm(arr, ord=None, axis=None, keepdims=keepdims)
+
+    @staticmethod
     def clean_default_mem():
         cp._default_memory_pool.free_all_blocks()
         cp._default_pinned_memory_pool.free_all_blocks()

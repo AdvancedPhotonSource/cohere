@@ -175,6 +175,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.mean) and
                 hasattr(subclass, 'median') and
                 callable(subclass.median) and
+                hasattr(subclass, 'norm') and
+                callable(subclass.norm) and
                 hasattr(subclass, 'clean_default_mem') and
                 callable(subclass.clean_default_mem) or
                 NotImplemented)
@@ -588,6 +590,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def median(arr, axis=None):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def norm(arr, axis=None):
         pass
 
     @staticmethod
