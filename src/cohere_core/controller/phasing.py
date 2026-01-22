@@ -486,22 +486,17 @@ class Rec:
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def live_operation(self):
-        self.shift_to_center()
-        ctr = self.dims[0]//2
+        self.ds_image, self.support = dvut.center_sync(self.ds_image, self.support, False)
+        # ctr = self.dims[0]//2
+        # slice = np.s_[ctr, :, :]
+        ctr = self.dims[2] // 2
+        slice = np.s_[:,:,ctr]
         title = f"Iteration: {self.iter}/{self.iter_no}\nError: {self.errs[-1]}"
-        self.viewer.update_singlepeak(self.ds_image[ctr], self.errs, self.support[ctr], title)
+        self.viewer.update_singlepeak(self.ds_image[slice], self.errs, self.support[slice], title)
 
     def get_ratio(self, divident, divisor):
         ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
         return ratio
-
-    def shift_to_center(self):
-        ind = devlib.center_of_mass(devlib.astype(self.support, 'int32'))
-        shift_dist = (self.dims[0]//2) - devlib.round(devlib.array(ind))
-        shift_dist = devlib.to_numpy(shift_dist).tolist()
-        axis = tuple(range(len(self.ds_image.shape)))
-        self.ds_image = devlib.roll(self.ds_image, shift_dist, axis=axis)
-        self.support = devlib.roll(self.support, shift_dist, axis=axis)
 
     def get_image(self):
         """

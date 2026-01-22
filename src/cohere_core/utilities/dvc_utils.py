@@ -264,7 +264,7 @@ def calc_ehd(arr1, arr2=None, log=False):
     return devlib.sum(hgram * devlib.abs(x - y)) / devlib.sum(hgram)
 
 
-def center_sync(image, support):
+def center_sync(image, support, center_phase=True):
     """
     Shifts the image and support arrays so the center of mass is in the center of array.
 
@@ -274,10 +274,11 @@ def center_sync(image, support):
     """
     shape = image.shape
 
-    # set center phase to zero, use as a reference
-    phi0 = math.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
-                      image.flatten().real[int(image.flatten().shape[0] / 2)])
-    image = image * cmath.exp(-1j * phi0)
+    if center_phase:
+        # set center phase to zero, use as a reference
+        phi0 = math.atan2(image.flatten().imag[int(image.flatten().shape[0] / 2)],
+                          image.flatten().real[int(image.flatten().shape[0] / 2)])
+        image = image * cmath.exp(-1j * phi0)
 
     # roll the max to the center to avoid distributing the mass at edges by center of mass
     shift = [int(shape[i]/2 - devlib.unravel_index(devlib.argmax(devlib.absolute(image)), shape)[i]) for i in range(len(shape))]
