@@ -54,10 +54,10 @@ class LiveViewer:
     def update_singlepeak(self, ds_image, errors, support, title=""):
         [ax.clear() for ax in self.axs]
         plt.suptitle(title)
-        qtrx = ds_image.shape[0] // 4
-        qtry = ds_image.shape[0] // 4
-        img = ds_image[qtrx:-qtrx, qtry:-qtry]
-        #img = ds_image
+        # qtrx = ds_image.shape[0] // 4
+        # qtry = ds_image.shape[0] // 4
+        # img = ds_image[qtrx:-qtrx, qtry:-qtry]
+        img = ds_image
         self.axs[0].set(title="Amplitude", xticks=[], yticks=[])
         self.axs[0].imshow(np.absolute(img), cmap="gray")
         self.axs[1].set(title="Phase", xticks=[], yticks=[])
@@ -65,8 +65,8 @@ class LiveViewer:
         self.axs[2].set(title="Error", xlabel="Iteration", yscale="log")
         self.axs[2].plot(errors[1:])
         self.axs[3].set(title="Support", xticks=[], yticks=[])
-        self.axs[3].imshow(support[qtrx:-qtrx, qtry:-qtry], cmap="gray")
-        # self.axs[3].imshow(support, cmap="gray")
+        # self.axs[3].imshow(support[qtrx:-qtrx, qtry:-qtry], cmap="gray")
+        self.axs[3].imshow(support, cmap="gray")
         self.draw()
 
     @dvut.use_numpy
