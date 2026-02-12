@@ -126,7 +126,7 @@ def center_max(arr):
     :param arr: ndarray, array to be centered
     :return: centered array
     """
-    shift = (np.array(arr.shape)/2) - np.unravel_index(np.argmax(arr), arr.shape)
+    shift = (np.array(arr.shape) // 2) - np.unravel_index(np.argmax(arr), arr.shape)
     return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
 
 
