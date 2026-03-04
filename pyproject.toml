@@ -19,13 +19,13 @@ classifiers = [
 license = { file = "LICENSE" }
 
 dependencies = [
-                'numpy<2',
+                'numpy',
                 'scikit-learn',
                 'tifffile',
                 'psutil',
                 'tqdm',
                 'matplotlib',
-                'scipy==1.14.1',
+                'scipy',
                 'sphinx',
                 'sphinx-pyproject'
                 ]
