@@ -7,7 +7,7 @@ Official Release Installation
 =============================
 Create and activate conda environment::
 
-    conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
+    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
     conda activate <env_name>
 
 The cohere project consists of three modules and each of them is a separate package in PyPi.::
@@ -18,7 +18,7 @@ Note: If the user's choice is own beamline dependent preprocessing and postproce
 
 If using cupy library::
 
-    conda install cupy=12.2.0 -c conda-forge
+    conda install cupy -c conda-forge
 
 If using torch library::
 
@@ -43,7 +43,7 @@ This will install the latest development. This installation might be right for a
 Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and three submodules: cohere-ui, cohere_beamlines, and cohere_examples.
 Run the following commands::
 
-    conda create -n <env_name> -c conda-forge python=3.11 mpi4py pyzmq
+    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
     conda activate <env_name>
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
@@ -58,7 +58,7 @@ Run the following commands::
 
 If using cupy library::
 
-    conda install cupy=12.2.0 -c conda-forge
+    conda install cupy -c conda-forge
 
 If using torch library::
 
