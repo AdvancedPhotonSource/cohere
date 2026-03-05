@@ -24,13 +24,13 @@ Parameters
 
     exclude_scans = [78,81]
 
-- user_roi
+- roi
 
 | Optional, defines user region of interest within frame. The indices are related to the data already cropped to the area detector roi.
 
 ::
 
-     user_roi = [76,64,200,200]
+     user = [76,64,200,200]
 
 - roi_format
 
