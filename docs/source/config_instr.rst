@@ -5,6 +5,36 @@ config_instr
 ============
 The "config_instr" file defines parameters related to experiment and instrument used during the experiment, such as detector and diffractometer.
 
+.. _hbb:
+
+common parameters
+-----------------
+Some detectors may need to remove horizontal bound background. If the detector name is included in det_bound_background list the following parameters may apply:
+
+- remove_band_background
+
+| Boolean switch to determine whether horizontal bound background should be removed.
+
+::
+
+    remove_band_background = True
+
+- rbb_smooth_sigma
+
+| Sigma parameter used in calculations. The optimal value is set for the detector but can be overridden.
+
+::
+
+    rbb_smooth_sigma = 50
+
+- rbb_robust
+
+| A boolean switch to decide a method used in calculation. If robust, a median of data is used, otherwise mean.
+
+::
+
+    rbb_robust = True
+
 beamline aps_1ide
 -----------------
 All the listed parameters are mandatory for the 1-IDE beamline.
@@ -292,6 +322,7 @@ Parameters
 ::
 
     diffractometer = "7iddrobot"
+
 - data_dir
 
 | directory where the raw experiment data is stored
@@ -331,6 +362,8 @@ Parameters
 ::
 
     detector = "ASI"
+
+| If BSE detector was used, additional parameters used in removal of horizontal bound background are available. Refer to :ref:`hbb`.
 
 Parsed parameters
 =================
@@ -566,7 +599,7 @@ Parameters
 
 ::
 
-    sample = 6
+    detector_module = 6
 
 Parsed parameters
 =================
@@ -578,17 +611,17 @@ Parsed parameters
 
     energy = 7.2
 
-- delta
+- del
 
-| delta (degrees)
+| delta axis posision (degrees)
 
 ::
 
     delta = 30.1
 
-- gamma
+- gam
 
-| gamma (degrees)
+| gamma axis posision in (degrees)
 
 ::
 
@@ -620,13 +653,15 @@ Parsed parameters
 
 - chi
 
-| chi detector axis posision in deg
+| chi motor posision in deg
 
 ::
 
     chi = 90.0
 
 - phi
+
+| phi motor posision in deg
 
 | phi detector axis posision in deg
 
@@ -652,4 +687,4 @@ Parsed parameters
 
 ::
 
-    detector = "34idcTIM2"
+    detector = "e4m"
