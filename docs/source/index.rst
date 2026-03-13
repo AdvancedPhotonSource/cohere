@@ -8,9 +8,7 @@ Welcome to cohere documentation!
    about
    installation
    define_alg_seq
-   api_standard_preprocess
-   api_phasing
-   api_utils
+   api_cohere_core
    api_cohere_ui
    configuration
    cohere_experiment

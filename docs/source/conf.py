@@ -83,6 +83,7 @@ autodoc_mock_imports = ['numpy',
                         'pyvista',
                         'notebook',
                         'gputil',
+                        'pandas'
                         ]
 
 master_doc = 'index'

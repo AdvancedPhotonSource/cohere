@@ -310,7 +310,7 @@ Parsed parameters
 
 
 beamline aps_20ide
------------------
+------------------
 All the listed parameters are mandatory for the 20-IDE beamline.
 
 Parameters

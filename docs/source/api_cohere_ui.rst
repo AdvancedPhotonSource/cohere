@@ -4,6 +4,8 @@
 cohere_ui
 =========
 
+| Contents:
+
 cohere_gui
 ----------
 This script provides GUI interface to cohere tools. User can create new cohere experiment or load an existing one. The GUI offers user friendly interface that allows to define configuration, set parameters to defaults, and run the scripts: beamline_preprocessing, standard_preprocessing, run_rec, and beamline_visualization, with push buttons.
@@ -14,7 +16,7 @@ To run this script from command line::
 
 optional arguments may follow:  --no_verify, --debug
 
-One can use --help to get explanation of command line parameters.
+Use --help to get explanation of command line parameters.
 
 beamline_preprocess
 -------------------
@@ -24,17 +26,17 @@ standard_preprocess
 -------------------
 .. automodule:: cohere_ui.standard_preprocess
 
-run_reconstruction
--------------------
-.. automodule:: cohere_ui.run_reconstruction
+cohere_reconstruction
+---------------------
+.. automodule:: cohere_ui.cohere_reconstruction
 
-beamline_visualization
-----------------------
-.. automodule:: cohere_ui.beamline_visualization
+beamline_postprocess
+--------------------
+.. automodule:: cohere_ui.beamline_postprocess
 
-everything
-----------
-.. automodule:: cohere_ui.everything
+cohere_full
+-----------
+.. automodule:: cohere_ui.cohere_full
 
 simple_phasing
 --------------
