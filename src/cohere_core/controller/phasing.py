@@ -490,7 +490,7 @@ class Rec:
         # ctr = self.dims[2] // 2
         # slice = np.s_[:,:,ctr]
         # not centering image, but need to find the slice
-        com = devlib.center_of_mass(self.ds_image)
+        com = devlib.center_of_mass(devlib.absolute(self.ds_image))
         slice = np.s_[:, :, int(com[2])]
         title = f"Iteration: {self.iter}/{self.iter_no}\nError: {self.errs[-1]}"
         self.viewer.update_singlepeak(self.ds_image[slice], self.errs, self.support[slice], title)
@@ -551,7 +551,7 @@ class Peak:
 
         # Convert the (possibly nonorthogonal) basis into cartesian coordinates
         # a1 is defined to be along the x-axis
-        a1 = a * devlib.array([1, 0, 0])
+        a1 = a * devlib.array([1., 0., 0.])
         # a2 is defined to be in the xy-plane
         a2 = b * devlib.array([cosg, sing, 0])
         # a3 is defined by the following system of equations:
@@ -572,7 +572,7 @@ class Peak:
 
         self.g_vec = self.hkl[0]*b1 + self.hkl[1]*b2 + self.hkl[2]*b3
         self.gdotg = devlib.array(devlib.dot(self.g_vec, self.g_vec))
-        geometry["g_vec"] = self.g_vec.get().tolist()
+        geometry["g_vec"] = self.g_vec.tolist()
         ut.write_config(geometry, f"{peak_dir}/geometry")
 
         self.size = geometry["final_size"]
@@ -729,9 +729,9 @@ class CoupledRec(Rec):
         self.proj = devlib.copy(self.data)
         self.dims = self.data.shape
         self.n_voxels = self.dims[0]*self.dims[1]*self.dims[2]
-        self.window = devlib.zeros(self.dims)
-        for i, pk in enumerate(self.peak_objs):
-            self.window = self.window + pk.window
+        self.window = self.peak_objs[0].window
+        for i in range(1, len(self.peak_objs)-1):
+            self.window = self.window + self.peak_objs[0].window
         self.window = self.window > 0
 
         stack = devlib.array([devlib.gaussian_filter(pk.res_data, 2) for pk in self.peak_objs])
@@ -739,7 +739,10 @@ class CoupledRec(Rec):
         for pk in self.peak_objs:
             peak = pk.res_data * devlib.sum(composite) / devlib.sum(pk.res_data)
             pk.mask = (peak > (composite * self.params["adapt_alien_threshold"])) * pk.window
-            pk.mask = devlib.gaussian_filter((devlib.zeros(pk.mask.shape)+1)*pk.mask, 3) > 0.3
+            # needed for torch library to have the objects on same device
+            args = devlib.coordinate_dev(*[devlib.zeros(pk.mask.shape)+1, pk.mask])
+            # pk.mask = devlib.gaussian_filter((devlib.zeros(pk.mask.shape)+1)*pk.mask, 3) > 0.3
+            pk.mask = devlib.gaussian_filter(args[0] * args[1], 3) > 0.3
             pk.filter = pk.mask
 
         if self.params.get("live_trigger", None) is not None:
@@ -783,7 +786,7 @@ class CoupledRec(Rec):
         #     self.u_image[:, :, :, i] = devlib.median_filter(self.u_image[:, :, :, i], 3)
         self.shift_to_center()
 
-        crop = self.dims[0] / 4
+        crop = self.dims[0] // 4
         sup = self.support[crop:-crop, crop:-crop, crop:-crop]
         rho = self.rho_image[crop:-crop, crop:-crop, crop:-crop] * sup
         u_x = self.u_image[crop:-crop, crop:-crop, crop:-crop, 0] * sup
@@ -973,7 +976,7 @@ class CoupledRec(Rec):
             self.shift_to_center()
 
         # Shift the displacement field so that the center of the image is at ux=uy=uz=0
-        ctr = self.dims[0] / 2
+        ctr = self.dims[0] // 2
         self.u_image = self.u_image[:, :, :] - self.u_image[ctr, ctr, ctr]
 
     def to_working_image(self):
@@ -1009,18 +1012,18 @@ class CoupledRec(Rec):
             threshold = self.params["adapt_alien_threshold"]
             error = devlib.fftshift(devlib.gaussian_filter(devlib.ifftshift(error), 3))
             pk.filter = pk.mask + (error > threshold * pk.weight)
-            mask_sum = pk.filter.get().sum()
+            mask_sum = devlib.sum(pk.filter)
             self.mask_sums[self.pk] = mask_sum
 
             # For phasing, use the projected amplitude for masked voxels and the measurement for unmasked voxels.
             if mask_sum > min(self.mask_sums):
                 zeros_mask = self.window * (pk.res_data == 0)
                 edges_mask = self.window * (pk.window == 0)
-                self.iter_data[pk.filter+zeros_mask+edges_mask] = self.proj[pk.filter+zeros_mask+edges_mask]
+                self.iter_data[pk.filter | zeros_mask | edges_mask] = self.proj[pk.filter | zeros_mask | edges_mask]
         elif self.params["adapt_alien_start"] < self.iter_no:
             self.iter_data[pk.filter] = 0
 
-        conf = (dvut.calc_nmi(meas_blurred, proj_blurred)*pk.window_size).get()
+        conf = devlib.to_numpy(dvut.calc_nmi(meas_blurred, proj_blurred)*pk.window_size)
         pk.conf_hist.append(conf)
         pk.conf_iter.append(self.iter)
 
@@ -1050,7 +1053,8 @@ class CoupledRec(Rec):
             # Assign the weights based on the RELATIVE confidence raised to a power.
             # This power determines how harshly bad peaks are punished.
             pk.weight = (confidence / max(confidences)) ** self.params["adapt_power"]
-        print(f"New weights: {[round(p.weight, 2) for p in self.peak_objs]}")
+        # print(f"New weights: {[round(p.weight, 2) for p in self.peak_objs]}")
+        print(f"New weights: {[p.weight for p in self.peak_objs]}")
         self.adapt_on = False
 
     def to_reciprocal_space(self):

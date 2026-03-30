@@ -106,10 +106,6 @@ class cplib(cohlib):
         return cp.roll(arr, sft, axis=axis)
 
     @staticmethod
-    def shift(arr, sft):
-        return sc.fourier_shift(arr, sft)
-
-    @staticmethod
     def fftshift(arr):
         return fft.fftshift(arr)
 
@@ -126,8 +122,8 @@ class cplib(cohlib):
         return fft.ifftn(arr, norm=norm)
 
     @staticmethod
-    def fftconvolve(arr1, kernel):
-        return sig.fftconvolve(arr1, kernel, mode='same')
+    def fftconvolve(arr1, kernel, mode='same'):
+        return sig.fftconvolve(arr1, kernel, mode=mode)
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
@@ -156,10 +152,7 @@ class cplib(cohlib):
 
     @staticmethod
     def sum(arr, axis=None):
-        sm = cp.sum(arr, axis)
-        # if axis is None:
-        #     return sm.tolist()
-        return sm
+        return cp.sum(arr, axis)
 
     @staticmethod
     def real(arr):
@@ -222,6 +215,10 @@ class cplib(cohlib):
         return cp.flip(arr, axis)
 
     @staticmethod
+    def coordinate_dev(*args):
+        return args
+
+    @staticmethod
     def tile(arr, rep):
         return cp.tile(arr, rep)
 
@@ -246,12 +243,12 @@ class cplib(cohlib):
         return sc.gaussian_filter(arr, sigma, **kwargs)
 
     @staticmethod
-    def median_filter(arr, size, **kwargs):
-        return sc.median_filter(arr, size)
+    def median_filter(arr, size=None, **kwargs):
+        return sc.median_filter(arr, size=size)
 
     @staticmethod
-    def uniform_filter(arr, size, **kwargs):
-        return sc.uniform_filter(arr, size)
+    def uniform_filter(arr, size=3, **kwargs):
+        return sc.uniform_filter(arr, size=size)
 
     @staticmethod
     def binary_erosion(arr, iterations=1, **kwargs):
@@ -305,12 +302,12 @@ class cplib(cohlib):
         return cp.clip(arr, min, max)
 
     @staticmethod
-    def diff(arr, axis=None, prepend=0):
-        return cp.diff(arr, axis=axis, prepend=prepend)
+    def diff(arr, axis=-1, prepend=None, append=None):
+        return cp.diff(arr, axis=axis, prepend=prepend, append=append)
 
     @staticmethod
-    def gradient(arr, dx=1):
-        return cp.gradient(arr, dx)
+    def gradient(arr, axis=None):
+        return cp.gradient(arr, axis=axis)
 
     @staticmethod
     def take_along_axis(a, indices, axis):
@@ -330,7 +327,7 @@ class cplib(cohlib):
 
     @staticmethod
     def concatenate(tup, axis=0):
-        return cp.concatenate(tup, axis)
+        return cp.concatenate(tup, axis=axis)
 
     @staticmethod
     def stack(tup):
@@ -372,7 +369,7 @@ class cplib(cohlib):
 
     @staticmethod
     def norm(arr, ord=None, axis=None, keepdims=True):
-        return cp.linalg.norm(arr, ord=None, axis=None, keepdims=keepdims)
+        return cp.linalg.norm(arr, ord=ord, axis=axis, keepdims=keepdims)
 
     @staticmethod
     def clean_default_mem():

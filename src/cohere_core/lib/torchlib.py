@@ -6,26 +6,31 @@
 
 from cohere_core.lib.cohlib import cohlib
 import numpy as np
-import torch
-
 import sys
-import math
+import torch
+import scipy
+from cohere_core.utilities import pad_to_cube
+import os
 
+os.environ['SCIPY_ARRAY_API']='1'
 
 class torchlib(cohlib):
-    device = "cpu"
+    #device = "cpu"
     # Interface
     @staticmethod
     def array(obj):
-        return torch.Tensor(obj, device=torchlib.device)
+        # return torch.tensor(obj, device=torchlib.device, dtype=torch.float64)
+        if isinstance(obj, list) and torch.is_tensor(obj[0]):
+            obj = torch.stack(obj)
+        return torch.tensor(obj, device=torchlib.device, dtype=torch.float64)
 
     @staticmethod
     def dot(arr1, arr2):
-        return torch.dot(arr1, arr2)
+        return torch.matmul(arr1, arr2)
 
     @staticmethod
     def cross(arr1, arr2):
-        raise NotImplementedError
+        return torch.cross(arr1, arr2)
 
     @staticmethod
     def set_device(dev_id):
@@ -65,7 +70,7 @@ class torchlib(cohlib):
 
     @staticmethod
     def from_numpy(arr, **kwargs):
-        return torch.as_tensor(arr, device=torchlib.device)
+        return torch.as_tensor(arr, device=torchlib.device).double()
 
     @staticmethod
     def dtype(arr):
@@ -81,7 +86,10 @@ class torchlib(cohlib):
 
     @staticmethod
     def reshape(arr, shape):
-        raise NotImplementedError
+        if shape == -1:
+            return torch.flatten(arr)
+        else:
+            return torch.reshape(arr, shape)
 
     @staticmethod
     def size(arr):
@@ -89,7 +97,6 @@ class torchlib(cohlib):
 
     @staticmethod
     def next_fast_len(target):
-        import scipy
         return scipy.fft.next_fast_len(target)
 
     @staticmethod
@@ -97,8 +104,8 @@ class torchlib(cohlib):
         return torch.any(torch.isnan(arr))
 
     @staticmethod
-    def nan_to_num(arr):
-        raise NotImplementedError
+    def nan_to_num(arr, **kwargs):
+        return torch.nan_to_num(arr, **kwargs)
 
     @staticmethod
     def copy(arr):
@@ -106,13 +113,11 @@ class torchlib(cohlib):
 
     @staticmethod
     def random(shape, **kwargs):
-        arr = torch.rand(shape, device=torchlib.device)
-        # return torch.rand(shape, device=torchlib.device)
-        return arr
+        return torch.rand(shape, device=torchlib.device)
 
     @staticmethod
     def moveaxis(arr, src, dst):
-        raise NotImplementedError
+        return torch.moveaxis(arr, src, dst)
 
     @staticmethod
     def roll(arr, sft, axis):
@@ -124,62 +129,36 @@ class torchlib(cohlib):
             print('not supported error: ' + repr(e))
 
     @staticmethod
-    def shift(arr, sft):
-        sft = [int(s) for s in sft]
-        dims = tuple([i for i in range(len(sft))])
-        try:
-            return torch.roll(arr, sft, dims)
-        except Exception as e:
-            print('not supported error: ' + repr(e))
-
-    @staticmethod
     def fftshift(arr):
-        try:
-            return torch.fft.fftshift(arr)
-        except Exception as e:
-            print('not supported error: ' + repr(e))
+        return torch.fft.fftshift(arr)
 
     @staticmethod
     def ifftshift(arr):
-        try:
-            return torch.fft.ifftshift(arr)
-        except Exception as e:
-            print('not supported error: ' + repr(e))
+        return torch.fft.ifftshift(arr)
 
     @staticmethod
     def fft(arr, norm='forward'):
-        try:
-            return torch.fft.fftn(arr, norm=norm)
-        except Exception as e:
-            print('not supported error: ' + repr(e))
+        return torch.fft.fftn(arr, norm=norm)
 
     @staticmethod
     def ifft(arr, norm='forward'):
-        try:
-            return torch.fft.ifftn(arr, norm=norm)
-        except Exception as e:
-            print('not supported error: ' + repr(e))
+        return torch.fft.ifftn(arr, norm=norm)
 
     @staticmethod
-    def fftconvolve(arr1, kernel):
-        print('not supported yet in torch, use different library')
-        raise
-        # # kernel shape can be smaller than arr1 shape in each dim
-        # sh1 = list(arr1.size())
-        # sh2 = list(kernel.size())
-        # if sh1 != sh2:
-        #     # the pad is added from last dim to first
-        #     sh1.reverse()
-        #     sh2.reverse()
-        #     pad = [((sh1[i]-sh2[i])//2, sh1[i] - sh2[i] - (sh1[i]-sh2[i])//2) for i in range(len(sh1))]
-        #     pad = tuple(sum(pad, ()))
-        #     kernel = torch.nn.functional.pad(kernel, pad)
-        # conv = torch.fft.ifftn(torch.fft.fftn(arr1) * torch.fft.fftn(kernel))
-        # return conv
+    def fftconvolve(arr1, kernel, mode='same'):
+        try:
+            import torchaudio.functional as tf
+        except Exception as e:
+            print('torchaudio not installed')
+            raise
+        return tf.fftconvolve(arr1, kernel, mode=mode)
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
-        raise NotImplementedError
+        A = torch.fft.ifftshift(torch.fft.fftn(torch.fft.fftshift(torch.conj(arr1)), norm='forward'))
+        B = torch.fft.ifftshift(torch.fft.fftn(torch.fft.fftshift(arr2), norm='forward'))
+        CC = A * B
+        return torch.fft.ifftshift(torch.fft.ifftn(torch.fft.fftshift(CC), norm='forward'))
 
     @staticmethod
     def where(cond, x, y):
@@ -219,6 +198,10 @@ class torchlib(cohlib):
         return torch.amax(arr)
 
     @staticmethod
+    def amin(arr):
+        return torch.amin(arr)
+
+    @staticmethod
     def argmax(arr, axis=None):
         return torch.argmax(arr, axis)
 
@@ -228,7 +211,7 @@ class torchlib(cohlib):
 
     @staticmethod
     def ravel(arr):
-        raise NotImplementedError
+        return torch.ravel(arr)
 
     @staticmethod
     def maximum(arr1, arr2):
@@ -262,7 +245,27 @@ class torchlib(cohlib):
     def flip(arr, axis=None):
         if axis is None:
             axis = [i for i in range(len(arr.size()))]
+        if isinstance(axis, int):
+            axis = [axis]
         return torch.flip(arr, axis)
+
+    @staticmethod
+    def coordinate_dev(*args):
+        # check if any tensor and if so check if any on cuda device
+        device = torch.device('cpu')
+        for arg in args:
+            if isinstance(arg, torch.Tensor):
+                if arg.device != device:
+                    device = arg.device
+                    break
+        # load all args on the chosen device
+        # if on different device
+        out = []
+        for arg in args:
+            if not isinstance(arg, torch.Tensor) or arg.device != device:
+                arg = arg.to(device)
+            out.append(arg)
+        return out
 
     @staticmethod
     def tile(arr, rep):
@@ -277,6 +280,12 @@ class torchlib(cohlib):
         return torch.squeeze(arr)
 
     @staticmethod
+    def entropy(arr):
+        arr = arr / torch.sum(arr, axis=0, keepdim=True)
+        epsilon = 1e-12
+        entropy = -torch.sum(arr * torch.log(arr + epsilon), axis=0)
+        return entropy
+
     # this method is only in torchlib, not part of cohlib
     def gaussian(sigma, size=5, **kwargs): #sigma, size=5, n=None):
         """
@@ -291,10 +300,6 @@ class torchlib(cohlib):
         kernel = torch.exp(-torch.sum((grid - center) ** 2, dim=-1) / (2 * sigma ** 2))
         kernel /= kernel.sum()
         return kernel
-
-    @staticmethod
-    def entropy(arr):
-        raise NotImplementedError
 
     @staticmethod
     def gaussian_filter(arr, sigma, **kwargs):
@@ -316,26 +321,84 @@ class torchlib(cohlib):
             gauss_kernel_size = 5
             kernel = torchlib.gaussian(sigma, gauss_kernel_size, dims=arr.ndim)
             kernel = kernel.to(arr.device)
-
+        arr = arr.to(torch.float32)
         padding = gauss_kernel_size // 2
 
         blurred = convn(arr.unsqueeze(0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding=padding)
-        return blurred.squeeze()
+        return blurred.squeeze().to(torch.float64)
 
     @staticmethod
-    def median_filter(arr, size, **kwargs):
-        raise NotImplementedError
+    def median_filter(arr, kernel_size, **kwargs):
+        raise NotImplementedError("Median filtering not implemented.")
+        #
+        # # input_tensor shape: (B, C, H, W)
+        # padding = kernel_size // 2
+        #
+        # # Extract patches: (B, C * kernel_size * kernel_size, L)
+        # patches = torch.nn.functional.unfold(arr.unsqueeze(0), kernel_size=kernel_size, padding=padding)
+        #
+        # # Reshape to separate channels and patch pixels
+        # B, C_kh_kw, L = patches.shape
+        # patches = patches.view(B, arr.size(1), -1, L)
+        #
+        # # Compute median across the patch dimension (dim=2)
+        # # .values is used because torch.median returns (values, indices)
+        # median_values = patches.median(dim=2).values
+        #
+        # # Reshape back to original image spatial dimensions
+        # return median_values.view_as(arr)
 
     @staticmethod
     def uniform_filter(arr, size, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError("Uniform filter not implemented.")
+        # if arr.ndim == 3:
+        #     return torch.nn.functional.avg_pool3d(arr, kernel_size=size, stride=1, padding=size // 2, count_include_pad=False)
+        # else:
+        #     # currently not used for 1D or 2D
+        #     print('not implemented for 1D or 2D')
+        #     raise NotImplementedError
 
     @staticmethod
     def binary_erosion(arr, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError("Binary erosion not implemented.")
+        # if arr.ndim == 3:
+        #     if 'structure' in kwargs:
+        #         # Ensure kernel is Float
+        #         structure = kwargs['structure'].float()
+        #     else:
+        #         # Default 3x3x3 cube structuring element
+        #         structure = torch.ones((1, 1, 3, 3, 3), device=arr.device)
+        #
+        #     padding = (structure.shape[2] // 2, structure.shape[3] // 2, structure.shape[4] // 2)
+        #     num_elements = structure.sum()
+        #
+        #     # Perform convolution
+        #     convolved = torch.nn.functional.conv3d(arr.float().unsqueeze(0).unsqueeze(0), structure, padding=padding).squeeze()
+        #
+        #     # Erosion: only True if ALL elements of the structure matched
+        #     return (convolved >= num_elements).float()
+        # else:
+        #     # currently not used for 1D or 2D
+        #     print('not implemented for 1D or 2D')
+        #     raise NotImplementedError
 
     def binary_dilation(arr, **kwargs):
-        raise NotImplementedError
+        raise NotImplementedError("Binary dilation not implemented.")
+        # if arr.ndim == 3:
+        #     if 'structure' in kwargs:
+        #         # Ensure kernel is Float
+        #         structure = kwargs['structure'].float()
+        #     else:
+        #         # Default 3x3x3 cube structuring element
+        #         structure = torch.ones((1, 1, 3, 3, 3), device=arr.device)
+        #
+        #     # Conv3d with weight=1 behaves like dilation when combined with >0 thresholding
+        #     dilated = torch.nn.functional.conv3d(arr.unsqueeze(0).unsqueeze(0), structure, padding=1).squeeze()
+        #     return (dilated > 0).float()
+        # else:
+        #     # currently not used for 1D or 2D
+        #     print('not implemented for 1D or 2D')
+        #     raise NotImplementedError
 
     @staticmethod
     def center_of_mass(arr):
@@ -373,91 +436,138 @@ class torchlib(cohlib):
 
     @staticmethod
     def geomspace(start, stop, num):
-        raise NotImplementedError
+        raise NotImplementedError("Geometry space not implemented.")
+        # return np.logspace(start, stop, num)
 
     @staticmethod
     def clip(arr, min, max=None):
-        return torch.clip(arr, min, max)
+        raise NotImplementedError("Clipping not implemented.")
+        # return torch.clip(arr, min=min, max=max)
 
     @staticmethod
-    def diff(arr, axis=None, prepend=0):
-        raise NotImplementedError
+    def diff(arr, axis=-1, prepend=None, append=None):
+        raise NotImplementedError("Difference not implemented.")
+        # return torch.diff(arr, dim=axis, prepend=prepend, append=append)
 
     @staticmethod
     def gradient(arr, dx=1):
-        raise NotImplementedError
+        raise NotImplementedError("Gradient not implemented.")
+        # return torch.gradient(arr, spacing=torch.tensor([float(dx)]))
 
     @staticmethod
     def argmin(arr, axis=None):
-        raise NotImplementedError
+        raise NotImplementedError("Argmin not implemented.")
+        # return torch.argmin(arr, dim=axis)
 
     @staticmethod
-    def take_along_axis(a, indices, axis):
-        raise NotImplementedError
-
-    @staticmethod
-    def moveaxis(arr, source, dest):
-        raise NotImplementedError
+    def take_along_axis(arr, indices, axis=None):
+        return torch.take_along_dim(arr, indices, dim=axis)
 
     @staticmethod
     def lstsq(A, B):
-        raise NotImplementedError
+        raise NotImplementedError("LSTSQ not implemented.")
+        # return torch.linalg.lstsq(A, B, rcond=None)
 
     @staticmethod
     def zeros(shape):
-        raise NotImplementedError
+        raise NotImplementedError("Zeros not implemented.")
+        # return torch.zeros(shape)
 
     @staticmethod
     def indices(dims):
-        raise NotImplementedError
+        raise NotImplementedError("Indices not implemented.")
+        # grids = torch.meshgrid([torch.arange(dim) for dim in dims], indexing='ij')
+        #
+        # # Stack the coordinate tensors along a new first dimension
+        # # This results in a single tensor of shape (N, r0, ..., rN-1)
+        # return torch.stack(grids, dim=0)
 
     @staticmethod
     def concatenate(tup, axis=0):
-        raise NotImplementedError
+        raise NotImplementedError("Concatenate not implemented.")
+        # return torch.cat(tup, dim=axis)
 
     @staticmethod
     def stack(tup):
-        raise NotImplementedError
-
-    @staticmethod
-    def amin(arr):
-        raise NotImplementedError
+        raise NotImplementedError("Stack not implemented.")
+        # same_dev_tup = torchlib.coordinate_dev(*tup)
+        # return torch.stack(same_dev_tup)
 
     @staticmethod
     def affine_transform(arr, matrix, order=3, offset=0):
-        raise NotImplementedError
+        raise NotImplementedError("Affine transform not implemented.")
+        # # Create grid
+        # matrix = torch.nn.functional.pad(matrix, (0,1))
+        # matrix = matrix.unsqueeze(0)
+        # grid = torch.nn.functional.affine_grid(matrix, (1,1)+arr.shape, align_corners=False)
+        # # if on different device
+        # [arr, grid] = torchlib.coordinate_dev(*[arr, grid])
+        #
+        # arr = arr.unsqueeze(0).unsqueeze(0)
+        # out = torch.nn.functional.grid_sample(arr.to(torch.float32), grid.to(torch.float32), padding_mode="zeros", align_corners=False)
+        # out = out.squeeze().to(torch.float64)
+        # return out
 
     @staticmethod
     def pad(arr, padding):
-        raise NotImplementedError
+        raise NotImplementedError("Pad not implemented.")
+        # if isinstance(padding, tuple) or isinstance(padding, list):
+        #     # convert the padding in numpy format ((px0,px1),(py0,py1),(pz0,pz1)) to torch format
+        #     # (px0,px1,py0,py1,pz0,pz1)
+        #     padding = list(sum(padding, ()))
+        #     padding.reverse() # in torch it starts from the last dim
+        # elif isinstance(padding, int):
+        #     padding = (padding,) * arr.ndim * 2
+        # return torch.nn.functional.pad(arr, padding)
 
     @staticmethod
     def histogram2d(meas, rec, n_bins=100, log=False):
-        raise NotImplementedError
+        raise NotImplementedError("Histogram2d not implemented.")
+        # device = torch.device('cpu')
+        # if meas.device != torch.device('cpu'):
+        #     device = meas.device
+        # if rec.device != torch.device('cpu'):
+        #     device = rec.device
+        #
+        # data = torch.stack((meas.to('cpu'), rec.to('cpu'))).T
+        # # torch.histogram2 is implemented only on cpu device, need to load it to cpu and then back to cuda if on cuda
+        # hist, bin_edges = torch.histogramdd(data, bins=n_bins)
+        # if device != torch.device('cpu'):
+        #     hist = hist.to(device)
+        # return hist
 
     @staticmethod
     def log(arr):
-        raise NotImplementedError
+        raise NotImplementedError("Log not implemented.")
+        # return torch.log(arr)
 
     @staticmethod
     def log10(arr):
-        raise NotImplementedError
+        raise NotImplementedError("Log10 not implemented.")
+        # return torch.log10(arr)
 
     @staticmethod
-    def xlogy(arr, y=None):
-        raise NotImplementedError
+    def xlogy(x, y=None):
+        raise NotImplementedError("Xlogy not implemented.")
+        # if y is None:
+        #     y = x
+        # return torch.xlogy(x, y)
 
     @staticmethod
     def mean(arr, axis=None):
-        raise NotImplementedError
+        raise NotImplementedError("Mean not implemented.")
+        # return torch.mean(arr, axis)
 
     @staticmethod
-    def median(arr, axis=None):
-        raise NotImplementedError
+    def median(arr, axis=-1):
+        raise NotImplementedError("Median not implemented.")
+        # (values, indices) = torch.median(arr, dim=axis)
+        # return values
 
     @staticmethod
-    def norm(arr, ord=None, axis=None, keepdims=True):
-        return torch.linalg.norm(arr, ord=None, axis=None, keepdims=keepdims)
+    def norm(arr, ord=None, axis=None, keepdim=True):
+        raise NotImplementedError("Norm not implemented.")
+        # return torch.linalg.norm(arr, ord=ord, dim=axis, keepdim=keepdim)
 
     @staticmethod
     def clean_default_mem():

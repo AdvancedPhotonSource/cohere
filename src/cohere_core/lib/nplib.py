@@ -101,10 +101,10 @@ class nplib(cohlib):
         sft = [int(s) for s in sft]
         return np.roll(arr, sft, axis=axis)
 
-    @staticmethod
-    def shift(arr, sft):
-        return ndi.shift(arr, sft)
-
+    # @staticmethod
+    # def shift(arr, sft):
+    #     return ndi.shift(arr, sft)
+    #
     @staticmethod
     def fftshift(arr):
         return np.fft.fftshift(arr)
@@ -122,8 +122,8 @@ class nplib(cohlib):
         return fft.ifftn(arr, norm=norm)
 
     @staticmethod
-    def fftconvolve(arr1, kernel):
-        return sig.fftconvolve(arr1, kernel, mode='same')
+    def fftconvolve(arr1, kernel, mode='same'):
+        return sig.fftconvolve(arr1, kernel, mode=mode)
 
     @staticmethod
     def correlate(arr1, arr2, mode='same', method='fft'):
@@ -167,6 +167,10 @@ class nplib(cohlib):
         return np.amax(arr)
 
     @staticmethod
+    def amin(arr):
+        return np.amin(arr)
+
+    @staticmethod
     def unravel_index(indices, shape):
         return np.unravel_index(indices, shape)
 
@@ -204,7 +208,11 @@ class nplib(cohlib):
 
     @staticmethod
     def flip(arr, axis=None):
-        return np.flip(arr, axis)
+        return np.flip(arr, axis=axis)
+
+    @staticmethod
+    def coordinate_dev(*args):
+        return args
 
     @staticmethod
     def tile(arr, rep):
@@ -240,11 +248,13 @@ class nplib(cohlib):
 
     @staticmethod
     def binary_erosion(arr, **kwargs):
-        return ndi.binary_erosion(arr, iterations=1)
+        iter = kwargs.get('iterations', 1)
+        return ndi.binary_erosion(arr, iterations=iter, **kwargs)
 
     @staticmethod
     def binary_dilation(arr, **kwargs):
-        return ndi.binary_dilation(arr, iterations=1)
+        iter = kwargs.get('iterations', 1)
+        return ndi.binary_dilation(arr, iterations=iter, **kwargs)
 
     @staticmethod
     def center_of_mass(inarr):
@@ -283,8 +293,8 @@ class nplib(cohlib):
         return np.clip(arr, min, max)
 
     @staticmethod
-    def diff(arr, axis=None, prepend=0):
-        return np.diff(arr, axis=axis, prepend=prepend)
+    def diff(arr, axis=-1, prepend=None, append=None):
+        return np.diff(arr, axis=axis, prepend=prepend, append=append)
 
     @staticmethod
     def gradient(arr, dx=1):
@@ -295,8 +305,8 @@ class nplib(cohlib):
         return np.argmin(arr, axis)
 
     @staticmethod
-    def take_along_axis(a, indices, axis):
-        return np.take_along_axis(a, indices, axis)
+    def take_along_axis(a, indices, axis=-1):
+        return np.take_along_axis(a, indices, axis=axis)
 
     @staticmethod
     def lstsq(A, B):
@@ -317,10 +327,6 @@ class nplib(cohlib):
     @staticmethod
     def stack(tup):
         return np.stack(tup)
-
-    @staticmethod
-    def amin(arr):
-        return np.amin(arr)
 
     @staticmethod
     def affine_transform(arr, matrix, order=3, offset=0):
@@ -358,7 +364,7 @@ class nplib(cohlib):
 
     @staticmethod
     def norm(arr, ord=None, axis=None, keepdims=True):
-        return np.linalg.norm(arr, ord=None, axis=None, keepdims=keepdims)
+        return np.linalg.norm(arr, ord=ord, axis=axis, keepdims=keepdims)
 
     @staticmethod
     def clean_default_mem():

@@ -43,8 +43,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.copy) and
                 hasattr(subclass, 'roll') and
                 callable(subclass.roll) and
-                hasattr(subclass, 'shift') and
-                callable(subclass.shift) and
+                # hasattr(subclass, 'shift') and
+                # callable(subclass.shift) and
                 hasattr(subclass, 'fftshift') and
                 callable(subclass.fftshift) and
                 hasattr(subclass, 'ifftshift') and
@@ -102,6 +102,8 @@ class cohlib(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'angle') and
                 callable(subclass.angle) and
                 hasattr(subclass, 'flip') and
+                callable(subclass.coordinate_dev) and
+                hasattr(subclass, 'coordinate_dev') and
                 callable(subclass.flip) and
                 hasattr(subclass, 'tile') and
                 callable(subclass.tile) and
@@ -273,11 +275,6 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def shift(arr, sft):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
     def fftshift(arr):
         pass
 
@@ -298,7 +295,7 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def fftconvolve(arr1, arr2):
+    def fftconvolve(arr1, arr2, mode):
         pass
 
     @staticmethod
@@ -350,6 +347,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def amax(arr):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def amin(arr):
         pass
 
     @staticmethod
@@ -410,6 +412,11 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def flip(arr, axis):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def coordinate_dev(*args):
         pass
 
     @staticmethod
@@ -545,11 +552,6 @@ class cohlib(metaclass=abc.ABCMeta):
     @staticmethod
     @abc.abstractmethod
     def stack(tup):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def amin(arr):
         pass
 
     @staticmethod

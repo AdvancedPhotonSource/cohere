@@ -706,7 +706,6 @@ def remove_ramp(arr, ups=1):
     """
     # the remove ramp is called (now) by visualization when arrays are on cpu
     # thus using functions from utilities will be ok for now
-    import cohere_core.utilities.utils as ut
     shape = arr.shape
     new_shape = [dim * ups for dim in shape]
     padded = ut.pad_center(arr, new_shape)
@@ -728,7 +727,6 @@ def resample(data, matrix, plot=False):
     :param plot: boolean, will plot if True, defaults to False.
     :return: smoothed array
     """
-    import numpy as np
     s = data.shape
     corners = [
         [0, 0, 0],
@@ -739,7 +737,7 @@ def resample(data, matrix, plot=False):
     new_corners = [np.linalg.inv(matrix)@c for c in corners]
     new_shape = np.ceil(np.max(new_corners, axis=0) - np.min(new_corners, axis=0)).astype(int)
     pad = np.max((new_shape - s) // 2)
-    data = devlib.pad(data, np.max([pad, 0]))
+    data = devlib.pad(data, int(np.max([pad, 0])))
     mid_shape = np.array(data.shape)
 
     offset = (mid_shape / 2) - matrix @ (mid_shape / 2)
