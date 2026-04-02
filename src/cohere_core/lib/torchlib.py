@@ -505,7 +505,7 @@ class torchlib(cohlib):
         #
         # arr = arr.unsqueeze(0).unsqueeze(0)
         # out = torch.nn.functional.grid_sample(arr.to(torch.float32), grid.to(torch.float32), padding_mode="zeros", align_corners=False)
-        # out = out.squeeze().to(torch.float64)
+        # out = out.squeeze().to(torch.float32)
         # return out
 
     @staticmethod
