@@ -22,7 +22,7 @@ class torchlib(cohlib):
         # return torch.tensor(obj, device=torchlib.device, dtype=torch.float64)
         if isinstance(obj, list) and torch.is_tensor(obj[0]):
             obj = torch.stack(obj)
-        return torch.tensor(obj, device=torchlib.device, dtype=torch.float64)
+        return torch.tensor(obj, device=torchlib.device, dtype=torch.float32)
 
     @staticmethod
     def dot(arr1, arr2):
@@ -325,7 +325,7 @@ class torchlib(cohlib):
         padding = gauss_kernel_size // 2
 
         blurred = convn(arr.unsqueeze(0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding=padding)
-        return blurred.squeeze().to(torch.float64)
+        return blurred.squeeze().to(torch.float32)
 
     @staticmethod
     def median_filter(arr, kernel_size, **kwargs):
