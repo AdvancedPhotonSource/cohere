@@ -107,13 +107,12 @@ def align_arrays_pixel(ref, arr, shift=None, CC=None):
             CC = devlib.correlate(ref, arr, mode='same', method='fft')
         # err = correlation_err(ref, arr, CC)
         CC_shifted = devlib.ifftshift(CC)
-        shape = devlib.array(CC_shifted.shape)
+        shape = devlib.dims(arr)
         amp = devlib.absolute(CC_shifted)
         shift = devlib.unravel_index(devlib.argmax(amp), shape)
     if devlib.sum(shift) == 0:
         return arr
-    intshift = devlib.array(shift)
-    pixelshift = devlib.where(intshift >= shape / 2, intshift - shape, intshift)
+    pixelshift = devlib.where(shift >= shape // 2, shift - shape, shift)
     shifted_arr = fast_shift(arr, pixelshift)
     return shifted_arr
 
@@ -409,7 +408,7 @@ def dftregistration(ref_arr, arr, usfac=2):
         ups_np = dftups(combined_np, int(math.ceil(usfac * 1.5)), int(math.ceil(usfac * 1.5)), usfac,
                    int(dftshift - row_shift * usfac), int(dftshift - col_shift * usfac))
 
-        ups = devlib.from_numpy(ups_np)
+        ups = devlib.from_numpy(ups_np, device=arr.device)
         c_c = devlib.conj(ups) / \
               (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ^ 2)
         # Locate maximum and map back to original pixel grid
@@ -476,10 +475,11 @@ def fast_shift(arr, shifty, fill_val=0):
     :return: shifted array
     """
     dims = arr.shape
-    result = devlib.full(dims, 1.0)
+    result = devlib.full(dims, 1.0, device=arr.device)  # create an array of ones on the same device as arr
     result *= fill_val
     result_slices = []
     arr_slices = []
+    shifty = [int(s) for s in shifty]
     for n in range(len(dims)):
         if shifty[n] > 0:
             result_slices.append(slice(shifty[n], dims[n]))
@@ -504,7 +504,6 @@ def gauss_conv_fft(arr, distribution):
     :param distribution: gaussian distribution array
     :return: convolution array
     """
-    dims = devlib.dims(arr)
     arr_sum = devlib.sum(arr)
     arr_f = devlib.ifftshift(devlib.fft(devlib.ifftshift(arr)))
     convag = arr_f * distribution
@@ -532,7 +531,7 @@ def get_ccamax_cc(ref, arr, mode='same', method='fft', CC=None):
         CC = devlib.correlate(ref, arr, mode, method)
 
     CC_shifted = devlib.ifftshift(CC)
-    shape = devlib.array(CC_shifted.shape)
+    shape = devlib.dims(arr)
     amp = devlib.absolute(CC_shifted)
     ccamax = devlib.unravel_index(devlib.argmax(amp), shape)
     return (ccamax, amp[ccamax])
@@ -637,22 +636,13 @@ def pad_around(arr, shape, val=0):
     :param shape: list or tuple, new shape
     :return: padded array
     """
-    padded = devlib.full(shape, val)
-    dims = devlib.dims(arr)
-    principio = []
-    finem = []
+    pad = []
     for i in range(len(shape)):
-        principio.append(int((shape[i] - dims[i]) / 2))
-        finem.append(principio[i] + dims[i])
-    if len(shape) == 1:
-        padded[principio[0]: finem[0]] = arr
-    elif len(shape) == 2:
-        padded[principio[0]: finem[0], principio[1]: finem[1]] = arr
-    elif len(shape) == 3:
-        padded[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]] = arr
-    else:
-        raise NotImplementedError
-    return padded
+        if shape[i] < devlib.dims(arr)[i]:
+            raise ValueError("New shape must be greater than or equal to the original shape in each dimension.")
+        pad .append(((shape[i] - devlib.dims(arr)[i]) // 2, (shape[i] - devlib.dims(arr)[i]) - (shape[i] - devlib.dims(arr)[i]) // 2))
+    
+    return devlib.pad(arr, pad)
 
 
 def pad_to_cube(data, size):
@@ -745,7 +735,7 @@ def resample(data, matrix, plot=False):
     # The phasing data as saved is a magnitude, which is not smooth everywhere (there are non-differentiable points
     # where the complex amplitude crosses zero). However, the intensity (magnitude squared) is a smooth function.
     # Thus, in order to allow a high-order spline, we take the square root of the interpolated square of the image.
-    data = devlib.affine_transform(devlib.square(data), devlib.array(matrix), order=1, offset=offset)
+    data = devlib.affine_transform(devlib.square(data), devlib.array(matrix, device=data.device), order=1, offset=offset)
     data = devlib.sqrt(devlib.clip(data, 0))
     if plot:
         arr = devlib.to_numpy(data)
@@ -799,11 +789,11 @@ def sub_pixel_shift(arr, row_shift, col_shift, z_shift):
     buf2ft = devlib.fft(arr)
     shape = arr.shape
     Nr = devlib.ifftshift(
-        devlib.array(list(range(-int(math.floor(shape[0] / 2)), shape[0] - int(math.floor(shape[0] / 2))))))
+        devlib.array(list(range(-int(math.floor(shape[0] / 2)), shape[0] - int(math.floor(shape[0] / 2)))), device=arr.device))
     Nc = devlib.ifftshift(
-        devlib.array(list(range(-int(math.floor(shape[1] / 2)), shape[1] - int(math.floor(shape[1] / 2))))))
+        devlib.array(list(range(-int(math.floor(shape[1] / 2)), shape[1] - int(math.floor(shape[1] / 2)))), device=arr.device))
     Nz = devlib.ifftshift(
-        devlib.array(list(range(-int(math.floor(shape[2] / 2)), shape[2] - int(math.floor(shape[2] / 2))))))
+        devlib.array(list(range(-int(math.floor(shape[2] / 2)), shape[2] - int(math.floor(shape[2] / 2)))), device=arr.device))
     [Nc, Nr, Nz] = devlib.meshgrid(Nc, Nr, Nz)
     mg = 1j * 2 * math.pi * (-row_shift * Nr / shape[0] - col_shift * Nc / shape[1] - z_shift * Nz / shape[2])
     # return as array on device

@@ -43,8 +43,6 @@ class cohlib(metaclass=abc.ABCMeta):
                 callable(subclass.copy) and
                 hasattr(subclass, 'roll') and
                 callable(subclass.roll) and
-                # hasattr(subclass, 'shift') and
-                # callable(subclass.shift) and
                 hasattr(subclass, 'fftshift') and
                 callable(subclass.fftshift) and
                 hasattr(subclass, 'ifftshift') and
@@ -185,7 +183,7 @@ class cohlib(metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def array(obj):
+    def array(obj, **kwargs):
         pass
 
     @staticmethod

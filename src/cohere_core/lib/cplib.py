@@ -16,7 +16,7 @@ import cupyx.scipy.fft as fft
 
 class cplib(cohlib):
     @staticmethod
-    def array(obj):
+    def array(obj, **kwargs):
         return cp.array(obj)
 
     @staticmethod
@@ -31,6 +31,7 @@ class cplib(cohlib):
     def set_device(dev_id):
         if dev_id != -1:
             cp.cuda.Device(dev_id).use()
+        return dev_id
 
     @staticmethod
     def to_numpy(arr):

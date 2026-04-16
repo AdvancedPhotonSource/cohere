@@ -13,7 +13,7 @@ import scipy.stats as stats
 
 class nplib(cohlib):
     @staticmethod
-    def array(obj):
+    def array(obj, **kwargs):
         return np.array(obj)
 
     @staticmethod
@@ -26,7 +26,7 @@ class nplib(cohlib):
 
     @staticmethod
     def set_device(dev_id):
-        pass
+        return dev_id
 
     @staticmethod
     def to_numpy(arr):

@@ -74,7 +74,6 @@ class Rec:
     A factory for this class, 'create_rec' returns initialized Rec object.
     The object is then called to run iterations. The results can be retrieved with getters or saved.
     """
-
     def __init__(self, params, data_file, pkg, **kwargs):
         """
         Constructor. Sets / initializes reconstruction parameters.
@@ -134,7 +133,6 @@ class Rec:
         # only when phc feature is configured this becomes array
         self.phc_correction = 1
 
-
     def init_dev(self, device_id):
         """
         This function initializes GPU device that will be used for reconstruction. When running on CPU, the device_id
@@ -146,22 +144,21 @@ class Rec:
         :return: 0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
         """
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        self.dev = "cpu"
         if device_id != -1:
-            self.dev = device_id
-            if device_id != -1:
-                try:
-                    devlib.set_device(device_id)
-                except Exception as e:
-                    if self.debug:
-                        raise
-                    print(e)
-                    print('may need to restart GUI')
-                    return -1
-
+            try:
+                self.dev = devlib.set_device(device_id)
+            except Exception as e:
+                if self.debug:
+                    raise
+                print(e)
+                print('may need to restart GUI')
+                return -1
+            
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
-                data = devlib.from_numpy(data_np)
+                data = devlib.from_numpy(data_np, device=self.dev)  # this is needed to specify device for torch, for cupy and numpy it is not used
             except Exception as e:
                 if self.debug:
                     raise
@@ -169,7 +166,7 @@ class Rec:
                 return -1
         elif self.data_file.endswith('npy'):
             try:
-                data = devlib.load(self.data_file)
+                data = devlib.load(self.data_file, device=self.dev)  # this is needed to specify device for torch, for cupy and numpy it is not used
             except Exception as e:
                 if self.debug:
                     raise
@@ -208,10 +205,10 @@ class Rec:
         if self.ds_image is not None:
             first_run = False
         elif dir is None or not os.path.isfile(ut.join(dir, 'image.npy')):
-            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype)
+            self.ds_image = devlib.random(self.dims, dtype=self.data.dtype, device=self.dev)
             first_run = True
         else:
-            self.ds_image = devlib.load(ut.join(dir, 'image.npy'))
+            self.ds_image = devlib.load(ut.join(dir, 'image.npy'), device=self.dev)
             first_run = False
 
         # When running GA the lowpass filter, phc, and twin triggers should be active only during first
@@ -247,10 +244,10 @@ class Rec:
         # create or get initial support
         if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
             init_support = [int(self.params['initial_support_area'][i] * self.dims[i]) for i in range(len(self.dims))]
-            center = devlib.full(init_support, 1)
+            center = devlib.full(init_support, 1, device=self.dev)
             self.support = dvut.pad_around(center, self.dims, 0)
         else:
-            self.support = devlib.load(ut.join(dir, 'support.npy'))
+            self.support = devlib.load(ut.join(dir, 'support.npy'), device=self.dev)
 
         if self.is_pc:
             self.pc_obj = ft.Pcdi(self.params, self.data, dir)
@@ -269,7 +266,6 @@ class Rec:
                 raise
             print(e)
             return -1
-
         # for the fast GA the data needs to be saved, as it would be changed by each lr generation
         # for non-fast GA the Rec object is created in each generation with the initial data
         if self.saved_data is not None:
@@ -312,9 +308,9 @@ class Rec:
             for f in self.flow:
                 f()
         except Exception as error:
+            print(str(error))
             if self.debug:
                 raise
-            print(error)
             return -1
 
         print('iterate took ', (time.time() - start_t), ' sec')
@@ -324,7 +320,7 @@ class Rec:
             return -1
 
         if self.aver is not None:
-            ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
+            ratio = self.get_ratio(devlib.from_numpy(self.aver, device=self.dev), devlib.absolute(self.ds_image))
             self.ds_image *= ratio / self.aver_iter
 
         mx = devlib.amax(devlib.absolute(self.ds_image))
@@ -904,7 +900,7 @@ class CoupledRec(Rec):
             return -1
 
         if self.aver is not None:
-            ratio = self.get_ratio(devlib.from_numpy(self.aver), devlib.absolute(self.ds_image))
+            ratio = self.get_ratio(devlib.from_numpy(self.aver, device=self.device), devlib.absolute(self.ds_image))
             self.ds_image *= ratio / self.aver_iter
 
         mx = devlib.amax(devlib.absolute(self.ds_image))

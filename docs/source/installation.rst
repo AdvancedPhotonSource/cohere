@@ -7,30 +7,39 @@ Official Release Installation
 =============================
 Create and activate conda environment::
 
-    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
+    conda create -n <env_name> -c conda-forge python=3.14
     conda activate <env_name>
+
+Note: When installing the cohere project with newer python versions or newer cuda driver it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project.
+
+    conda install -c conda-forge mpi4py pyzmq pyqt5 xrayutilities matplotlib
 
 The cohere project consists of three modules and each of them is a separate package in PyPi.::
 
     pip install cohere_core cohere_ui cohere_beamlines
 
-Note: If the user's choice is own beamline dependent preprocessing and postprocessing and cohere_core package as a reconstruction engine, the user can access cohere_core APIs or use cohere_ui user's scripts. In the first case only the cohere_core package has to be installed, and in the second case, the cohere_ui has to be added.
-
 If using cupy library::
 
     conda install cupy -c conda-forge
 
+    Note: If the latest version of cupy is not compatible with your system, you can install a specific version of cupy that is compatible with your system using the following command::
+    conda install cupy=13.6.0 -c conda-forge
+
 If using torch library::
 
     pip install torch torchvision torchaudio
+
+    Note: If you want to use the latest torch library, you can install the nightly version with the corresponding cuda driver (example CUDA 12.9) support using the following command::
+
+    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 
     cohere_gui
     beamline_preprocess <dir_to_cohere_examples>/example_workspace/scan_54
     standard_preprocess <dir_to_cohere_examples>/example_workspace/scan_54
-    run_reconstruction <dir_to_cohere_examples>/example_workspace/scan_54
-    beamline_visualization <dir_to_cohere_examples>/example_workspace/scan_54
+    cohere_reconstruction <dir_to_cohere_examples>/example_workspace/scan_54
+    beamline_postprocess <dir_to_cohere_examples>/example_workspace/scan_54
 
 The cohere project provides examples in the cohere_examples submodule. The examples contain experiment data and configuration files in defined directory structure. To get the examples refer to :ref:`examples`
 
@@ -43,7 +52,7 @@ This will install the latest development. This installation might be right for a
 Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and three submodules: cohere-ui, cohere_beamlines, and cohere_examples.
 Run the following commands::
 
-    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
+    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq pyqt5 xrayutilities matplotlib
     conda activate <env_name>
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
@@ -60,15 +69,22 @@ If using cupy library::
 
     conda install cupy -c conda-forge
 
+    Note: If the latest version of cupy is not compatible with your system, you can install a specific version of cupy that is compatible with your system using the following command::
+    conda install cupy=13.6.0 -c conda-forge
+
 If using torch library::
 
     pip install torch torchvision torchaudio
+
+    Note: If you want to use the latest torch library, you can install the nightly version with the corresponding cuda driver (example CUDA 12.9) support using the following command::
+
+    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 
     cohere_gui
 
-The examples are cloned as one of submodule to cohere project. The examples are in cohere_experiment subdirectory.
+Cohere examples are cloned as one of submodule to cohere project. The examples are in cohere_experiment subdirectory.
 
 Beamlines specific installation
 ===============================
@@ -80,11 +96,10 @@ Some of the modules can be installed with Pypi, as some can be cloned. A common 
 
 .. _examples:
 
-Examples installation
-=====================
+Cohere examples installation
+============================
 To obtain the examples from cohere_examples module, clone the repository and initialize it to align with your directory structure::
 
     git clone https://github.com/advancedPhotonSource/cohere_examples
     cd cohere_examples
     python init_examples.py
-

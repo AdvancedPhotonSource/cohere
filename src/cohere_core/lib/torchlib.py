@@ -15,14 +15,12 @@ import os
 os.environ['SCIPY_ARRAY_API']='1'
 
 class torchlib(cohlib):
-    #device = "cpu"
-    # Interface
     @staticmethod
-    def array(obj):
-        # return torch.tensor(obj, device=torchlib.device, dtype=torch.float64)
+    def array(obj, **kwargs):
         if isinstance(obj, list) and torch.is_tensor(obj[0]):
             obj = torch.stack(obj)
-        return torch.tensor(obj, device=torchlib.device, dtype=torch.float32)
+        device = kwargs.get('device', "cpu")
+        return torch.tensor(obj, device=device, dtype=torch.float32)
 
     @staticmethod
     def dot(arr1, arr2):
@@ -34,18 +32,17 @@ class torchlib(cohlib):
 
     @staticmethod
     def set_device(dev_id):
+        dev = 'cpu'
         if sys.platform == 'darwin':
             # Check that MPS is available
-            if not torch.backends.mps.is_available():
-                print("MPS not available because the current PyTorch install was not built with MPS enabled. Using cpu.")
-                torch.device("cpu")
+            if torch.backends.mps.is_available():
+                dev = "mps"
             else:
-                torch.device("mps")
+                print("MPS not available because the current PyTorch install was not built with MPS enabled. Using cpu.")
         elif torch.backends.cuda.is_built() and dev_id != -1:
-            torch_dev = f"cuda:{str(dev_id)}"
-            torchlib.device = torch_dev
-        else:
-            torch.device("cpu")
+            dev = f"cuda:{str(dev_id)}"
+        return dev
+
 
     @staticmethod
     def to_numpy(arr):
@@ -66,11 +63,13 @@ class torchlib(cohlib):
     @staticmethod
     def load(filename, **kwargs):
         arr = np.load(filename)
-        return torch.as_tensor(arr, device=torchlib.device)
+        device = kwargs.get('device', "cpu")
+        return torch.as_tensor(arr, device=device)
 
     @staticmethod
     def from_numpy(arr, **kwargs):
-        return torch.as_tensor(arr, device=torchlib.device).double()
+        device = kwargs.get('device', "cpu")
+        return torch.as_tensor(arr, device=device)
 
     @staticmethod
     def dtype(arr):
@@ -113,7 +112,8 @@ class torchlib(cohlib):
 
     @staticmethod
     def random(shape, **kwargs):
-        return torch.rand(shape, device=torchlib.device)
+        device = kwargs.get('device', "cpu")
+        return torch.rand(shape, device=device)
 
     @staticmethod
     def moveaxis(arr, src, dst):
@@ -231,7 +231,8 @@ class torchlib(cohlib):
 
     @staticmethod
     def full(shape, fill_value, **kwargs):
-        return torch.full(shape, fill_value, device=torchlib.device)
+        device = kwargs.get('device', "cpu")
+        return torch.full(shape, fill_value, device=device)
 
     @staticmethod
     def print(arr, **kwargs):
@@ -404,7 +405,7 @@ class torchlib(cohlib):
     def center_of_mass(arr):
         normalizer = torch.sum(arr)
         shape = arr.shape
-        ranges = [torch.arange(shape[i], device=torchlib.device) for i in range(arr.ndim)]
+        ranges = [torch.arange(shape[i], device=arr.device) for i in range(arr.ndim)]
         grids = torch.meshgrid(*ranges)
         com = [(torch.sum(arr * grids[i]) / normalizer).tolist() for i in range(arr.ndim)]
         return com
@@ -510,15 +511,14 @@ class torchlib(cohlib):
 
     @staticmethod
     def pad(arr, padding):
-        raise NotImplementedError("Pad not implemented.")
-        # if isinstance(padding, tuple) or isinstance(padding, list):
-        #     # convert the padding in numpy format ((px0,px1),(py0,py1),(pz0,pz1)) to torch format
-        #     # (px0,px1,py0,py1,pz0,pz1)
-        #     padding = list(sum(padding, ()))
-        #     padding.reverse() # in torch it starts from the last dim
-        # elif isinstance(padding, int):
-        #     padding = (padding,) * arr.ndim * 2
-        # return torch.nn.functional.pad(arr, padding)
+        if isinstance(padding, tuple) or isinstance(padding, list):
+            # convert the padding in numpy format ((px0,px1),(py0,py1),(pz0,pz1)) to torch format
+            # (px0,px1,py0,py1,pz0,pz1)
+            padding = list(sum(padding, ()))
+            padding.reverse() # in torch it starts from the last dim
+        elif isinstance(padding, int):
+            padding = (padding,) * arr.ndim * 2
+        return torch.nn.functional.pad(arr, padding)
 
     @staticmethod
     def histogram2d(meas, rec, n_bins=100, log=False):
@@ -566,8 +566,8 @@ class torchlib(cohlib):
 
     @staticmethod
     def norm(arr, ord=None, axis=None, keepdim=True):
-        raise NotImplementedError("Norm not implemented.")
-        # return torch.linalg.norm(arr, ord=ord, dim=axis, keepdim=keepdim)
+        #raise NotImplementedError("Norm not implemented.")
+        return torch.linalg.norm(arr, ord=ord, dim=axis, keepdim=keepdim)
 
     @staticmethod
     def clean_default_mem():
