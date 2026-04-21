@@ -18,7 +18,9 @@ classifiers = [
 ]
 license-files = ["LICENSE"]
 
-dependencies = [
+dependencies = ['torch; sys_platform == "darwin"',
+                'torchvision; sys_platform == "darwin"',
+                'torchaudio; sys_platform == "darwin"',
                 'numpy',
                 'scikit-learn',
                 'tifffile',
