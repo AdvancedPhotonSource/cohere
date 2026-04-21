@@ -57,7 +57,7 @@ Run the following commands::
     conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
     conda activate <env_name>
 
-Note: When installing the cohere project with newer python versions it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project. We found the following packages needed to be installed.
+    Note: When installing the cohere project with newer python versions it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project. We found the following packages needed to be installed.
 
     conda install -c conda-forge  xrayutilities  # Mac
     conda install -c conda-forge  xrayutilities matplotlib  # Windows
