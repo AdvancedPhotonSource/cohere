@@ -21,16 +21,13 @@ The cohere project consists of three modules and each of them is a separate pack
 
 If using cupy library (for Linux and Windows)::
 
-    conda install cupy=13.6.0 -c conda-forge   # Linux, where the cupy version is compatible with cuda driver; this version is compatible with CUDA 12.9
-    pip install cupy-cuda13x    # Windows, where cuda major version is 13 
+    pip install cupy-cuda13x    # where cuda major version is 13
 
-If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac)::
+If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac).
+Install the nightly version with the corresponding CUDA driver (example CUDA 13.2) support using the following command::
 
-    pip install torch torchvision torchaudio    # check the note below if the driver is incompatible
-
-Note: If you want to use the latest torch library, you can install the nightly version with the corresponding cuda driver (example CUDA 12.9) support using the following command::
-
-    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
+    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu132
+    Note: make sure your CUDA driver matches this command
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 
@@ -72,16 +69,13 @@ Run the following commands::
 
 If using cupy library (for Linux and Windows)::
 
-    conda install cupy=13.6.0 -c conda-forge   # Linux, where the cupy version is compatible with cuda driver; this version is compatible with CUDA 12.9
-    pip install cupy-cuda13x    # Windows, where cuda major version is 13 
+    pip install cupy-cuda13x    # where cuda major version is 13
 
-If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac)::
+If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac).
+Install the nightly version with the corresponding CUDA driver (example CUDA 13.2) support using the following command::
 
-    pip install torch torchvision torchaudio    # check the note below if the driver is incompatible
-
-Note: If you want to use the latest torch library, you can install the nightly version with the corresponding cuda driver (example CUDA 12.9) support using the following command::
-
-    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
+    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu132
+    Note: make sure your CUDA driver matches this command
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 
