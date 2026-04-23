@@ -7,13 +7,15 @@ Official Release Installation
 =============================
 Create and activate conda environment::
 
-    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
+    conda create -n <env_name> -c conda-forge python=3.14
     conda activate <env_name>
 
 Note: When installing the cohere project with newer python versions it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project. We found the following packages needed to be installed.::
 
-    conda install -c conda-forge  xrayutilities  # Mac
-    conda install -c conda-forge  xrayutilities matplotlib  # Windows
+    mamba install -c conda-forge mpi4py pyzmq  # Linux
+    conda install -c conda-forge PyQt6  # Linux
+    conda install -c conda-forge mpi4py pyzmq xrayutilities  # Mac
+    conda install -c conda-forge mpi4py pyzmq xrayutilities matplotlib  # Windows
 
 The cohere project consists of three modules and each of them is a separate package in PyPi.::
 
@@ -48,13 +50,15 @@ This will install the latest development. This installation might be right for a
 Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and three submodules: cohere-ui, cohere_beamlines, and cohere_examples.
 Run the following commands::
 
-    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
+    conda create -n <env_name> -c conda-forge python=3.14
     conda activate <env_name>
 
     Note: When installing the cohere project with newer python versions it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project. We found the following packages needed to be installed.
 
-    conda install -c conda-forge  xrayutilities  # Mac
-    conda install -c conda-forge  xrayutilities matplotlib  # Windows
+    mamba install -c conda-forge mpi4py pyzmq  # Linux
+    conda install -c conda-forge PyQt6  # Linux
+    conda install -c conda-forge mpi4py pyzmq xrayutilities  # Mac
+    conda install -c conda-forge mpi4py pyzmq xrayutilities matplotlib  # Windows
 
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
