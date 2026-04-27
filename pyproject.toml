@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cohere_core"
-version = "4.5.1"
+version = "4.5.2"
 authors = [
   { name="Barbara Frosik", email="bfrosik@anl.gov" },
   { name="Ross Harder", email="rharder@anl.gov" }
@@ -21,7 +21,6 @@ license-files = ["LICENSE"]
 dependencies = ['torch; sys_platform == "darwin"',
                 'torchvision; sys_platform == "darwin"',
                 'torchaudio; sys_platform == "darwin"',
-                'numpy',
                 'scikit-learn',
                 'tifffile',
                 'psutil',
@@ -29,8 +28,9 @@ dependencies = ['torch; sys_platform == "darwin"',
                 'matplotlib',
                 'scipy',
                 'sphinx',
-                'sphinx-pyproject'
-                ]
+                'sphinx-pyproject',
+                'numpy>=2.0'
+               ]
 
 [tool.setuptools.packages.find]
     where = ["src"]
