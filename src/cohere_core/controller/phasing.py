@@ -383,11 +383,6 @@ class Rec:
 
     def next(self):
         self.iter = self.iter + 1
-        for cb in view_ut._iter_callbacks:
-            try:
-                cb(self)
-            except Exception as e:
-                print(f'iter callback error: {e}')
 
     def lowpass_filter_operation(self):
         args = (self.data, self.iter)

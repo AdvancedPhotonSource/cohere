@@ -11,14 +11,11 @@ This module provides:
   a PyVista backend renders 3D volumes).
 - ``MatplotlibBackend``: the existing matplotlib-based viewer logic, lifted
   out of ``LiveViewer`` and made into a backend.
-- ``add_iter_callback`` / ``remove_iter_callback`` / ``clear_iter_callbacks``:
-  generic per-iteration subscription independent of ``live_trigger``.
-  Callbacks are fired once per iteration from inside ``Rec.next()``.
 """
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Optional
 
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
@@ -226,33 +223,6 @@ def set_default_live_backend(backend: Optional[LiveViewBackend]):
 
 def get_default_live_backend() -> Optional[LiveViewBackend]:
     return _default_backend
-
-
-_iter_callbacks: List[Callable] = []
-
-
-def add_iter_callback(fn: Callable):
-    """Subscribe a per-iteration callback fired from ``Rec.next()``.
-
-    ``fn(rec)`` runs once per iteration with the live ``Rec`` instance;
-    inspect ``rec.iter``, ``rec.errs``, ``rec.ds_image``, ``rec.support``
-    directly. Throttle inside ``fn`` with ``if rec.iter % N == 0`` if you
-    want sparser events.
-
-    Callbacks are process-global and shared across all ``Rec`` instances.
-    Exceptions are caught and printed; a bad callback can't break the
-    iteration loop.
-    """
-    _iter_callbacks.append(fn)
-
-
-def remove_iter_callback(fn: Callable):
-    if fn in _iter_callbacks:
-        _iter_callbacks.remove(fn)
-
-
-def clear_iter_callbacks():
-    _iter_callbacks.clear()
 
 
 class LiveViewer:
