@@ -482,14 +482,11 @@ class Rec:
         print(f'------iter {self.iter}   error {self.errs[-1]}')
 
     def live_operation(self):
-        # self.ds_image, self.support = dvut.center_sync(self.ds_image, self.support, False)
-        # ctr = self.dims[2] // 2
-        # slice = np.s_[:,:,ctr]
-        # not centering image, but need to find the slice
-        com = devlib.center_of_mass(devlib.absolute(self.ds_image))
-        slice = np.s_[:, :, int(com[2])]
+        ds, sup = self.viewer._backend.select_singlepeak_data(
+            self.ds_image, self.support, devlib,
+        )
         title = f"Iteration: {self.iter}/{self.iter_no}\nError: {self.errs[-1]}"
-        self.viewer.update_singlepeak(self.ds_image[slice], self.errs, self.support[slice], title)
+        self.viewer.update_singlepeak(ds, self.errs, sup, title)
 
     def get_ratio(self, divident, divisor):
         ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
