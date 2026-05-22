@@ -304,7 +304,10 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
                     flow_arr[i] = fill_trigger_row(params[trigger_name], iter_no, last_trig)
                     # special case
                     if flow_item == 'phc_operation':
-                        # Assuming phc trigger is configured with upper limit
+                        # phc should be run only at the begginning of flow, but for the sake of consistency
+                        # add fake limit
+                        if len(params[trigger_name]) == 2:
+                            params[trigger_name] = params[trigger_name] + [-1]
                         reset_iter = min(iter_no - 1, params[trigger_name][2] + 1)
                         flow_arr[i-1][reset_iter] = 1
         elif flow_item == 'set_prev_pc' and pc_start is not None:
