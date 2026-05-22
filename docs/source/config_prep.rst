@@ -51,6 +51,14 @@ Parameters
 
     max_crop = [200,200]
 
+- do_RSM
+
+| Optional, boolean conveying if the reciprocal space mapping will be generated.
+
+::
+
+    do_RSM = True
+
 - remove_outliers
 
 | Optional, boolean parameter for auto removal of outlier scans in large data sets.

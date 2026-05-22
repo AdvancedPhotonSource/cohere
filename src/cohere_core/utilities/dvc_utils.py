@@ -470,7 +470,7 @@ def fast_shift(arr, shifty, fill_val=0):
     Shifts array by the shifty parameter.
 
     :param arr:  array to shift
-    :param shifty: an array of integers/shifts in each dimension
+    :param shifty: a list of integers/shifts in each dimension
     :param fill_val: float, value to fill shifted, defaults to 0
     :return: shifted array
     """
