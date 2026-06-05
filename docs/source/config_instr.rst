@@ -41,14 +41,6 @@ All the listed parameters are mandatory for the 1-IDE beamline.
 
 Parameters
 ==========
-- diffractometer
-
-| Name of diffractometer used in experiment.
-
-::
-
-    diffractometer = "1ide"
-
 - specfile
 
 | Optional (but necessary when the parsed parameters are not provided), specfile recorded when the experiment was conducted.
@@ -161,12 +153,6 @@ Parsed parameters
 
     scanmot = "aero"
 
-- scanmot_del:
-
-::
-
-    scanmot_del = 0.004999999999999997
-
 
 beamline aps_7idd
 -----------------
@@ -174,14 +160,6 @@ All the listed parameters are mandatory for the 7-IDD beamline.
 
 Parameters
 ==========
-- diffractometer
-
-| Name of diffractometer used in experiment.
-
-::
-
-    diffractometer = "7iddrobot"
-
 - specfile
 
 | Optional (but necessary when the parsed parameters are not provided), specfile recorded when the experiment was conducted.
@@ -294,12 +272,6 @@ Parsed parameters
 
     scanmot = "aero"
 
-- scanmot_del:
-
-::
-
-    scanmot_del = 0.004999999999999997
-
 - detector
 
 | Detector name
@@ -315,14 +287,6 @@ All the listed parameters are mandatory for the 20-IDE beamline.
 
 Parameters
 ==========
-- diffractometer
-
-| Name of diffractometer used in experiment.
-
-::
-
-    diffractometer = "7iddrobot"
-
 - data_dir
 
 | directory where the raw experiment data is stored
@@ -405,14 +369,6 @@ The diffractometer is mandatory parameter for the 34-IDC beamline. If specfile i
 
 Parameters
 ==========
-- diffractometer
-
-| Mandatory, name of diffractometer used in experiment
-
-::
-
-    diffractometer = "34idc"
-
 - specfile
 
 | Optional (but necessary when the parsed parameters are not provided), specfile recorded when the experiment was conducted.
@@ -521,12 +477,6 @@ Parsed parameters
 
     scanmot = "th"
 
-- scanmot_del
-
-::
-
-    scanmot_del = 0.005
-
 - detector
 
 | detector name
@@ -540,14 +490,6 @@ beamline esrf_id01
 
 Parameters
 ==========
-- diffractometer
-
-| Mandatory, name of diffractometer used in experiment.
-
-::
-
-    diffractometer = "id01"
-
 - detector
 
 | Detector name
@@ -569,14 +511,6 @@ beamline Petra3_P10
 
 Parameters
 ==========
-- diffractometer
-
-| Mandatory, name of diffractometer used in experiment.
-
-::
-
-    diffractometer = "P10sixc"
-
 - data_dir
 
 | Directory where experiment data is stored; contains subdirectories related to samples.
@@ -674,12 +608,6 @@ Parsed parameters
 ::
 
     scanmot = "th"
-
-- scanmot_del
-
-::
-
-    scanmot_del = 0.005
 
 - detector
 
