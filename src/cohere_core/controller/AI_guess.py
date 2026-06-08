@@ -233,7 +233,7 @@ def run_AI(data, model_file, dir):
                                         th=0.1,
                                         uw=0)
 
-    pred_obj = preds_amp * np.exp(1j * preds_phi)
+    pred_obj = preds_amp.astype(np.float64) * np.exp(1j * preds_phi.astype(np.float64))
 
     # match object size with the input data
     pred_obj = ut.resample(pred_obj, inshape)
