@@ -3,34 +3,37 @@ develop
 =======
 | This chapter has info for developers.
 
-Adding new trigger
-==================
-The design allows to add a new feature in a standardized way. Typical feature is defined by a trigger and supporting parameters. The following modifications/additions need to be done to add a new feature:
-    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name ending with '_operation' to the self.iter_functions list in the correct order.
-    - Implement the new trigger function in cohere_core/controller/phasing.py, Rec class.
-    - In cohere_core/controller/phasing.py add code to set any new defaults when creating Rec object.
-    - In utilities/config_verifier.py add code to verify added parameters.
-
-Adding new sub-trigger
-======================
-If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
-    - In cohere_core/controller/op_flow.py add entry in the sub_triggers dictionary, where key is the arbitrary assigned mnemonics, and value is the trigger name.
-    - In cohere_core/controller/phasing.py, Rec.init function, create_feat_objects sub-function, add the new feature object, created the same way as shrink_wrap_obj, and other features.
-    - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with args.
-    - in cohere_core/controller/features.py add new feature class.
-
-       | The constructor factory function create should have a new lines to construct the new object.
-       | The feature class should be subclass of Feature and
-       | should have implemented create_obj function that creates sub-object(s) and
-       | should have defined the sub-object(s) class(es). The embedded class contains the apply_trigger function that has the trigger code. Some features can be configured to different types and therefore multiple classes can be defined.
-       |
-       | The easiest way to implement the feature is to copy one already implemented and modify.
-
-Adding new algorithm
+Adding a new trigger
 ====================
-The algorithm sequence defines functions executed during modulus projection and during modulus. Adding new algorithm requires the following steps:
-    - In cohere_core/controller/op_flow.py add entry in the algs dictionary, where key is the mnemonic used in algorithm_sequence, and value is the tuple defining functions, ex: 'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er')
-    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name to the self.iter_functions list in the correct order.
+The design allows to add a new feature in a structured way. Typical feature is defined by a trigger and supporting parameters. Refer to  :ref:`formula` for the design description. The following modifications/additions are needed when adding a new feature named <new_feature>:
+    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name '<new_feature>_operation' to the self.iter_functions list in the correct order. Note: If the order of functions executed during iterations should be different, one can subclass the Rec class and write own constructor overriding the 'iter_functions' field.
+    - Implement the '<new_feature>_operation' function in cohere_core/controller/phasing.py, Rec class. Add necessary parameters.
+    - In cohere_core/controller/phasing.py add code to set any new defaults if applicable when creating Rec object.
+    - In utilities/config_verifier.py add code to verify added parameters.
+    - The feature will be available in cohere_core and can be used from command line interface. If the GUI support is wanted, modify the cohere_gui.py file to add the feature.
+
+Adding a new sub-trigger
+========================
+If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
+    - Assign a mnemonics for the feature that will be used to identify it in the algorithm sequence.
+    - In cohere_core/controller/op_flow.py add entry in the 'sub_triggers' dictionary, where key is the arbitrary assigned mnemonics, and value is the trigger name.
+    - in cohere_core/controller/features.py add new feature with the following steps:
+
+       - Add feature class that inherits from 'TriggeredOp' class. One feature can have different method, including different parameters. Therefore the feature class may contain multiple classes with different implementations, as aggregate, or at least one class.
+       - Add code in the constructor factory function 'create' to construct the new feature object.
+       - The feature class should have implemented 'create_obj' function that creates the aggregate object(s) according to parameters. It is recommended that parameters are verified and exception raised in case of error.
+       - The aggregate class(es) should implement the 'apply_trigger' function with the trigger code.
+
+    - In cohere_core/controller/phasing.py, 'init_iter_loop' function, add the new feature object, under comment: ' # create the trgger/sub-trigger objects' created using constructor factory, the same way as shrink_wrap_obj, and other features.
+    - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with args.
+
+       | Note: The easiest way to implement the feature is to copy one already implemented and modify following the recipe above.
+
+Adding a new algorithm
+======================
+The algorithm sequence defines functions executed during modulus projection and during modulus stages. Adding new algorithm requires the following steps:
+    - In cohere_core/controller/op_flow.py add entry in the 'algs' dictionary, where key is the mnemonic used in algorithm_sequence, and value is the tuple defining functions, ex: 'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er')
+    - In cohere_core/controller/phasing.py, Rec constructor, insert a new function name, implementation of the new algorithm, to the self.iter_functions list in the correct order.
     - In cohere_core/controller/phasing.py, Rec class add the new algorithm function(s).
 
 Pypi Build

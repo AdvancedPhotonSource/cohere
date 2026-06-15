@@ -4,6 +4,7 @@
 Execution formula
 =================
 | The "config_rec" file defines parameters used during reconstruction process.
+| The execution sequence order during an iteration is hardcoded and defined by iter_functions field in Rec class. Not all of the functions are executed during each iteration.
 | The execution sequence is determined by algorithm_sequence parameter, triggers, and sub-triggers.
 | Algorithm sequence defines which projection algorithm is executed in each iteration. Cohere supports the following projection algorithms: ER (error reduction), HIO (hybrid input-output), SF (solvent flipping), and RAAR (relaxed averaged alternating reflectors). The algorithms are described in this publication: https://pubs.aip.org/aip/rsi/article/78/1/011301/349838/Invited-Article-A-unified-evaluation-of-iterative.
 | Triggers define iterations at which the corresponding triggered operations are active.
@@ -23,7 +24,7 @@ Trigger
 Sub-Trigger
 ===========
 | For sub-trigger configuration, the trigger is a list of triggers, i.e. a list of lists. Each internal list is a sub-trigger.
-| The following features: shrink wrap (SW), lowpass filter (LPF), and phase constrain (PHC) can be defined as sub-triggers. The literals listed in parenthesis are used to define the sub-triggers in algorithm_sequence.
+| The following features: shrink wrap (SW), and phase constrain (PHC) can be defined as sub-triggers. The literals listed in parenthesis are used to define the sub-triggers in algorithm_sequence.
 | For example a shrink_wrap_trigger = [[5, 1, 100], [0, 3], [5]] defines sub-triggers: SW0, SW1, SW2 respectively.
 | Since the sub-triggers are associated with algorithm sequence, they must be attached to the projection algorithm in algorithm_sequence parameter, for example: 20*ER.SW0 + 180*HIO.SW1 + 20*ER.SW2 + 180*HIO.SW1 +20*ER.SW0.
 | In this case the first sub-trigger SW0 will be applied during the first 20 iterations, then during next 180 iterations the trigger SW1 is applied, and so on.
