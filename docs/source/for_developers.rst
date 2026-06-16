@@ -17,12 +17,12 @@ Adding a new sub-trigger
 If the new feature will be used in a context of sub-triggers, in addition to the above steps, the following modifications/additions need to be done:
     - Assign a mnemonics for the feature that will be used to identify it in the algorithm sequence.
     - In cohere_core/controller/op_flow.py add entry in the 'sub_triggers' dictionary, where key is the arbitrary assigned mnemonics, and value is the trigger name.
-    - in cohere_core/controller/features.py add new feature with the following steps:
+    - In cohere_core/controller/features.py add new feature with the following steps:
 
-       - Add feature class that inherits from 'TriggeredOp' class. One feature can have different method, including different parameters. Therefore the feature class may contain multiple classes with different implementations, as aggregate, or at least one class.
-       - Add code in the constructor factory function 'create' to construct the new feature object.
-       - The feature class should have implemented 'create_obj' function that creates the aggregate object(s) according to parameters. It is recommended that parameters are verified and exception raised in case of error.
+       - Add feature class that inherits from 'TriggeredOp' class. One feature can have different method, including different parameters. Therefore, the feature class may contain multiple classes with different implementations, as aggregate, or at least one class.
        - The aggregate class(es) should implement the 'apply_trigger' function with the trigger code.
+       - The feature class should have implemented 'create_obj' function that creates the aggregate object(s) according to parameters. It is recommended that parameters are verified and exception raised in case of error.
+       - Add code in the constructor factory function 'create' to construct the new feature object.
 
     - In cohere_core/controller/phasing.py, 'init_iter_loop' function, add the new feature object, under comment: ' # create the trgger/sub-trigger objects' created using constructor factory, the same way as shrink_wrap_obj, and other features.
     - In cohere_core/controller/phasing.py, Rec class add the trigger function. The code inside should call the trigger on the feature object with args.
