@@ -92,16 +92,18 @@ class Rec:
                                self.reset_phc_correction,
                                self.phc_operation,
                                self.to_reciprocal_space,
-                               self.new_func_operation,
+                            #    self.new_feature_operation,
                                self.pc_operation,
                                self.pc_modulus,
                                self.modulus,
+                            #    self.global_min_operation,
                                self.set_prev_pc,
                                self.to_direct_space,
                                self.er,
                                self.hio,
                                self.sf,
                                self.raar,
+                            #    self.bla,
                                self.twin_operation,
                                self.average_operation,
                                self.progress_operation,
@@ -117,6 +119,8 @@ class Rec:
         params['hio_beta'] = params.get('hio_beta', 0.9)
         params['raar_beta'] = params.get('raar_beta', 0.45)
         params['initial_support_area'] = params.get('initial_support_area', (.5, .5, .5))
+        # params['new_param'] = params.get('new_param', 1)
+
         if 'twin_trigger' in params:
             params['twin_halves'] = params.get('twin_halves', (0, 0))
         if 'pc_interval' in params and 'pc' in params['algorithm_sequence']:
@@ -261,6 +265,8 @@ class Rec:
                 self.shrink_wrap_obj = ft.create('shrink_wrap', self.params, feats)
             if 'phc_trigger' in self.params:
                 self.phc_obj = ft.create('phc', self.params, feats)
+            # if 'global_min_trigger' in self.params:
+            #     self.global_min_obj = ft.create('global_min', self.params, feats)
         except Exception as e:
             if self.debug:
                 raise
@@ -343,6 +349,13 @@ class Rec:
         :param only_image: will save only image if True, otherwise all the results are saved. By default all results are saved.
         :return:
         """
+        # # if global min feature is active, the best image will be saved instead
+        # if 'global_min_trigger' in self.params:
+        #     self.ds_iamge, gm_err = self.global_min_obj.get_best()
+        #     # need to run shrink wrap to find support
+        #     self.support = dvut.shrink_wrap(self.ds_image, .1, 1.0)
+        #     print('global minimum error', gm_err)
+
         mx = devlib.amax(devlib.absolute(self.ds_image))
         self.ds_image = self.ds_image / mx
 
@@ -405,9 +418,8 @@ class Rec:
     def to_reciprocal_space(self):
         self.rs_amplitudes = devlib.ifft(self.ds_image)
 
-    def new_func_operation(self):
-        self.params['new_param'] = 1
-        print(f'in new_func_trigger, new_param {self.params["new_param"]}')
+    # def new_feature_operation(self):
+    #     print(f'in new_feature_trigger, new_param {self.params["new_param"]}')
 
     def pc_operation(self):
         self.pc_obj.update_partial_coherence(devlib.absolute(self.rs_amplitudes))
@@ -427,6 +439,11 @@ class Rec:
                                       0)) / dvut.get_norm(self.iter_data)
         self.errs.append(float(error))
         self.rs_amplitudes *= ratio
+
+    # def global_min_operation(self):
+    #     args = (self.ds_image, self.errs[-1])
+    #     self.global_min_obj.apply_trigger(*args)
+    #     print('updating global min image')
 
     def set_prev_pc(self):
         self.pc_obj.set_previous(devlib.absolute(self.rs_amplitudes))
@@ -452,6 +469,10 @@ class Rec:
         self.ds_image = (self.params['raar_beta']
                          * (self.support * self.phc_correction * self.ds_image_proj + self.ds_image)
                          + (1 - 2 * self.params['raar_beta']) * self.ds_image_proj)
+
+    # def bla(self):
+    #     print('bla ')
+    #     self.ds_image = self.ds_image_proj * self.support
 
     def twin_operation(self):
         # TODO this will work only for 3D array, but will the twin be used for 1D or 2D?

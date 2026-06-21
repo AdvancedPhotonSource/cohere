@@ -15,14 +15,16 @@ algs = {'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er'),
         'ERpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'er'),
         'HIOpc': ('to_reciprocal_space', 'pc_modulus', 'to_direct_space', 'hio'),
         'SF': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'sf'),
-        'RAAR': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'raar')
+        'RAAR': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'raar'),
+        # 'BLA': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'bla'),
         }
 
 # This map keeps the names of triggers that can be configured as sub-trigger, i.e. be a trigger for the iteration span
 # defined by preceding algorithm. The key is the trigger name and value is the mnemonic. The mnemonic is used in the
 # configuration.
 sub_triggers = {'SW' : 'shrink_wrap_trigger',
-             'PHC' : 'phc_trigger'}
+             'PHC' : 'phc_trigger',
+            #  'GM' : 'global_min_trigger'}
 
 # This list contains triggers that will be active at the last iteration defined by trigger, despite
 # not being a trigger calculated by the step formula.

@@ -288,6 +288,31 @@ class ShrinkWrap(TriggeredOp):
                 raise ValueError(msg)
 
 
+# class GlobalMin(TriggeredOp):
+#     def __init__(self, trig_op):
+#         super().__init__(trig_op)
+#         self.best_image = None
+#         self.min_error = 1.0
+
+#     class BestImage:
+#         def __init__(self, GMin):
+#             self.GMin = GMin
+
+#         def apply_trigger(self, *args):
+#             ds_image = args[0]
+#             error = args[1]
+#             if error < self.GMin.min_error:
+#                 self.GMin.best_image = ds_image
+#                 self.GMin.min_error = error
+
+#     def get_best(self):
+#         return (self.best_image, self.min_error)
+
+
+#     def create_obj(self, params, index=None, beg=None, end=None):
+#         return self.BestImage(self)
+
+
 class PhaseConstrain(TriggeredOp):
     def __init__(self, trig_op):
         super().__init__(trig_op)
@@ -330,6 +355,8 @@ def create(trig_op, params, trig_op_info):
         to = ShrinkWrap(trig_op)
     if trig_op == 'phc':
         to = PhaseConstrain(trig_op)
+    # if trig_op == 'global_min':
+    #     to = GlobalMin(trig_op)
 
     # this function sets self.objs and self.f and creates all objects
     # It may throw exception
