@@ -24,7 +24,8 @@ algs = {'ER': ('to_reciprocal_space', 'modulus', 'to_direct_space', 'er'),
 # configuration.
 sub_triggers = {'SW' : 'shrink_wrap_trigger',
              'PHC' : 'phc_trigger',
-            #  'GM' : 'global_min_trigger'}
+            #  'GM' : 'global_min_trigger',
+            }
 
 # This list contains triggers that will be active at the last iteration defined by trigger, despite
 # not being a trigger calculated by the step formula.
