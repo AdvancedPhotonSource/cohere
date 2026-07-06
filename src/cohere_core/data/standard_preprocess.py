@@ -36,7 +36,7 @@ def prep(beamline_full_datafile_name, **kwargs):
     :param beamline_full_datafile_name: full path of tif file containing beamline preprocessed data
     :param kwargs:
         data_dir : str
-            directory where prepared data will be saved, default <experiment_dir>/phasing_data
+            directory where prepared data will be saved, if not given, it defaults to the directory where the data file is.
         alien_alg : str
             Acronym of method used to remove aliens. Possible options are: ‘block_aliens’, ‘alien_file’, and ‘AutoAlien1’. The ‘block_aliens’ algorithm will zero out defined blocks, ‘alien_file’ method will use given file as a mask, and ‘AutoAlien1’ will use auto mechanism to remove aliens. Each of these algorithms require different parameters
         aliens : list
@@ -80,8 +80,11 @@ def prep(beamline_full_datafile_name, **kwargs):
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
-        # assuming the directory structure and naming follows cohere-ui experiment directory structure
-        data_dir = prep_data_dir.replace(os.sep, '/').replace('preprocessed_data', 'phasing_data')
+        # result will be saved in the same directory as data
+        # check if the given filename is 'data.tif' and exit so the data file is not overridden
+        if beamline_datafile_name == 'data.tif':
+            raise AttributeError("Define data_dir or rename the data file so it won't be overridden by 'data.tif' result file")
+        data_dir = prep_data_dir.replace(os.sep, '/')
 
     if 'alien_alg' in kwargs:
         data = at.remove_aliens(beam_data, kwargs, data_dir)

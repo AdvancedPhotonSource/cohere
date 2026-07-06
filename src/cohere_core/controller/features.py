@@ -13,7 +13,7 @@ __copyright__ = "Copyright (c) 2016, UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = ['Pcdi',
            'TriggeredOp',
-           'ShrinkWrap',
+           'ShrinkWrapGauss',
            'PhaseConstrain',
            'LowPassFilter']
 
@@ -143,7 +143,7 @@ class TriggeredOp(ABC):
         :param args: variable parameters depending on the concrete feature
         :return: depends on the concrete feature
         """
-        # the f is either update_amp_seq function or update_amp_seq
+        # the f is either apply_trigger_seq function or apply_trigger_obj
         # The f is set in constructor depending on whether the trigger
         # was defined for the entire span of iterations or multiple
         # subtriggers were defined in algorithm sequence
@@ -194,7 +194,7 @@ class TriggeredOp(ABC):
                 self.f = self.apply_trigger_obj
 
 
-class ShrinkWrap(TriggeredOp):
+class ShrinkWrapGauss(TriggeredOp):
     def __init__(self, trig_op):
         super().__init__(trig_op)
 
@@ -207,110 +207,53 @@ class ShrinkWrap(TriggeredOp):
             ds_image = args[0]
             return dvut.shrink_wrap(ds_image, self.threshold, self.gauss_sigma)
 
+    def create_obj(self, params, index=None, beg=None, end=None):
+        sigma = params.get('shrink_wrap_gauss_sigma', None)
+        threshold = params.get('shrink_wrap_threshold', None)
+        # for now cohere supports only Gauss type, so the following parameters are mandatory
+        if sigma is None:
+            msg = 'shrink_wrap_gauss_sigma parameter not defined'
+            raise ValueError(msg)
+        if threshold is None:
+            msg = 'shrink_wrap_threshold parameter not defined'
+            raise ValueError(msg)
+        if index is None:
+            return self.GaussSW(sigma, threshold)
+        else:
+            if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
+                msg = f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}'
+                raise ValueError(msg)
+            sigma = params['shrink_wrap_gauss_sigma'][index]
+            if len(params['shrink_wrap_threshold']) - 1 < index:
+                msg = f'shrink_wrap_threshold not defined for sub-trigger {index}'
+                raise ValueError(msg)
+            threshold = params['shrink_wrap_threshold'][index]
+            return self.GaussSW(sigma, threshold)
 
-    class Gauss1SW:
-        def __init__(self, gauss_sigma, threshold):
-            self.gauss_sigma = gauss_sigma
-            self.threshold = threshold
+
+class GlobalMin(TriggeredOp):
+    def __init__(self, trig_op):
+        super().__init__(trig_op)
+        self.best_image = None
+        self.min_error = 1.0
+
+    class BestImage:
+        def __init__(self, GMin):
+            self.GMin = GMin
 
         def apply_trigger(self, *args):
             ds_image = args[0]
-            return dvut.shrink_wrap(ds_image, self.threshold + .01, self.gauss_sigma)
+            error = args[1]
+            if error < self.GMin.min_error:
+                self.GMin.best_image = ds_image
+                self.GMin.min_error = error
+
+    def get_best(self):
+        return (self.best_image, self.min_error)
 
 
     def create_obj(self, params, index=None, beg=None, end=None):
-        def check_Gauss_type():
-            # for now cohere supports only Gauss type, so the following parameters are mandatory
-            if 'shrink_wrap_gauss_sigma' not in params:
-                msg = 'shrink_wrap_gauss_sigma parameter not defined'
-                raise ValueError(msg)
-            if 'shrink_wrap_threshold' not in params:
-                msg = 'shrink_wrap_threshold parameter not defined'
-                raise ValueError(msg)
-
-        def check_Gauss1_type():
-            # for now cohere supports only Gauss type, so the following parameters are mandatory
-            if 'shrink_wrap_gauss_sigma' not in params:
-                msg = 'shrink_wrap_gauss_sigma parameter not defined'
-                raise ValueError(msg)
-            if 'shrink_wrap_threshold' not in params:
-                msg = 'shrink_wrap_threshold parameter not defined'
-                raise ValueError(msg)
-
-        if 'shrink_wrap_type' not in params:
-            msg = 'shrink_wrap_type parameter not defined'
-            raise ValueError(msg)
-
-        if index is None:
-            sw_type = params['shrink_wrap_type']
-            if sw_type == 'GAUSS':
-                check_Gauss_type()
-                sigma = params['shrink_wrap_gauss_sigma']
-                threshold = params['shrink_wrap_threshold']
-                return self.GaussSW(sigma, threshold)
-            elif sw_type == 'GAUSS1':
-                check_Gauss1_type()
-                sigma = params['shrink_wrap_gauss_sigma']
-                threshold = params['shrink_wrap_threshold']
-                return self.Gauss1SW(sigma, threshold)
-            else:
-                msg = f'{sw_type} shrink wrap type is not supported'
-                raise ValueError(msg)
-        else:
-            if len(params['shrink_wrap_type']) - 1 < index:
-                msg = f'shrink_wrap_type not defined for sub-trigger {index}'
-                raise ValueError(msg)
-            sw_type = params['shrink_wrap_type'][index]
-            if sw_type == 'GAUSS':
-                check_Gauss_type()
-                if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
-                    msg = f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}'
-                    raise ValueError(msg)
-                sigma = params['shrink_wrap_gauss_sigma'][index]
-                if len(params['shrink_wrap_threshold']) - 1 < index:
-                    msg = f'shrink_wrap_threshold not defined for sub-trigger {index}'
-                    raise ValueError(msg)
-                threshold = params['shrink_wrap_threshold'][index]
-                return self.GaussSW(sigma, threshold)
-            elif sw_type == 'GAUSS1':
-                check_Gauss1_type()
-                if len(params['shrink_wrap_gauss_sigma']) - 1 < index:
-                    msg = f'shrink_wrap_gauss_sigma not defined for sub-trigger {index}'
-                    raise ValueError(msg)
-                sigma = params['shrink_wrap_gauss_sigma'][index]
-                if len(params['shrink_wrap_threshold']) - 1 < index:
-                    msg = f'shrink_wrap_threshold not defined for sub-trigger {index}'
-                    raise ValueError(msg)
-                threshold = params['shrink_wrap_threshold'][index]
-                return self.Gauss1SW(sigma, threshold)
-            else:
-                msg = f'{sw_type} shrink wrap type is not supported'
-                raise ValueError(msg)
-
-
-# class GlobalMin(TriggeredOp):
-#     def __init__(self, trig_op):
-#         super().__init__(trig_op)
-#         self.best_image = None
-#         self.min_error = 1.0
-
-#     class BestImage:
-#         def __init__(self, GMin):
-#             self.GMin = GMin
-
-#         def apply_trigger(self, *args):
-#             ds_image = args[0]
-#             error = args[1]
-#             if error < self.GMin.min_error:
-#                 self.GMin.best_image = ds_image
-#                 self.GMin.min_error = error
-
-#     def get_best(self):
-#         return (self.best_image, self.min_error)
-
-
-#     def create_obj(self, params, index=None, beg=None, end=None):
-#         return self.BestImage(self)
+        return self.BestImage(self)
 
 
 class PhaseConstrain(TriggeredOp):
@@ -352,11 +295,11 @@ class PhaseConstrain(TriggeredOp):
 
 def create(trig_op, params, trig_op_info):
     if trig_op == 'shrink_wrap':
-        to = ShrinkWrap(trig_op)
+        to = ShrinkWrapGauss(trig_op)
     if trig_op == 'phc':
         to = PhaseConstrain(trig_op)
-    # if trig_op == 'global_min':
-    #     to = GlobalMin(trig_op)
+    if trig_op == 'global_min':
+        to = GlobalMin(trig_op)
 
     # this function sets self.objs and self.f and creates all objects
     # It may throw exception
