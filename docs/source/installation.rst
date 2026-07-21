@@ -89,7 +89,7 @@ Cohere examples are cloned as one of submodule to cohere project. The examples a
 
 Beamlines specific installation
 ===============================
-For Petra beamline install additional packages::
+For Petra and aps_28idb beamlines install additional packages::
 
     pip install hdf5plugin
 
