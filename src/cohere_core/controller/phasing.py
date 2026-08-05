@@ -132,6 +132,7 @@ class Rec:
         self.need_save_data = False
         self.saved_data = None
         self.debug = kwargs.get('debug', False)
+        self.hpc = kwargs.get('hpc', False)
         # only when phc feature is configured this becomes array
         self.phc_correction = 1
 
@@ -146,17 +147,22 @@ class Rec:
         :return: 0 if successful, -1 otherwise. In debug mode will re-raise exception instead of returning -1.
         """
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        self.dev = "cpu"
-        if device_id != -1:
-            try:
-                self.dev = devlib.set_device(device_id)
-            except Exception as e:
-                if self.debug:
-                    raise
-                print(e)
-                print('may need to restart GUI')
-                return -1
-            
+
+        if self.hpc: # assuming running on hpc only on GPU and device is set through env variable
+            self.dev = os.environ.get('CUDA_VISIBLE_DEVICES')
+        else:
+            if device_id == -1:
+                self.dev = "cpu"
+            else:
+                try:
+                    self.dev = devlib.set_device(device_id)
+                except Exception as e:
+                    if self.debug:
+                        raise
+                    print(e)
+                    print('may need to restart GUI')
+                    return -1
+
         if self.data_file.endswith('tif') or self.data_file.endswith('tiff'):
             try:
                 data_np = ut.read_tif(self.data_file)
