@@ -1,0 +1,21 @@
+ARG CUDA_VERSION=13.0
+ARG PYTORCH_VERSION=2.12.0
+ARG CUDNN_VERSION=9
+
+FROM pytorch/pytorch:${PYTORCH_VERSION}-cuda${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel
+
+WORKDIR /app
+COPY . /src
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libqt6gui6 && \
+    rm -rf /var/lib/apt/lists/* && \
+    python3 -m pip install --root-user-action=ignore --no-cache-dir --upgrade pip && \
+    python3 -m pip install --root-user-action=ignore --no-cache-dir numpy pyzmq cupy && \
+    python3 -m pip install --root-user-action=ignore --no-cache-dir /src && \
+    python3 -m pip install --root-user-action=ignore --no-cache-dir /src/cohere-ui && \
+    python3 -m pip install --root-user-action=ignore --no-cache-dir /src/cohere_beamlines && \
+    rm -rf /src
+
+CMD ["python3"]
