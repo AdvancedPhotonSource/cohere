@@ -18,4 +18,4 @@ RUN apt-get update && \
     python3 -m pip install --root-user-action=ignore --no-cache-dir /src/cohere_beamlines && \
     rm -rf /src
 
-CMD ["python3"]
+CMD ["cohere_gui"]
