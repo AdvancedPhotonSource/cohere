@@ -13,7 +13,6 @@ import os
 import numpy as np
 import cohere_core.data.alien_tools as at
 import cohere_core.utilities.utils as ut
-import cohere_core.utilities.config_verifier as ver
 
 
 __author__ = "Barbara Frosik"
@@ -76,12 +75,12 @@ def prep(beamline_full_datafile_name, **kwargs):
     # The data has been transposed when saved in tif format for the ImageJ to show the right orientation
     beam_data = ut.read_tif(beamline_full_datafile_name)
 
-    prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
     if 'data_dir' in kwargs:
         data_dir = kwargs['data_dir'].replace(os.sep, '/')
     else:
         # result will be saved in the same directory as data
         # check if the given filename is 'data.tif' and exit so the data file is not overridden
+        prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
         if beamline_datafile_name == 'data.tif':
             raise AttributeError("Define data_dir or rename the data file so it won't be overridden by 'data.tif' result file")
         data_dir = prep_data_dir.replace(os.sep, '/')
@@ -147,6 +146,7 @@ def prep(beamline_full_datafile_name, **kwargs):
 
     try:
         # assuming the mask file is in directory of preprocessed data
+        prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
         mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
         mask = np.roll(mask, shift, tuple(range(mask.ndim)))
         ut.save_tif(mask, ut.join(data_dir, 'mask.tif'))

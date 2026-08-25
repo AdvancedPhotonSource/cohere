@@ -329,9 +329,8 @@ def remove_blocks(data, config_map):
         data array with zeroed out aliens
     """
     import ast
-
     if 'aliens' in config_map:
-        aliens = ast.literal_eval(config_map['aliens'])
+        aliens = config_map['aliens']
         for alien in aliens:
             # The ImageJ swaps the x and y axis, so the aliens coordinates needs to be swapped, since ImageJ is used
             # to find aliens
