@@ -18,6 +18,7 @@ import cohere_core.utilities.schemas.exp_schema as exp_schema
 import cohere_core.utilities.schemas.post_schema as post_schema
 import cohere_core.utilities.schemas.recon_schema as recon_schema
 import cohere_core.utilities.schemas.standard_prep_schema as st_prep_schema
+import cohere_core.utilities.schemas.mp_schema as mp_schema
 
 ERROR = 2
 WARNING = 1
@@ -247,6 +248,8 @@ def verify_params(config_name, conf_map):
             return ''   # no mandatory params or groups
         case 'config_instr':
             return ''   # no check as the parameters are checked in code
+        case 'config_mp':
+            schema_file = mp_schema
         case _:
             raise NotImplementedError(f"Parameter presence check not implemented for {config_name}.")
     errors = ''

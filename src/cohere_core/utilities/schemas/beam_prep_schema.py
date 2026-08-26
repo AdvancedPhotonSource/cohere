@@ -37,7 +37,7 @@ BEAM_PREP_FIELDS = [
         },
     ]
 
-MANDATORY = [] # There are mandatory parameters but they are checked in the code
+MANDATORY = []
 
 def get_config_schema():
     return BEAM_PREP_FIELDS
