@@ -101,7 +101,7 @@ def analyze_clusters(arr, labels, nz):
 
     # this selects the nz indicies where labels=-1 (noise)
     noise_pts = tuple([nz[n][labels == -1] for n in range(3)])
-    no_noise = arr
+    no_noise = arr.copy()
 
     # move the points labeled noise into their own array
     # remove the noise out of arr (no_noise is copy of arr)

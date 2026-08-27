@@ -296,16 +296,12 @@ class PhaseConstrain(TriggeredOp):
 def create(trig_op, params, trig_op_info):
     if trig_op == 'shrink_wrap':
         to = ShrinkWrapGauss(trig_op)
-    if trig_op == 'phc':
+    elif trig_op == 'phc':
         to = PhaseConstrain(trig_op)
-    if trig_op == 'global_min':
+    elif trig_op == 'global_min':
         to = GlobalMin(trig_op)
+    else:
+        raise ValueError(f"Unsupported trigger op: {trig_op}")
 
-    # this function sets self.objs and self.f and creates all objects
-    # It may throw exception
     to.create_objs(params, trig_op_info)
     return to
-
-
-
-
