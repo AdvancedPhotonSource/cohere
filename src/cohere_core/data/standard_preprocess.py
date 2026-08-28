@@ -28,9 +28,10 @@ def prep(beamline_full_datafile_name, **kwargs):
         - removing the aliens which is effect of interference. The removal can be done by setting regions or mask file that requires manual inspection of the data file. The removal can be automatic with the AutoAlien1 algorithm.
         - clearing the noise, where values below an amplitude threshold are set to zero. The threshold can be set as a parameter or auto determined.
         - amplitudes are set to sqrt
-        - cropping and padding. If the crop-pad is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions with positive values. After adjusting, the dimensions are adjusted further to find the smallest dimension that is supported by opencl library (multiplier of 2, 3, and 5).
-        - centering - finding the greatest amplitude and locating it at a center of array. If shift center is defined, the center will be shifted accordingly.
+        - cropping and padding. If the crop-pad is negative in any dimension, the array is cropped in this dimension. The cropping is followed by padding in the dimensions with positive values.
         - binning - adding amplitudes of several consecutive points. Binning can be done in any dimension.
+        - adjusting the dimensions to the 'next good dimension' for the package the reconstruction will use.
+        - centering - finding the greatest amplitude and locating it at a center of array. If shift center is defined, the center will be shifted accordingly.
 
     :param beamline_full_datafile_name: full path of tif file containing beamline preprocessed data
     :param kwargs:
@@ -115,43 +116,16 @@ def prep(beamline_full_datafile_name, **kwargs):
             for _ in range(6 - len(crops_pads)):
                 crops_pads.append(0)
     else:
-        # the size still has to be adjusted to the opencl supported dimension
         crops_pads = (0, 0, 0, 0, 0, 0)
-    # adjust the size, either pad with 0s or crop array
     pairs = []
     for i in range(int(len(crops_pads) / 2)):
         pair = crops_pads[2 * i:2 * i + 2]
         pairs.append(pair)
-
-    # next_fast_len parameter should be always True. But it needs to be included
-    # when calling adjust_dimensions functions, as depending on the pkg, the result
-    # could be different. So for the sake of flexibility, the parameter next_fast_len
-    # was added as option in kwargs.
-    next_fast_len = kwargs.get('next_fast_len', True)
-    pkg = kwargs.get('pkg', 'np')
-    data = ut.adjust_dimensions(data, pairs, next_fast_len, pkg)
+    # adjust the size, either pad with 0s or crop array
+    data = ut.adjust_dimensions(data, pairs)
     if data is None:
-        print('check "crop_pad" configuration')
+        print('check "crop_pad" configuration, exiting')
         return
-
-    no_center_max = kwargs.get('no_center_max', False)
-    shift = [0, 0, 0]
-    if not no_center_max:
-        data, shift = ut.center_max(data)
-
-    if 'shift' in kwargs:
-        conf_shift = kwargs['shift']
-        data = np.roll(data, conf_shift, tuple(range(data.ndim)))
-        shift = [s + cs for s, cs in zip(shift, conf_shift)]
-
-    try:
-        # assuming the mask file is in directory of preprocessed data
-        prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
-        mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
-        mask = np.roll(mask, shift, tuple(range(mask.ndim)))
-        ut.save_tif(mask, ut.join(data_dir, 'mask.tif'))
-    except FileNotFoundError:
-        pass
 
     # auto_binning:
     #     # prepare data to make the oversampling ratio ~3
@@ -177,6 +151,31 @@ def prep(beamline_full_datafile_name, **kwargs):
         except:
             print('check "binning" configuration')
             raise
+
+    # correct dimensions to ensure good performance. The 'good' dimension depends on package the
+    # reconstruction will use
+    pkg = kwargs.get('pkg', 'np')
+    data = ut.array_to_good_dims(data, pkg)
+
+    no_center_max = kwargs.get('no_center_max', False)
+#    shift = [0 for _ in range(len(data.shape))] # this is used for mask, move it to cohere_ui
+    if not no_center_max:
+        data, shift = ut.center_max(data)
+
+    if 'shift' in kwargs:
+        conf_shift = kwargs['shift']
+        data = np.roll(data, conf_shift, tuple(range(data.ndim)))
+#        shift = [s + cs for s, cs in zip(shift, conf_shift)] # this is used for mask, move it to cohere_ui
+
+    # this is used for mask, move it to cohere_ui
+    # try:
+    #     # assuming the mask file is in directory of preprocessed data
+    #     prep_data_dir, beamline_datafile_name = os.path.split(beamline_full_datafile_name)
+    #     mask = ut.read_tif(beamline_full_datafile_name.replace(beamline_datafile_name, 'mask.tif'))
+    #     mask = np.roll(mask, shift, tuple(range(mask.ndim)))
+    #     ut.save_tif(mask, ut.join(data_dir, 'mask.tif'))
+    # except FileNotFoundError:
+    #     pass
 
     # save data
     data_file = ut.join(data_dir, 'data.tif')

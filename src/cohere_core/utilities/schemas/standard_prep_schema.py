@@ -64,10 +64,6 @@ STANDARD_PREP_FIELDS = [
     },
     {
         'key': 'crop_pad', 'label': 'crop pad', 'type': 'list', 'element_type': 'int',
-        'description': 'List of scans found to be outliers.',
-    },
-    {
-        'key': 'crop_pad', 'label': 'crop pad', 'type': 'bool',
         'description': 'The data will be padded if positive, and cropped if negative \
                         as follows: [x left, x right, y left, y right, z left, z right].',
     },

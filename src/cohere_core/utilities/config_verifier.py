@@ -95,7 +95,7 @@ def validate_list(value, params_def, param):
         print(f'Info: schema does not define element_type for parameter {param}')
     else:
         ver_elements = [check_type(v, element_type) for v in value]  # validate type of each element in list
-        if not any(ver_elements):  # all are False, so it could be alternate type allowed
+        if not all(ver_elements):  # all are False, so it could be alternate type allowed
             alt_element_types = params_def.get('alt_element_types', None)
             if alt_element_types is None:
                 # it's an error because the elements in the list do not match

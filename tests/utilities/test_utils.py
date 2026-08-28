@@ -7,6 +7,179 @@ import pytest
 import cohere_core.utilities.utils as utils
 
 
+class DummyDevLib:
+    def __init__(self, mapping=None):
+        self.mapping = mapping or {}
+
+    def next_fast_len(self, dim):
+        # Return mapped value if present, otherwise return dim itself
+        return self.mapping.get(dim, dim)
+
+
+def test_get_good_dim_returns_even_fast_len(monkeypatch):
+    """
+    If next_fast_len already returns an even number >= dim,
+    get_good_dim should return it directly.
+    """
+    dummy_lib = DummyDevLib({5: 6})
+
+    monkeypatch.setattr(utils, "get_lib", lambda pkg: dummy_lib)
+
+    result = utils.get_good_dim(5, "np")
+
+    assert result == 6
+
+
+def test_get_good_dim_skips_odd_fast_len(monkeypatch):
+    """
+    If next_fast_len returns an odd number, get_good_dim should keep
+    advancing until it finds an even fast length.
+    """
+    dummy_lib = DummyDevLib({
+        5: 5,  # odd
+        6: 7,  # odd again
+        8: 8,  # finally even
+    })
+
+    monkeypatch.setattr(utils, "get_lib", lambda pkg: dummy_lib)
+
+    result = utils.get_good_dim(5, "np")
+
+    assert result == 8
+
+
+def test_array_to_good_dims_calls_pad_center_with_good_shape(monkeypatch):
+    """
+    array_to_good_dims should compute good dims for each axis and pass
+    the resulting shape into pad_center.
+    """
+    arr = np.zeros((5, 7))
+
+    monkeypatch.setattr(utils, "get_good_dim", lambda d, pkg: d + 2)
+
+    captured = {}
+
+    def fake_pad_center(input_arr, new_shape):
+        captured["arr"] = input_arr
+        captured["shape"] = new_shape
+        return "padded-array"
+
+    monkeypatch.setattr(utils, "pad_center", fake_pad_center)
+
+    result = utils.array_to_good_dims(arr, "np")
+
+    assert result == "padded-array"
+    assert captured["arr"] is arr
+    assert captured["shape"] == (7, 9)
+
+
+def test_adjust_dimensions_positive_pad_1d():
+    """
+    Positive pads should add zeros around the array.
+    1D input is temporarily expanded to 3D and then squeezed back.
+    """
+    arr = np.array([1, 2, 3])
+    pads = [(1, 2)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    expected = np.array([0, 1, 2, 3, 0, 0])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_adjust_dimensions_negative_pad_1d():
+    """
+    Negative pads should crop the array.
+    """
+    arr = np.array([1, 2, 3, 4, 5])
+    pads = [(-1, -2)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    expected = np.array([2, 3])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_adjust_dimensions_mixed_pad_1d():
+    """
+    Mixed negative and positive pads should crop one side and pad the other.
+    """
+    arr = np.array([1, 2, 3, 4])
+    pads = [(-1, 2)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    expected = np.array([2, 3, 4, 0, 0])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_adjust_dimensions_positive_pad_2d():
+    """
+    2D arrays should be expanded internally and then squeezed back to 2D.
+    """
+    arr = np.array([[1, 2], [3, 4]])
+    pads = [(1, 1), (2, 0)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    expected = np.array([
+        [0, 0, 0, 0],
+        [0, 0, 1, 2],
+        [0, 0, 3, 4],
+        [0, 0, 0, 0],
+    ])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_adjust_dimensions_crop_2d():
+    """
+    Cropping in 2D should remove rows/columns as specified.
+    """
+    arr = np.arange(1, 17).reshape(4, 4)
+    pads = [(-1, -1), (-1, -1)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    expected = np.array([
+        [6, 7],
+        [10, 11],
+    ])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_adjust_dimensions_3d_mixed():
+    """
+    Test mixed padding/cropping on a true 3D array.
+    """
+    arr = np.arange(27).reshape(3, 3, 3)
+    pads = [(1, 0), (-1, 1), (0, 2)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    # Manually build expected result
+    cropped = arr[:, 1:, :]  # crop second axis from front by 1
+    expected = np.pad(
+        cropped,
+        pad_width=[(1, 0), (0, 1), (0, 2)],
+        mode="constant",
+        constant_values=0,
+    )
+
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_adjust_dimensions_no_change():
+    """
+    Zero pads should leave the array unchanged.
+    """
+    arr = np.array([[1, 2], [3, 4]])
+    pads = [(0, 0), (0, 0)]
+
+    result = utils.adjust_dimensions(arr, pads)
+
+    np.testing.assert_array_equal(result, arr)
+
+
 def test_join_uses_forward_slashes():
     path = utils.join("a", "b", "c")
     assert path.endswith("a/b/c") or path == "a/b/c"
@@ -37,6 +210,22 @@ def test_crop_center_crops_3d_array_around_center():
     assert np.array_equal(cropped, expected)
 
 
+def test_crop_center_crops_2d_array_around_center():
+    arr = np.arange(5 * 5 ).reshape((5, 5))
+    cropped = utils.crop_center(arr, (3, 3))
+
+    expected = arr[1:4, 1:4]
+    assert np.array_equal(cropped, expected)
+
+
+def test_crop_center_crops_1d_array_around_center():
+    arr = np.arange(5).reshape((5,))
+    cropped = utils.crop_center(arr, (3,))
+
+    expected = arr[1:4]
+    assert np.array_equal(cropped, expected)
+
+
 def test_crop_center_raises_for_ndim_gt_3():
     arr = np.zeros((2, 2, 2, 2))
     with pytest.raises(NotImplementedError):
@@ -57,32 +246,6 @@ def test_pad_center_pads_2d_array_into_center():
     expected = np.zeros((6, 6), dtype=arr.dtype)
     expected[2:4, 2:4] = arr
     assert np.array_equal(padded, expected)
-
-
-def test_adjust_dimensions_pads_array():
-    arr = np.ones((2, 2, 2))
-    out = utils.adjust_dimensions(
-        arr,
-        pads=[(1, 1), (1, 1), (1, 1)],
-        next_fast_len=False
-    )
-
-    assert out.shape == (4, 4, 4)
-    assert np.array_equal(out[1:3, 1:3, 1:3], arr)
-    assert np.sum(out) == 8.0
-
-
-def test_adjust_dimensions_crops_array():
-    arr = np.arange(4 * 4 * 4).reshape((4, 4, 4))
-    out = utils.adjust_dimensions(
-        arr,
-        pads=[(-1, -1), (-1, -1), (-1, -1)],
-        next_fast_len=False
-    )
-
-    expected = arr[1:3, 1:3, 1:3]
-    assert out.shape == (2, 2, 2)
-    assert np.array_equal(out, expected)
 
 
 def test_binning_bins_2d_array_by_summing_blocks():
@@ -155,6 +318,7 @@ def test_read_config_parses_values_and_ignores_comments():
             f.write("c = (1, 2, 3)\n")
             f.write("d = [4, 5]\n")
             f.write("e = True\n")
+            f.write("f = {'a': 1, 'b': 2}\n")
 
         out = utils.read_config(cfg)
 
@@ -163,6 +327,7 @@ def test_read_config_parses_values_and_ignores_comments():
         assert out["c"] == [1, 2, 3]
         assert out["d"] == [4, 5]
         assert out["e"] is True
+        assert out["f"] == {'a': 1, 'b': 2}
 
 
 def test_read_config_returns_none_for_missing_file():
@@ -241,15 +406,3 @@ def test_get_logger_creates_default_log_file():
 # Run with pytest
 #
 # pytest -q
-# Notes
-# A few caveats about the implementation under test:
-#
-# crop_center() is not safe for 1D/2D arrays because it loops over range(3) and indexes shape[i].
-# select_central_object() selects the largest connected component, not necessarily the most central one.
-# save_metrics() appears to write str({er}) literally rather than the numeric error value.
-# get_logger() may add duplicate handlers if reused with the same logger name across tests.
-# If you want, I can also give you:
-#
-# a pytest version with tmp_path fixtures,
-# mocked tests for get_lib, read_tif, and save_tif,
-# or a more complete coverage-oriented suite.

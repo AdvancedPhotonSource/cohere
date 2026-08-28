@@ -49,14 +49,12 @@ __all__ = [
            ]
 
 
-def adjust_dimensions(arr, pads, next_fast_len=True, pkg='np'):
+def adjust_dimensions(arr, pads):
     """
     This function adds to or subtracts from each dimension of the array elements defined by pad. If the pad is positive, the array is padded in this dimension. If the pad is negative, the array is cropped.
 
     :param arr: ndarray, the array to pad/crop
     :param pad: list of pad values, a tuple of two int for each dimension. The values in each tuple will be added/subtracted to the sides of array in corresponding dimension. 
-    :param next_fast_len: bool, whether or not to find the next fast length for each dimension
-    :param pkg: package acronym: 'cp' for cupy, 'torch' for torch, 'np' for numpy
     :return: the padded/cropped and adjusted to opencl compatible format array
     """
    # up the dimensions to 3D
@@ -74,21 +72,28 @@ def adjust_dimensions(arr, pads, next_fast_len=True, pkg='np'):
     new_pad = []
     for i in range(len(dims)):
         pad = pads[i]
-        # find a good dimension and find padding
-        temp_dim = old_dims[i] + pad[0] + pad[1]
-        if next_fast_len and temp_dim > 1:
-            new_dim = get_good_dim(temp_dim, pkg)
-        else:
-            new_dim = temp_dim
-        added = new_dim - temp_dim
+        new_dim = old_dims[i] + pad[0] + pad[1]
         # if the pad is positive
-        pad_front = max(0, pad[0]) + int(added / 2)
+        pad_front = max(0, pad[0])
         pad_end = new_dim - dims[i] - pad_front
         new_pad.append((pad_front, pad_end))
         c_vals.append((0.0, 0.0))
     adjusted = np.pad(cropped, new_pad, 'constant', constant_values=c_vals)
 
     return np.squeeze(adjusted)
+
+
+def array_to_good_dims(arr, pkg):
+    """
+    Returns array with each dimension found to be good for fast Fourier transform and not smaller than given dimension.
+    The original array is in the center.
+
+    :param arr: array to be resized
+    :param pck: python package that will be used for reconstruction: 'np' for numpy, 'cp' for cupy, 'torch' for torch.
+    :return: the array padded to the 'good' dimensions
+    """
+    new_shape = [get_good_dim(d, pkg) for d in arr.shape]
+    return pad_center(arr, tuple(new_shape))
 
 
 def binning(array, binsizes):
@@ -130,30 +135,43 @@ def center_max(arr):
     return np.roll(arr, shift.astype(int), tuple(range(arr.ndim))), shift.astype(int)
 
 
-def crop_center(arr, new_shape):
+def crop_center(arr, crop_shape):
     """
-    This function crops the array to the new size, keeping the center of the array.
-    The new_size must be smaller or equal to the original size in each dimension.
+    Crop the center of a 1D, 2D, or 3D NumPy array.
 
-    :param arr: ndarray, the array to crop
-    :param new_shape: tuple, new size
-    :return: cropped array
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array (1D, 2D, or 3D).
+    crop_shape : int or tuple
+        Desired output shape.
+        - For 1D: int or tuple of length 1
+        - For 2D: tuple of length 2
+        - For 3D: tuple of length 3
+
+    Returns
+    -------
+    np.ndarray
+        Center-cropped array.
     """
-    shape = arr.shape
-    principio = []
-    finem = []
-    for i in range(3):
-        principio.append(int((shape[i] - new_shape[i]) / 2))
-        finem.append(principio[i] + new_shape[i])
-    if len(shape) == 1:
-        cropped = arr[principio[0]: finem[0]]
-    elif len(shape) == 2:
-        cropped = arr[principio[0]: finem[0], principio[1]: finem[1]]
-    elif len(shape) == 3:
-        cropped = arr[principio[0]: finem[0], principio[1]: finem[1], principio[2]: finem[2]]
-    else:
-        raise NotImplementedError
-    return cropped
+    arr = np.asarray(arr)
+
+    # Normalize crop_shape to a tuple
+    if isinstance(crop_shape, int):
+        crop_shape = (crop_shape,)
+    elif len(crop_shape) != arr.ndim:
+        raise ValueError(f"crop_shape must have {arr.ndim} dimensions.")
+
+    if any(c > s for c, s in zip(crop_shape, arr.shape)):
+        raise ValueError("crop_shape cannot be larger than the input array shape.")
+
+    slices = []
+    for dim_size, crop_size in zip(arr.shape, crop_shape):
+        start = (dim_size - crop_size) // 2
+        end = start + crop_size
+        slices.append(slice(start, end))
+
+    return arr[tuple(slices)]
 
 
 def get_central_object_extent(fp: np.ndarray) -> list:
@@ -176,7 +194,7 @@ def get_good_dim(dim, pkg):
     Returns the even dimension that the given package found to be good for fast Fourier transform and not smaller than given dimension. .
 
     :param dim: int, initial dimension
-    :param pck: python package that will be used for reconstruction: 'np' for numpy, 'cp' for cupy, 'torch' for torch.
+    :param pkg: python package that will be used for reconstruction: 'np' for numpy, 'cp' for cupy, 'torch' for torch.
     :return: a new dimension
     """
     devlib = get_lib(pkg)
@@ -276,27 +294,54 @@ def normalize(vec):
     return vec / np.linalg.norm(vec)
 
 
-def pad_center(arr, new_shape):
+def pad_center(arr, target_shape):
     """
-    This function pads the array with zeros to the new shape with the array in the center.
+    Pad a 1D, 2D, or 3D NumPy array with zeros so that it is centered
+    in a new array of shape `target_shape`.
 
-    :param arr: ndarray, the original array to be padded
-    :param new_shape: tuple, new dimensions
-    :return: the zero padded centered array
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input 1D, 2D, or 3D array.
+    target_shape : int or tuple
+        Desired output shape. Must have the same number of dimensions as arr.
+        For 1D, this can be an int or a 1-tuple.
+
+    Returns
+    -------
+    np.ndarray
+        Zero-padded array with the original array centered.
+
+    Raises
+    ------
+    ValueError
+        If target_shape has different dimensionality from arr
+        or if any target dimension is smaller than the input dimension.
     """
-    shape = arr.shape
-    centered = np.zeros(new_shape, arr.dtype)
-    if len(shape) == 1:
-        centered[: shape[0]] = arr
-    elif len(shape) == 2:
-        centered[: shape[0], : shape[1]] = arr
-    elif len(shape) == 3:
-        centered[: shape[0], : shape[1], : shape[2]] = arr
+    arr = np.asarray(arr)
 
-    for i in range(len(new_shape)):
-        centered = np.roll(centered, (new_shape[i] - shape[i] + 1) // 2, i)
+    if arr.ndim not in (1, 2, 3):
+        raise ValueError("Only 1D, 2D, and 3D arrays are supported.")
 
-    return centered
+    if isinstance(target_shape, int):
+        target_shape = (target_shape,)
+    else:
+        target_shape = tuple(target_shape)
+
+    if len(target_shape) != arr.ndim:
+        raise ValueError("target_shape must have the same number of dimensions as arr.")
+
+    if any(t < s for t, s in zip(target_shape, arr.shape)):
+        raise ValueError("Each target dimension must be >= the corresponding input dimension.")
+
+    pad_width = []
+    for s, t in zip(arr.shape, target_shape):
+        total_pad = t - s
+        pad_before = total_pad // 2
+        pad_after = total_pad - pad_before
+        pad_width.append((pad_before, pad_after))
+
+    return np.pad(arr, pad_width, mode='constant', constant_values=0)
 
 
 def read_config(config):
@@ -329,8 +374,8 @@ def read_config(config):
             try:
                 param_dict[param.strip()] = ast.literal_eval(value)
             except:
-                print(f'{param}: {value}\n  string value should be surrounded by "" ')
-                raise
+                msg = f'{param}: {value}\n  string value in configuration file should be surrounded by "" '
+                raise ValueError(msg)
 
         line = input.readline()
     input.close()
@@ -423,7 +468,7 @@ def save_metrics(errs, dir, metrics=None):
                 mf.write(f'{key} = {str(value)}{linesep}')
         mf.write(f'{linesep}errors by iteration{linesep}')
         for er in errs:
-            mf.write(f'str({er}) ')
+            mf.write(f'{er} ')
     mf.close()
 
 
