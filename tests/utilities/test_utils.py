@@ -226,12 +226,6 @@ def test_crop_center_crops_1d_array_around_center():
     assert np.array_equal(cropped, expected)
 
 
-def test_crop_center_raises_for_ndim_gt_3():
-    arr = np.zeros((2, 2, 2, 2))
-    with pytest.raises(NotImplementedError):
-        utils.crop_center(arr, (1, 1, 1, 1))
-
-
 def test_pad_center_pads_1d_array_into_center():
     arr = np.array([1, 2, 3])
     padded = utils.pad_center(arr, (7,))

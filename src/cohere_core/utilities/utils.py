@@ -428,7 +428,7 @@ def select_central_object(fp: np.ndarray) -> np.ndarray:
     binary[binary <= zero] = 0
 
     # cluster by connectivity
-    struct = ndi.morphology.generate_binary_structure(fp.ndim, 1).astype("uint8")
+    struct = ndi.generate_binary_structure(fp.ndim, 1).astype("uint8")
     label, nlabel = ndi.label(binary, structure=struct)
 
     # select largest cluster
