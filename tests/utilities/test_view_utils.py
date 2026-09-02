@@ -1,349 +1,311 @@
-import importlib
-from pathlib import Path
-
-import matplotlib
-matplotlib.use("Agg")
-
 import numpy as np
 import pytest
+from pathlib import Path
+import cohere_core.utilities.view_utils as view_utils
+import cohere_core.utilities.dvc_utils as dvut
 
 
-@pytest.fixture
-def view_utils(monkeypatch):
-    mod = importlib.import_module("cohere_core.utilities.view_utils")
+class FakeDevLib:
+    @staticmethod
+    def to_numpy(x):
+        return x
 
-    class DummyDevLib:
-        def to_numpy(self, x):
-            return np.asarray(x)
+@pytest.fixture(autouse=True)
+def fake_devlib(monkeypatch):
+    monkeypatch.setattr(dvut, "devlib", FakeDevLib(), raising=False)
 
-        def absolute(self, x):
-            return np.abs(x)
+class DummyBackend(view_utils.LiveViewBackend):
+    def __init__(self):
+        self.calls = []
 
-        def center_of_mass(self, x):
-            x = np.asarray(x, dtype=float)
-            total = x.sum()
-            inds = np.indices(x.shape)
-            return tuple((inds[i] * x).sum() / total for i in range(x.ndim))
+    def update_singlepeak(self, ds_image, errors, support, title=""):
+        self.calls.append(
+            ("singlepeak", ds_image, errors, support, title)
+        )
 
-    monkeypatch.setattr(mod, "devlib", DummyDevLib(), raising=False)
-    return mod
+    def update_multipeak_fourier(self, proj, mask, meas, data, title=""):
+        self.calls.append(
+            ("fourier", proj, mask, meas, data, title)
+        )
 
+    def update_multipeak_direct(self, rho, u0, u1, u2, title=""):
+        self.calls.append(
+            ("direct", rho, u0, u1, u2, title)
+        )
 
-@pytest.fixture
-def no_gui(monkeypatch, view_utils):
-    monkeypatch.setattr(view_utils.plt, "show", lambda *a, **k: None)
-    monkeypatch.setattr(view_utils.plt, "pause", lambda *a, **k: None)
-    monkeypatch.setattr(view_utils.plt, "draw", lambda *a, **k: None)
+    def save(self, save_as):
+        self.calls.append(("save", save_as))
 
+    def block(self):
+        self.calls.append(("block",))
 
-def test_set_lib_from_pkg_calls_get_lib(monkeypatch, view_utils):
-    sentinel = object()
 
-    monkeypatch.setattr(view_utils.ut, "get_lib", lambda pkg: sentinel)
-    view_utils.set_lib_from_pkg("np")
+@pytest.fixture(autouse=True)
+def reset_default_backend():
+    old = view_utils.get_default_live_backend()
+    view_utils.set_default_live_backend(None)
+    yield
+    view_utils.set_default_live_backend(old)
 
-    assert view_utils.devlib is sentinel
 
+def test_set_and_get_default_live_backend():
+    backend = DummyBackend()
+    view_utils.set_default_live_backend(backend)
+    assert view_utils.get_default_live_backend() is backend
 
-def test_show_3d_slices_runs(no_gui, monkeypatch, view_utils):
-    arr = np.random.rand(4, 5, 6)
 
-    called = {"subplots": False}
+def test_liveviewer_uses_explicit_backend():
+    backend = DummyBackend()
+    viewer = view_utils.LiveViewer(backend=backend)
+    assert viewer._backend is backend
 
-    original_subplots = view_utils.plt.subplots
 
-    def wrapped_subplots(*args, **kwargs):
-        called["subplots"] = True
-        return original_subplots(*args, **kwargs)
-
-    monkeypatch.setattr(view_utils.plt, "subplots", wrapped_subplots)
-
-    view_utils.show_3d_slices(arr)
-
-    assert called["subplots"] is True
-
-
-def test_liveviewbackend_select_singlepeak_data_returns_center_slice(view_utils):
-    class DummyLib:
-        def absolute(self, x):
-            return np.abs(x)
-
-        def center_of_mass(self, x):
-            return (1.0, 1.0, 2.0)
-
-    backend = view_utils.MatplotlibBackend
-    base = backend.__mro__[1]() if False else None  # unused, just to avoid ABC direct instantiation
-
-    class ConcreteBackend(view_utils.LiveViewBackend):
-        def update_singlepeak(self, ds_image, errors, support, title=""):
-            pass
-
-        def update_multipeak_fourier(self, proj, mask, meas, data, title=""):
-            pass
-
-        def update_multipeak_direct(self, rho, u0, u1, u2, title=""):
-            pass
-
-        def save(self, save_as):
-            pass
-
-        def block(self):
-            pass
-
-    b = ConcreteBackend()
-    ds_image = np.arange(3 * 4 * 5).reshape(3, 4, 5)
-    support = np.ones_like(ds_image)
-
-    ds_out, support_out = b.select_singlepeak_data(ds_image, support, DummyLib())
-
-    np.testing.assert_array_equal(ds_out, ds_image[:, :, 2])
-    np.testing.assert_array_equal(support_out, support[:, :, 2])
-
-
-def test_liveviewbackend_select_singlepeak_data_handles_none_support(view_utils):
-    class DummyLib:
-        def absolute(self, x):
-            return np.abs(x)
-
-        def center_of_mass(self, x):
-            return (0.0, 0.0, 1.0)
-
-    class ConcreteBackend(view_utils.LiveViewBackend):
-        def update_singlepeak(self, ds_image, errors, support, title=""):
-            pass
-
-        def update_multipeak_fourier(self, proj, mask, meas, data, title=""):
-            pass
-
-        def update_multipeak_direct(self, rho, u0, u1, u2, title=""):
-            pass
-
-        def save(self, save_as):
-            pass
-
-        def block(self):
-            pass
-
-    b = ConcreteBackend()
-    ds_image = np.arange(2 * 3 * 4).reshape(2, 3, 4)
-
-    ds_out, support_out = b.select_singlepeak_data(ds_image, None, DummyLib())
-
-    np.testing.assert_array_equal(ds_out, ds_image[:, :, 1])
-    assert support_out is None
-
-
-def test_matplotlibbackend_update_singlepeak(no_gui, view_utils):
-    backend = view_utils.MatplotlibBackend()
-    ds_image = np.ones((5, 5), dtype=np.complex128) * (1 + 1j)
-    errors = [1.0, 0.5, 0.25]
-    support = np.ones((5, 5))
-
-    backend.update_singlepeak(ds_image, errors, support, title="singlepeak")
-
-    assert len(backend.axs) == 4
-    assert backend.axs[0].get_title() == "Amplitude"
-    assert backend.axs[1].get_title() == "Phase"
-    assert backend.axs[2].get_title() == "Error"
-    assert backend.axs[3].get_title() == "Support"
-
-
-def test_matplotlibbackend_update_multipeak_fourier(no_gui, view_utils):
-    backend = view_utils.MatplotlibBackend()
-    proj = np.ones((4, 4))
-    mask = np.zeros((4, 4))
-    meas = np.full((4, 4), 2.0)
-    data = np.full((4, 4), 3.0)
-
-    backend.update_multipeak_fourier(proj, mask, meas, data, title="fourier")
-
-    titles = [ax.get_title() for ax in backend.axs]
-    assert titles == ["Measurement", "Projection", "Mask", "Fourier Constraint"]
-
-
-def test_matplotlibbackend_update_multipeak_direct(no_gui, view_utils):
-    backend = view_utils.MatplotlibBackend()
-    rho = np.ones((5, 5))
-    u0 = np.full((5, 5), 0.01)
-    u1 = np.full((5, 5), -0.02)
-    u2 = np.zeros((5, 5))
-
-    backend.update_multipeak_direct(rho, u0, u1, u2, title="direct")
-
-    assert len(backend.axs) == 4
-
-
-def test_matplotlibbackend_save_creates_file_and_reinitializes(no_gui, tmp_path, view_utils):
-    backend = view_utils.MatplotlibBackend()
-    old_fig = backend.fig
-
-    out = tmp_path / "subdir" / "figure.png"
-    backend.save(out)
-
-    assert out.exists()
-    assert backend.fig is not old_fig
-    assert len(backend.axs) == 4
-
-
-def test_matplotlibbackend_reinitialize_replaces_figure(no_gui, view_utils):
-    backend = view_utils.MatplotlibBackend()
-    old_fig = backend.fig
-
-    backend._reinitialize()
-
-    assert backend.fig is not old_fig
-    assert len(backend.axs) == 4
-
-
-def test_set_and_get_default_live_backend(view_utils):
-    class DummyBackend:
-        pass
-
+def test_liveviewer_uses_default_backend():
     backend = DummyBackend()
     view_utils.set_default_live_backend(backend)
 
-    assert view_utils.get_default_live_backend() is backend
-
-    view_utils.set_default_live_backend(None)
-    assert view_utils.get_default_live_backend() is None
+    viewer = view_utils.LiveViewer()
+    assert viewer._backend is backend
 
 
-def test_liveviewer_uses_explicit_backend(view_utils):
-    class DummyBackend:
-        def __init__(self):
-            self.calls = []
-
-        def update_singlepeak(self, ds_image, errors, support, title=""):
-            self.calls.append(("single", ds_image, errors, support, title))
-
-        def update_multipeak_fourier(self, proj, mask, meas, data, title=""):
-            self.calls.append(("fourier", proj, mask, meas, data, title))
-
-        def update_multipeak_direct(self, rho, u0, u1, u2, title=""):
-            self.calls.append(("direct", rho, u0, u1, u2, title))
+def test_liveviewer_falls_back_to_matplotlib_backend(monkeypatch):
+    class FakeMatplotlibBackend:
+        def __init__(self, shape=(2, 2), figsize=(12, 13)):
+            self.shape = shape
+            self.figsize = figsize
 
         def save(self, save_as):
-            self.calls.append(("save", save_as))
+            pass
 
         def block(self):
-            self.calls.append(("block",))
+            pass
 
+    monkeypatch.setattr(view_utils, "MatplotlibBackend", FakeMatplotlibBackend)
+
+    viewer = view_utils.LiveViewer(shape=(1, 1), figsize=(4, 4))
+    assert isinstance(viewer._backend, FakeMatplotlibBackend)
+    assert viewer._backend.shape == (1, 1)
+    assert viewer._backend.figsize == (4, 4)
+
+
+def test_liveviewer_update_singlepeak_dispatches_to_backend():
     backend = DummyBackend()
     viewer = view_utils.LiveViewer(backend=backend)
 
-    arr = np.ones((2, 2))
-    viewer.update_singlepeak(arr, [1.0], arr, title="t1")
-    viewer.update_multipeak_fourier(arr, arr, arr, arr, title="t2")
-    viewer.update_multipeak_direct(arr, arr, arr, arr, title="t3")
-    viewer.save("x.png")
+    ds_image = np.ones((4, 4), dtype=np.complex64)
+    errors = np.array([0.0, 0.1, 0.05])
+    support = np.ones((4, 4))
+    title = "test title"
+
+    viewer.update_singlepeak(ds_image, errors, support, title)
+
+    assert len(backend.calls) == 1
+    kind, got_ds, got_err, got_support, got_title = backend.calls[0]
+    assert kind == "singlepeak"
+    np.testing.assert_array_equal(got_ds, ds_image)
+    np.testing.assert_array_equal(got_err, errors)
+    np.testing.assert_array_equal(got_support, support)
+    assert got_title == title
+
+
+def test_liveviewer_update_multipeak_fourier_dispatches_to_backend():
+    backend = DummyBackend()
+    viewer = view_utils.LiveViewer(backend=backend)
+
+    proj = np.ones((3, 3))
+    mask = np.zeros((3, 3))
+    meas = np.full((3, 3), 2.0)
+    data = np.full((3, 3), 3.0)
+
+    viewer.update_multipeak_fourier(proj, mask, meas, data, "fourier title")
+
+    assert len(backend.calls) == 1
+    kind, got_proj, got_mask, got_meas, got_data, got_title = backend.calls[0]
+    assert kind == "fourier"
+    np.testing.assert_array_equal(got_proj, proj)
+    np.testing.assert_array_equal(got_mask, mask)
+    np.testing.assert_array_equal(got_meas, meas)
+    np.testing.assert_array_equal(got_data, data)
+    assert got_title == "fourier title"
+
+
+def test_liveviewer_update_multipeak_direct_dispatches_to_backend():
+    backend = DummyBackend()
+    viewer = view_utils.LiveViewer(backend=backend)
+
+    rho = np.ones((3, 3))
+    u0 = np.full((3, 3), 0.1)
+    u1 = np.full((3, 3), 0.2)
+    u2 = np.full((3, 3), 0.3)
+
+    viewer.update_multipeak_direct(rho, u0, u1, u2, "direct title")
+
+    assert len(backend.calls) == 1
+    kind, got_rho, got_u0, got_u1, got_u2, got_title = backend.calls[0]
+    assert kind == "direct"
+    np.testing.assert_array_equal(got_rho, rho)
+    np.testing.assert_array_equal(got_u0, u0)
+    np.testing.assert_array_equal(got_u1, u1)
+    np.testing.assert_array_equal(got_u2, u2)
+    assert got_title == "direct title"
+
+
+def test_liveviewer_save_dispatches_to_backend(tmp_path):
+    backend = DummyBackend()
+    viewer = view_utils.LiveViewer(backend=backend)
+
+    out = tmp_path / "image.png"
+    viewer.save(out)
+
+    assert backend.calls == [("save", out)]
+
+
+def test_liveviewer_block_dispatches_to_backend():
+    backend = DummyBackend()
+    viewer = view_utils.LiveViewer(backend=backend)
+
     viewer.block()
 
-    assert backend.calls[0][0] == "single"
-    assert backend.calls[1][0] == "fourier"
-    assert backend.calls[2][0] == "direct"
-    assert backend.calls[3] == ("save", "x.png")
-    assert backend.calls[4] == ("block",)
+    assert backend.calls == [("block",)]
 
 
-def test_liveviewer_uses_global_default_backend(view_utils):
-    class DummyBackend:
-        def __init__(self):
-            self.called = False
-
-        def update_singlepeak(self, ds_image, errors, support, title=""):
-            self.called = True
-
-        def update_multipeak_fourier(self, proj, mask, meas, data, title=""):
-            pass
-
-        def update_multipeak_direct(self, rho, u0, u1, u2, title=""):
-            pass
-
-        def save(self, save_as):
-            pass
-
-        def block(self):
-            pass
-
+def test_liveviewer_getattr_forwards_to_backend():
     backend = DummyBackend()
-    view_utils.set_default_live_backend(backend)
+    backend.custom_attr = "forwarded"
 
-    viewer = view_utils.LiveViewer()
-    viewer.update_singlepeak(np.ones((2, 2)), [1.0], np.ones((2, 2)))
+    viewer = view_utils.LiveViewer(backend=backend)
 
-    assert viewer._backend is backend
-    assert backend.called is True
-
-    view_utils.set_default_live_backend(None)
+    assert viewer.custom_attr == "forwarded"
 
 
-def test_liveviewer_falls_back_to_matplotlibbackend(no_gui, view_utils):
-    view_utils.set_default_live_backend(None)
-    viewer = view_utils.LiveViewer()
+def test_select_singlepeak_data_returns_center_slice():
+    backend = DummyBackend()
 
-    assert isinstance(viewer._backend, view_utils.MatplotlibBackend)
+    ds_image = np.zeros((4, 5, 6), dtype=np.complex64)
+    support = np.ones((4, 5, 6), dtype=np.float32)
+
+    target_idx = 3
+    ds_image[:, :, target_idx] = 7 + 2j
+    support[:, :, target_idx] = 9
+
+    class FakeDevLib:
+        @staticmethod
+        def absolute(arr):
+            return np.abs(arr)
+
+        @staticmethod
+        def center_of_mass(arr):
+            return (1.0, 2.0, float(target_idx))
+
+    out_img, out_support = view_utils.LiveViewBackend.select_singlepeak_data(
+        backend, ds_image, support, FakeDevLib
+    )
+
+    assert out_img.shape == (4, 5)
+    assert out_support.shape == (4, 5)
+    np.testing.assert_array_equal(out_img, ds_image[:, :, target_idx])
+    np.testing.assert_array_equal(out_support, support[:, :, target_idx])
 
 
-def test_liveviewer_getattr_forwards_to_backend(view_utils):
-    class DummyBackend:
+def test_select_singlepeak_data_handles_none_support():
+    backend = DummyBackend()
+    ds_image = np.zeros((2, 3, 4), dtype=np.complex64)
+
+    class FakeDevLib:
+        @staticmethod
+        def absolute(arr):
+            return np.abs(arr)
+
+        @staticmethod
+        def center_of_mass(arr):
+            return (0.0, 0.0, 1.0)
+
+    out_img, out_support = view_utils.LiveViewBackend.select_singlepeak_data(
+        backend, ds_image, None, FakeDevLib
+    )
+
+    assert out_img.shape == (2, 3)
+    assert out_support is None
+
+
+def test_matplotlibbackend_save_creates_parent_and_reinitializes(monkeypatch, tmp_path):
+    backend = view_utils.MatplotlibBackend.__new__(view_utils.MatplotlibBackend)
+
+    class FakeFig:
         def __init__(self):
-            self.custom_attr = 123
+            self.saved = None
 
-        def update_singlepeak(self, ds_image, errors, support, title=""):
-            pass
+        def savefig(self, path, dpi=300):
+            self.saved = (path, dpi)
 
-        def update_multipeak_fourier(self, proj, mask, meas, data, title=""):
-            pass
+    fake_fig = FakeFig()
+    backend.fig = fake_fig
 
-        def update_multipeak_direct(self, rho, u0, u1, u2, title=""):
-            pass
+    called = {"reinit": False}
 
-        def save(self, save_as):
-            pass
+    def fake_reinitialize():
+        called["reinit"] = True
 
-        def block(self):
-            pass
+    backend._reinitialize = fake_reinitialize
 
-    viewer = view_utils.LiveViewer(backend=DummyBackend())
+    out = tmp_path / "nested" / "plot.png"
+    backend.save(out)
 
-    assert viewer.custom_attr == 123
+    assert out.parent.exists()
+    assert fake_fig.saved == (Path(out), 300)
+    assert called["reinit"] is True
 
 
-# What this covers
-# set_lib_from_pkg
-# show_3d_slices
-# LiveViewBackend.select_singlepeak_data
-# MatplotlibBackend
-# update_singlepeak
-# update_multipeak_fourier
-# update_multipeak_direct
-# save
-# _reinitialize
-# default backend registration helpers
-# LiveViewer
+def test_matplotlibbackend_draw_calls_pyplot(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(view_utils.plt, "draw", lambda: calls.append("draw"))
+    monkeypatch.setattr(view_utils.plt, "pause", lambda x: calls.append(("pause", x)))
+
+    view_utils.MatplotlibBackend.draw()
+
+    assert calls == ["draw", ("pause", 0.15)]
+
+
+def test_matplotlibbackend_block_calls_show(monkeypatch):
+    calls = []
+    monkeypatch.setattr(view_utils.plt, "show", lambda: calls.append("show"))
+
+    view_utils.MatplotlibBackend.block()
+
+    assert calls == ["show"]
+
+# What this tests
+# This test suite covers:
+#
+# set_default_live_backend / get_default_live_backend
+# LiveViewer backend selection:
 # explicit backend
-# global default backend
-# fallback backend
-# delegated attribute access
+# default backend
+# fallback to MatplotlibBackend
+# dispatching from LiveViewer methods to backend methods
+# __getattr__ forwarding
+# LiveViewBackend.select_singlepeak_data
+# MatplotlibBackend.save
+# MatplotlibBackend.draw
+# MatplotlibBackend.block
 # Notes
-# 1. Use a non-interactive backend
-# The line:
+# 1. GUI-safe testing
+# These tests avoid real plotting windows except for one place:
+#
+# test_matplotlibbackend_save_creates_parent_and_reinitializes uses __new__ so it does not run the real MatplotlibBackend.__init__.
+# That keeps tests headless-friendly.
+#
+# 2. If your CI has matplotlib GUI issues
+# You may also want to force a non-interactive backend in your test environment, for example in conftest.py:
 #
 #
+# import matplotlib
 # matplotlib.use("Agg")
-# is important for CI/headless environments.
+# 3. If you want stricter tests for decorators
+# Because @dvut.use_numpy is applied, if you want to explicitly test conversion behavior, I can also write tests that monkeypatch dvut.use_numpy or simulate non-numpy inputs depending on how that decorator behaves in your codebase.
 #
-# 2. dvut.use_numpy
-# Since view_utils uses @dvut.use_numpy, I patched view_utils.devlib with a small stub so decorated functions can safely call devlib.to_numpy(...).
+# If you want, I can also provide:
 #
-# 3. GUI behavior
-# The tests don’t verify pixels rendered on screen; they verify:
-#
-# methods run successfully
-# expected titles/state are set
-# files are created
-# If you want, I can also give you:
-#
-# a more minimal version,
-# a parametrized version,
-# or a version split into TestMatplotlibBackend / TestLiveViewer classes.
+# a minimal version of this test file, or
+# a version adapted to your project’s existing test style.

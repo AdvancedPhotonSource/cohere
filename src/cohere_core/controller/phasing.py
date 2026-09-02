@@ -131,6 +131,7 @@ class Rec:
         self.hpc = kwargs.get('hpc', False)
         # only when phc feature is configured this becomes array
         self.phc_correction = 1
+        self.aver = None
 
     def init_dev(self, device_id):
         """
@@ -322,6 +323,8 @@ class Rec:
         print('iterate took ', (time.time() - start_t), ' sec')
 
         if devlib.hasnan(self.ds_image):
+            if self.debug:
+                raise RuntimeError('reconstruction resulted in NaN')
             print('reconstruction resulted in NaN')
             return -1
 
@@ -685,6 +688,10 @@ class CoupledRec(Rec):
         self.peak_dirs = peak_dirs
         self.save_dir = Path(self.params.get('save_dir', ut.join(os.path.dirname(peak_dirs[0]), 'results_phasing')))
         self.er_iter = False  # Indicates whether the last iteration done was ER
+        # Fast resampling means using the resampled data to reconstruct the object in a single common basis
+        # When this is set to False, the reconstruction will need to be resampled each time the peak is switched
+        self.fast_resample = True
+        self.lab_frame = True
 
     def init_dev(self, device_id):
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -721,12 +728,6 @@ class CoupledRec(Rec):
             self.ctrl_error = None
         self.peak_confidence = [1.0 for _ in self.peak_objs]
         self.mask_sums = [0 for _ in self.peak_objs]
-
-
-        # Fast resampling means using the resampled data to reconstruct the object in a single common basis
-        # When this is set to False, the reconstruction will need to be resampled each time the peak is switched
-        self.fast_resample = True
-        self.lab_frame = True
 
         self.num_peaks = len(self.peak_objs)
         self.pk = 0  # index in list of current peak being reconstructed
@@ -1231,7 +1232,7 @@ class TeRec(Rec):
         # Since data collected by detector is greater than 0,
         # the data that does not have any negative values is full data,
         # and partial data otherwise.
-        self.is_full_data = (self.data < 0).sum() == 0
+        self.is_full_data = bool((self.data >= 0).all())
         # send to previous if full_data
         if self.rank != 0:
             self.comm.send(self.is_full_data, dest=self.rank - 1)

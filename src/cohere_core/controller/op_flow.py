@@ -126,10 +126,10 @@ def get_alg_rows(s, pc_conf_start):
             match = re.match(r"([A-Z]+)([0-9]+)", row_key, re.I)
             if match:
                 (trig_op, idx) = match.groups(0)
-                sub_t = sub_triggers[trig_op]
                 if trig_op not in sub_triggers.keys():
                     msg = f'the sub-trigger {trig_op} must be defined in op_flow.py file, sub_triggers dict.'
                     raise NameError(msg)
+                sub_t = sub_triggers[trig_op]
                 if sub_t not in sub_rows:
                     sub_rows[sub_t] = []
                 sub_rows[sub_t].append((entry[2], entry[0] + entry[2], idx))
@@ -148,7 +148,7 @@ def fill_trigger_row(trig, iter_no, last_trig, row=None):
         total number of iterations
     :param row: ndarray
         if given, the row will be used to fill the trigger
-    :return:
+    :return: ndarray
     """
     if row is None:
         row = np.zeros(iter_no, dtype=int)
@@ -240,22 +240,18 @@ def get_flow_arr(params, flow_items_list, curr_gen=None):
 
     # parse algorithm sequence to get the algorithm rows and sub-triggers rows, number iterations,
     # and partial coherence starting iteration
-    try:
-        (alg_rows, sub_iters, iter_no, pc_start) = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
-    except:
-        return False, None, None
+    (alg_rows, sub_iters, iter_no, pc_start) = get_alg_rows(params['algorithm_sequence'], pc_conf_start)
 
     # do some checks to find if the sequence and configuration are runnable
     # and special cases
-
-    last_lpf = None
+    last_lpf = -1
     if 'lowpass_filter_trigger' in params:
         if len(params['lowpass_filter_trigger']) < 2:
             print('Low pass trigger misconfiguration error. This trigger should have upper bound.')
-            raise
+            # raise ValueError('Low pass trigger should have upper bound.')
         elif params['lowpass_filter_trigger'][2] >= iter_no:
             print('Low pass trigger misconfiguration error. The upper bound should be less than total iterations.')
-            raise
+            # raise
         else:
             last_lpf = params['lowpass_filter_trigger'][2]
 

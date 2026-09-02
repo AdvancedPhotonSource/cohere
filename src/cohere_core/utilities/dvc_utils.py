@@ -242,6 +242,18 @@ def breed(breed_mode, alpha, image):
     return beta
 
 
+# There were two definitions of that function, need to find out which one is correct.
+# def calc_nmi(arr1, arr2=None, log=False):
+#     if arr2 is None:
+#         hgram = arr1
+#     else:
+#         hgram = histogram2d(arr1, arr2, log=log)
+#     h0 = devlib.entropy(devlib.sum(hgram, axis=0))
+#     h1 = devlib.entropy(devlib.sum(hgram, axis=1))
+#     h01 = devlib.entropy(devlib.reshape(hgram, -1))
+#     return (h0 + h1) / h01
+#
+#
 def calc_nmi(arr1, arr2=None, log=False):
     if arr2 is None:
         hgram = arr1
@@ -250,7 +262,7 @@ def calc_nmi(arr1, arr2=None, log=False):
     h0 = devlib.entropy(devlib.sum(hgram, axis=0))
     h1 = devlib.entropy(devlib.sum(hgram, axis=1))
     h01 = devlib.entropy(devlib.reshape(hgram, -1))
-    return (h0 + h1) / h01
+    return (h0 + h1) / h01 - 1
 
 
 def calc_ehd(arr1, arr2=None, log=False):
@@ -259,7 +271,7 @@ def calc_ehd(arr1, arr2=None, log=False):
     else:
         hgram = histogram2d(arr1, arr2, log=log)
     n = hgram.shape[0]
-    x, y = devlib.meshgrid(devlib.arange(n), devlib.arange(n))
+    x, y = devlib.meshgrid(devlib.array(range(n)), devlib.array(range(n)))
     return devlib.sum(hgram * devlib.abs(x - y)) / devlib.sum(hgram)
 
 
@@ -615,17 +627,6 @@ def lucy_deconvolution(pristine, blurred, kernel, iterations, diffbreak=0):
     kernel = devlib.real(kernel)
     coh_sum = devlib.sum(devlib.absolute(kernel))
     return devlib.absolute(kernel) / coh_sum
-
-
-def calc_nmi(arr1, arr2=None, log=False):
-    if arr2 is None:
-        hgram = arr1
-    else:
-        hgram = histogram2d(arr1, arr2, log=log)
-    h0 = devlib.entropy(devlib.sum(hgram, axis=0))
-    h1 = devlib.entropy(devlib.sum(hgram, axis=1))
-    h01 = devlib.entropy(devlib.reshape(hgram, -1))
-    return (h0 + h1) / h01 - 1
 
 
 def pad_around(arr, shape, val=0):

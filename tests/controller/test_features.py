@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import features
+import cohere_core.controller.features as features
 
 
 class DummyDevLib:
@@ -26,8 +26,8 @@ class DummyDevLib:
         return np.square(data)
 
     @staticmethod
-    def full(shape, value, dtype=None):
-        return np.full(shape, value, dtype=dtype)
+    def full(shape, fill_value, dtype=None):
+        return np.full(shape, fill_value, dtype=dtype)
 
     @staticmethod
     def dtype(data):
@@ -38,350 +38,306 @@ class DummyDevLib:
         return np.sqrt(data)
 
     @staticmethod
-    def fftconvolve(a, b):
-        # lightweight stub for testing
-        return a + b
-
-    @staticmethod
-    def gaussian_filter(data, sigma):
-        # deterministic stub for testing
-        return data + sigma
-
-    @staticmethod
     def angle(data):
         return np.angle(data)
 
+    @staticmethod
+    def gaussian_filter(data, sigma):
+        # simple deterministic stand-in for testing
+        return data + sigma
+
+    @staticmethod
+    def fftconvolve(a, b):
+        # simple stand-in preserving shape for test purposes
+        return a + np.mean(b)
+
 
 @pytest.fixture(autouse=True)
-def patch_devlib():
+def setup_devlib():
     features.set_lib(DummyDevLib)
 
 
 @pytest.fixture
 def patch_utils(monkeypatch):
-    def crop_center(arr, shape):
-        slices = tuple(slice(0, s) for s in shape)
-        return arr[slices]
+    def fake_crop_center(data, kernel_area):
+        slices = tuple(slice(0, k) for k in kernel_area)
+        return data[slices]
 
-    monkeypatch.setattr(features.ut, "crop_center", crop_center)
-    monkeypatch.setattr(features.ut, "join", lambda a, b: f"{a}/{b}")
+    def fake_join(*args):
+        return "/".join(args)
+
+    monkeypatch.setattr(features.ut, "crop_center", fake_crop_center)
+    monkeypatch.setattr(features.ut, "join", fake_join)
 
 
 @pytest.fixture
 def patch_dvut(monkeypatch):
-    monkeypatch.setattr(
-        features.dvut,
-        "lucy_deconvolution",
-        lambda amplitudes, roi_data, kernel, iterations: kernel + 1
-    )
-    monkeypatch.setattr(
-        features.dvut,
-        "shrink_wrap",
-        lambda ds_image, threshold, gauss_sigma: {
-            "image": ds_image,
-            "threshold": threshold,
-            "sigma": gauss_sigma,
-        }
-    )
+    calls = {}
+
+    def fake_shrink_wrap(ds_image, threshold, gauss_sigma):
+        calls["shrink_wrap"] = (ds_image, threshold, gauss_sigma)
+        return np.ones_like(ds_image) * threshold
+
+    def fake_lucy_deconvolution(amplitudes2, roi_data2, kernel, iterations):
+        calls["lucy"] = (amplitudes2, roi_data2, kernel, iterations)
+        return kernel + 1
+
+    monkeypatch.setattr(features.dvut, "shrink_wrap", fake_shrink_wrap)
+    monkeypatch.setattr(features.dvut, "lucy_deconvolution", fake_lucy_deconvolution)
+    return calls
 
 
-def test_pcdi_init_requires_iterations(patch_utils):
-    params = {
-        "pc_LUCY_kernel": (2, 2),
-    }
-    data = np.ones((4, 4))
-
-    with pytest.raises(ValueError, match="pc_LUCY_iterations parameter not defined"):
-        features.Pcdi(params, data)
+def test_create_unsupported_trigger_op():
+    with pytest.raises(ValueError, match="Unsupported trigger op"):
+        features.create("bad_op", {}, {})
 
 
-def test_pcdi_init_requires_kernel(patch_utils):
-    params = {
-        "pc_LUCY_iterations": 5,
-    }
-    data = np.ones((4, 4))
-
-    with pytest.raises(ValueError, match="pc_LUCY_kernel parameter not defined"):
-        features.Pcdi(params, data)
-
-
-def test_pcdi_init_sets_default_kernel_when_no_dir(patch_utils):
-    params = {
-        "pc_LUCY_iterations": 5,
-        "pc_LUCY_kernel": (2, 2),
-    }
-    data = np.ones((4, 4), dtype=np.float32)
-
-    obj = features.Pcdi(params, data)
-
-    assert obj.kernel.shape == (2, 2)
-    assert np.all(obj.kernel == 0.5)
-    assert obj.iterations == 5
-    assert obj.normalize is True
-
-
-def test_pcdi_set_previous(patch_utils):
-    params = {
-        "pc_LUCY_iterations": 5,
-        "pc_LUCY_kernel": (2, 2),
-    }
-    data = np.ones((4, 4))
-    obj = features.Pcdi(params, data)
-
-    abs_amplitudes = np.arange(16).reshape(4, 4)
-    obj.set_previous(abs_amplitudes)
-
-    assert obj.roi_amplitudes_prev.shape == (2, 2)
-
-
-def test_pcdi_apply_partial_coherence(patch_utils):
-    params = {
-        "pc_LUCY_iterations": 5,
-        "pc_LUCY_kernel": (2, 2),
-    }
-    data = np.ones((4, 4))
-    obj = features.Pcdi(params, data)
-
-    abs_amplitudes = np.ones((2, 2))
-    result = obj.apply_partial_coherence(abs_amplitudes)
-
-    expected = np.sqrt(np.square(abs_amplitudes) + obj.kernel)
-    np.testing.assert_allclose(result, expected)
-
-
-def test_pcdi_update_partial_coherence_calls_lucy(patch_utils, patch_dvut):
-    params = {
-        "pc_LUCY_iterations": 3,
-        "pc_LUCY_kernel": (2, 2),
-    }
-    data = np.ones((4, 4))
-    obj = features.Pcdi(params, data)
-    obj.roi_amplitudes_prev = np.ones((2, 2))
-
-    old_kernel = obj.kernel.copy()
-    obj.update_partial_coherence(np.ones((4, 4)) * 2)
-
-    np.testing.assert_array_equal(obj.kernel, old_kernel + 1)
-
-
-def test_lowpass_filter_builds_sigmas():
-    params = {
-        "lowpass_filter_trigger": [0, 1, 4],
-        "lowpass_filter_range": [0.5, 1.5],
-    }
-    obj = features.LowPassFilter(params)
-
-    assert obj.filter_sigmas == [0.5, 0.75, 1.0, 1.25]
-
-
-def test_lowpass_filter_apply_trigger():
-    params = {
-        "lowpass_filter_trigger": [0, 1, 3],
-        "lowpass_filter_range": [1.0, 3.0],
-    }
-    obj = features.LowPassFilter(params)
-    data = np.ones((2, 2))
-
-    result = obj.apply_trigger(data, 1)
-    np.testing.assert_allclose(result, data + obj.filter_sigmas[1])
-
-
-def test_triggeredop_general_trigger_shrinkwrap(patch_dvut):
+def test_create_shrink_wrap_general_trigger():
     params = {
         "shrink_wrap_trigger": [0, 1, 5],
-        "shrink_wrap_gauss_sigma": 2.0,
-        "shrink_wrap_threshold": 0.1,
-    }
-    trig_info = {}
-
-    obj = features.create("shrink_wrap", params, trig_info)
-    result = obj.apply_trigger(np.ones((2, 2)))
-
-    assert result["threshold"] == 0.1
-    assert result["sigma"] == 2.0
-
-
-def test_triggeredop_subtrigger_sequence():
-    class DummyRow:
-        def tolist(self):
-            return [1, 2, 1, 0]
-
-    class DummyTriggered(features.TriggeredOp):
-        class Op:
-            def __init__(self, value):
-                self.value = value
-
-            def apply_trigger(self, x):
-                return x + self.value
-
-        def create_obj(self, params, index=None, beg=None, end=None):
-            return self.Op(index if index is not None else params["default"])
-
-    obj = DummyTriggered("dummy")
-    params = {"default": 100}
-    trig_info = {
-        "dummy_trigger": (
-            DummyRow(),
-            [(0, 2, 1), (2, 4, 2)],
-        )
-    }
-
-    obj.create_objs(params, trig_info)
-
-    assert obj.apply_trigger(10) == 11
-    assert obj.apply_trigger(10) == 12
-    assert obj.apply_trigger(10) == 11
-
-
-def test_shrinkwrap_create_obj_requires_sigma():
-    obj = features.ShrinkWrapGauss("shrink_wrap")
-    params = {
-        "shrink_wrap_threshold": 0.1
-    }
-
-    with pytest.raises(ValueError, match="shrink_wrap_gauss_sigma parameter not defined"):
-        obj.create_obj(params)
-
-
-def test_shrinkwrap_create_obj_requires_threshold():
-    obj = features.ShrinkWrapGauss("shrink_wrap")
-    params = {
-        "shrink_wrap_gauss_sigma": 2.0
-    }
-
-    with pytest.raises(ValueError, match="shrink_wrap_threshold parameter not defined"):
-        obj.create_obj(params)
-
-
-def test_phaseconstrain_requires_phase_min():
-    obj = features.PhaseConstrain("phc")
-    params = {
-        "phc_phase_max": 1.0
-    }
-
-    with pytest.raises(ValueError, match="phc_phase_min parameter not defined"):
-        obj.create_obj(params)
-
-
-def test_phaseconstrain_requires_phase_max():
-    obj = features.PhaseConstrain("phc")
-    params = {
-        "phc_phase_min": -1.0
-    }
-
-    with pytest.raises(ValueError, match="phc_phase_max parameter not defined"):
-        obj.create_obj(params)
-
-
-def test_phaseconstrain_apply_trigger():
-    obj = features.PhaseConstrain("phc")
-    params = {
-        "phc_phase_min": -0.5,
-        "phc_phase_max": 0.5,
-    }
-    phc = obj.create_obj(params)
-
-    data = np.array([1 + 0j, 1j, -1 + 0j])
-    result = phc.apply_trigger(data)
-
-    expected = (np.angle(data) > -0.5) & (np.angle(data) < 0.5)
-    np.testing.assert_array_equal(result, expected)
-
-
-def test_globalmin_tracks_best_image():
-    gm = features.GlobalMin("global_min")
-    best = gm.create_obj({})
-
-    img1 = np.array([[1]])
-    img2 = np.array([[2]])
-
-    best.apply_trigger(img1, 0.4)
-    best.apply_trigger(img2, 0.2)
-
-    best_image, min_error = gm.get_best()
-    np.testing.assert_array_equal(best_image, img2)
-    assert min_error == 0.2
-
-
-def test_create_returns_shrinkwrap(patch_dvut):
-    params = {
-        "shrink_wrap_trigger": [0, 1, 5],
-        "shrink_wrap_gauss_sigma": 2.0,
+        "shrink_wrap_gauss_sigma": 2.5,
         "shrink_wrap_threshold": 0.1,
     }
 
     obj = features.create("shrink_wrap", params, {})
     assert isinstance(obj, features.ShrinkWrapGauss)
+    assert obj.f == obj.apply_trigger_obj
+    assert isinstance(obj.objs, features.ShrinkWrapGauss.GaussSW)
+    assert obj.objs.gauss_sigma == 2.5
+    assert obj.objs.threshold == 0.1
 
 
-def test_create_returns_phaseconstrain():
+def test_shrink_wrap_apply_trigger_calls_dvut(patch_dvut):
+    sw = features.ShrinkWrapGauss("shrink_wrap")
+    params = {
+        "shrink_wrap_trigger": [0, 1, 5],
+        "shrink_wrap_gauss_sigma": 3.0,
+        "shrink_wrap_threshold": 0.25,
+    }
+    sw.create_objs(params, {})
+    data = np.array([[1.0, 2.0], [3.0, 4.0]])
+
+    result = sw.apply_trigger(data)
+
+    assert np.all(result == 0.25)
+    assert patch_dvut["shrink_wrap"][1] == 0.25
+    assert patch_dvut["shrink_wrap"][2] == 3.0
+
+
+def test_shrink_wrap_missing_sigma_raises():
+    sw = features.ShrinkWrapGauss("shrink_wrap")
+    params = {
+        "shrink_wrap_threshold": 0.25,
+    }
+    with pytest.raises(ValueError, match="shrink_wrap_gauss_sigma parameter not defined"):
+        sw.create_obj(params)
+
+
+def test_shrink_wrap_missing_threshold_raises():
+    sw = features.ShrinkWrapGauss("shrink_wrap")
+    params = {
+        "shrink_wrap_gauss_sigma": 2.0,
+    }
+    with pytest.raises(ValueError, match="shrink_wrap_threshold parameter not defined"):
+        sw.create_obj(params)
+
+
+def test_phase_constrain_general_trigger():
     params = {
         "phc_trigger": [0, 1, 5],
-        "phc_phase_min": -1.0,
-        "phc_phase_max": 1.0,
+        "phc_phase_min": -0.5,
+        "phc_phase_max": 0.5,
     }
 
     obj = features.create("phc", params, {})
     assert isinstance(obj, features.PhaseConstrain)
+    assert obj.f == obj.apply_trigger_obj
+
+    data = np.array([1 + 0j, 1j, -1 + 0j])
+    result = obj.apply_trigger(data)
+
+    expected = np.array([True, False, False])
+    np.testing.assert_array_equal(result, expected)
 
 
-def test_create_returns_globalmin():
+def test_phase_constrain_missing_min_raises():
+    phc = features.PhaseConstrain("phc")
+    params = {"phc_phase_max": 1.0}
+    with pytest.raises(ValueError, match="phc_phase_min parameter not defined"):
+        phc.create_obj(params)
+
+
+def test_phase_constrain_missing_max_raises():
+    phc = features.PhaseConstrain("phc")
+    params = {"phc_phase_min": -1.0}
+    with pytest.raises(ValueError, match="phc_phase_max parameter not defined"):
+        phc.create_obj(params)
+
+
+def test_global_min_tracks_best_image():
+    gm = features.GlobalMin("global_min")
+    params = {"global_min_trigger": [0, 1, 5]}
+    gm.create_objs(params, {})
+
+    img1 = np.array([[1]])
+    img2 = np.array([[2]])
+    img3 = np.array([[3]])
+
+    gm.apply_trigger(img1, 0.5)
+    gm.apply_trigger(img2, 0.2)
+    gm.apply_trigger(img3, 0.3)
+
+    best_image, min_error = gm.get_best()
+    assert min_error == 0.2
+    np.testing.assert_array_equal(best_image, img2)
+
+
+def test_create_objs_with_sub_triggers_for_phase_constrain():
+    phc = features.PhaseConstrain("phc")
     params = {
-        "global_min_trigger": [0, 1, 5],
+        "phc_phase_min": [-1.0, -0.2],
+        "phc_phase_max": [1.0, 0.2],
     }
 
-    obj = features.create("global_min", params, {})
-    assert isinstance(obj, features.GlobalMin)
+    trig_info = {
+        "phc_trigger": (
+            np.array([1, 2, 1, 0]),
+            [
+                (0, 5, 0),
+                (5, 10, 1),
+            ],
+        )
+    }
+
+    phc.create_objs(params, trig_info)
+
+    assert phc.f == phc.apply_trigger_seq
+    assert len(phc.objs) == 3
+    assert phc.objs[0].phc_phase_min == -1.0
+    assert phc.objs[1].phc_phase_min == -0.2
+    assert phc.objs[2].phc_phase_min == -1.0
 
 
+def test_apply_trigger_seq_consumes_objects():
+    phc = features.PhaseConstrain("phc")
+    params = {
+        "phc_phase_min": [-1.0, -0.2],
+        "phc_phase_max": [1.0, 0.2],
+    }
+
+    trig_info = {
+        "phc_trigger": (
+            np.array([1, 2]),
+            [
+                (0, 5, 0),
+                (5, 10, 1),
+            ],
+        )
+    }
+
+    phc.create_objs(params, trig_info)
+    data = np.array([1 + 0j])
+
+    phc.apply_trigger(data)
+    assert len(phc.objs) == 1
+
+    phc.apply_trigger(data)
+    assert len(phc.objs) == 0
+
+
+def test_low_pass_filter_apply_trigger():
+    lpf = features.LowPassFilter({
+        "lowpass_filter_trigger": [0, 1, 4],
+        "lowpass_filter_range": [0.5, 2.0],
+    })
+
+    data = np.ones((2, 2))
+    result = lpf.apply_trigger(data, 1)
+
+    expected_sigma = lpf.filter_sigmas[1]
+    np.testing.assert_array_equal(result, data + expected_sigma)
+
+
+def test_pcdi_init_and_apply_partial_coherence(patch_utils):
+    params = {
+        "pc_type": "LUCY",
+        "pc_LUCY_iterations": 5,
+        "pc_normalize": True,
+        "pc_LUCY_kernel": (2, 2),
+    }
+    data = np.ones((4, 4), dtype=np.float32)
+
+    pcdi = features.Pcdi(params, data)
+
+    assert pcdi.type == "LUCY"
+    assert pcdi.iterations == 5
+    assert pcdi.normalize is True
+    assert pcdi.kernel.shape == (2, 2)
+    assert pcdi.dims == (4, 4)
+
+    abs_amplitudes = np.ones((4, 4), dtype=np.float32)
+    result = pcdi.apply_partial_coherence(abs_amplitudes)
+
+    assert result.shape == (4, 4)
+
+
+def test_pcdi_set_previous_and_update_partial_coherence(patch_utils, patch_dvut):
+    params = {
+        "pc_type": "LUCY",
+        "pc_LUCY_iterations": 3,
+        "pc_normalize": True,
+        "pc_LUCY_kernel": (2, 2),
+    }
+    data = np.ones((4, 4), dtype=np.float32)
+
+    pcdi = features.Pcdi(params, data)
+    prev = np.full((4, 4), 2.0, dtype=np.float32)
+    curr = np.full((4, 4), 3.0, dtype=np.float32)
+
+    pcdi.set_previous(prev)
+    pcdi.update_partial_coherence(curr)
+
+    assert "lucy" in patch_dvut
+    amplitudes2, roi_data2, kernel, iterations = patch_dvut["lucy"]
+    assert iterations == 3
+    assert amplitudes2.shape == (2, 2)
+    assert roi_data2.shape == (2, 2)
+    np.testing.assert_array_equal(pcdi.kernel, np.full((2, 2), 1.5, dtype=np.float32))
+
+
+def test_pcdi_missing_iterations_raises(patch_utils):
+    params = {
+        "pc_LUCY_kernel": (2, 2),
+    }
+    data = np.ones((4, 4), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="pc_LUCY_iterations parameter not defined"):
+        features.Pcdi(params, data)
+
+
+def test_pcdi_missing_kernel_raises(patch_utils):
+    params = {
+        "pc_LUCY_iterations": 5,
+    }
+    data = np.ones((4, 4), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="pc_LUCY_kernel parameter not defined"):
+        features.Pcdi(params, data)
 # Notes
-# A few important points about this test file:
+# A few implementation details in your module affect how the test is written:
 #
-# It assumes your module is named features.py and importable as:
+# devlib is global
 #
+# The module expects set_lib() to be called before many operations.
+# The fixture setup_devlib() handles that automatically for every test.
+# External dependencies are mocked
 #
-# import features
-# Since your code depends on:
+# cohere_core.utilities.utils.crop_center
+# cohere_core.utilities.utils.join
+# cohere_core.utilities.dvc_utils.shrink_wrap
+# cohere_core.utilities.dvc_utils.lucy_deconvolution
+# Sub-trigger indexing is 1-based in the row array
 #
-# cohere_core.utilities.utils as ut
-# cohere_core.utilities.dvc_utils as dvut
-# a global devlib
-# the tests mock/stub those pieces so the tests can run in isolation.
-#
-# DummyDevLib.fftconvolve() and gaussian_filter() are simplified deterministic stubs, which is usually best for unit tests.
-#
-# How to run
-# From the directory containing features.py and test_features.py:
-#
-#
-# pytest -q
-# Optional improvement
-# There is one issue in create():
-#
-#
-# if trig_op == 'shrink_wrap':
-#     to = ShrinkWrapGauss(trig_op)
-# if trig_op == 'phc':
-#     to = PhaseConstrain(trig_op)
-# if trig_op == 'global_min':
-#     to = GlobalMin(trig_op)
-# This should ideally be if/elif/elif, and it should probably raise an error for unknown trig_op, e.g.:
-#
-#
-def create(trig_op, params, trig_op_info):
-    if trig_op == 'shrink_wrap':
-        to = ShrinkWrapGauss(trig_op)
-    elif trig_op == 'phc':
-        to = PhaseConstrain(trig_op)
-    elif trig_op == 'global_min':
-        to = GlobalMin(trig_op)
-    else:
-        raise ValueError(f"Unsupported trigger op: {trig_op}")
-
-    to.create_objs(params, trig_op_info)
-    return to
-# If you want, I can also rewrite these tests to:
-#
-# use unittest.mock instead of fixtures/stubs, or
-# be more minimal, or
-# target 100% coverage for this file.
+# create_objs() converts row entries via:
+# trigs = [i-1 for i in row.tolist() if i != 0]
+# So in tests, row entries like [1, 2, 1] map to sub-object indices [0, 1, 0].

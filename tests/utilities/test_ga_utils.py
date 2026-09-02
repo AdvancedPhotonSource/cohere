@@ -324,9 +324,3 @@ def test_set_ga_defaults_pc_settings():
 #
 # fitnesses = list(self.report_tracing[0][1][1].keys())
 # assumes that at least one generation has already been appended. So if you call save() before append_gen(), pretty formatting will fail and your code will intentionally fall back to raw formatting. I included a test for that fallback path.
-#
-# If you want, I can also give you:
-#
-# a more minimal version of this test file
-# a more exhaustive edge-case version
-# a version using parametrized pytest tests to reduce repetition
