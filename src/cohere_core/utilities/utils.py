@@ -26,6 +26,7 @@ __copyright__ = "Copyright (c), UChicago Argonne, LLC."
 __docformat__ = 'restructuredtext en'
 __all__ = [
            'adjust_dimensions',
+           'array_to_good_dims',
            'binning',
            'center_max',
            'crop_center',

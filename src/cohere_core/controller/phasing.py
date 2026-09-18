@@ -1247,22 +1247,31 @@ class TeRec(Rec):
         # figure out if rank needs to send prev/next
         self.send_to_prev = (self.rank > 0) and (not prev_full_data)
         self.send_to_next = (self.rank < self.size - 1) and (not next_full_data)
+#        print('rank, send previous, send next', self.rank, self.send_to_prev, self.send_to_next)
 
 
     def er(self):
+#        monitor_rank = 2
         if self.send_to_prev:
             self.comm.send(self.ds_image, dest=self.rank - 1)
+#            if self.rank == monitor_rank:
+#                print(f'rank {self.rank}, sent to rank {self.rank-1}')
         if not self.is_full_data:
             ds_image_next = self.comm.recv(source=self.rank + 1)
+#            if self.rank == monitor_rank:
+#                print(f'rank {self.rank}, received from rank {self.rank+1}')
         if self.send_to_next:
             self.comm.send(self.ds_image, dest=self.rank + 1)
+#            if self.rank == monitor_rank:
+#                print(f'rank {self.rank}, sent to rank {self.rank+1}')
         if not self.is_full_data:
             ds_image_prev = self.comm.recv(source=self.rank - 1)
+#            if self.rank == monitor_rank:
+#                print(f'rank {self.rank}, received from rank {self.rank-1}')
 
         if self.is_full_data:
             # run the super er
             self.ds_image = self.ds_image_proj * self.support
-
         else:
             # use previous and next to run modified er
             self.ds_image = (1/(1+2*self.weight)) * self.support * (self.ds_image_proj +
