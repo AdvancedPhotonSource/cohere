@@ -7,11 +7,14 @@ FROM pytorch/pytorch:${PYTORCH_VERSION}-cuda${CUDA_VERSION}-cudnn${CUDNN_VERSION
 WORKDIR /app
 COPY . /src
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libmpich-dev \
+        mpich \
         libqt6gui6 && \
     rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install --root-user-action=ignore --no-cache-dir --upgrade pip && \
+    python3 -m pip install --root-user-action=ignore --no-cache-dir --no-binary=mpi4py mpi4py && \
     python3 -m pip install --root-user-action=ignore --no-cache-dir numpy pyzmq cupy && \
     python3 -m pip install --root-user-action=ignore --no-cache-dir /src && \
     python3 -m pip install --root-user-action=ignore --no-cache-dir /src/cohere-ui && \

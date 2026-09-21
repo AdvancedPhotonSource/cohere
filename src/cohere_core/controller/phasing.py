@@ -1273,6 +1273,7 @@ class TeRec(Rec):
             # run the super er
             self.ds_image = self.ds_image_proj * self.support
         else:
+            # allign
             # use previous and next to run modified er
             self.ds_image = (1/(1+2*self.weight)) * self.support * (self.ds_image_proj +
             self.weight * (ds_image_prev + ds_image_next))
@@ -1293,6 +1294,7 @@ class TeRec(Rec):
             combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
             self.ds_image = devlib.where((self.support > 0), self.ds_image_proj, combined_image)
         else:
+            # allign
             # use previous and next to run modified hio
             combined_image = self.ds_image - self.ds_image_proj * self.params['hio_beta']
             corr = self.weight * self.support * (2 * (self.ds_image) - (ds_image_prev + ds_image_next))
