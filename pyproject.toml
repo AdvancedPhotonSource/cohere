@@ -29,7 +29,8 @@ dependencies = ['torch; sys_platform == "darwin"',
                 'scipy',
                 'sphinx',
                 'sphinx-pyproject',
-                'numpy>=2.0'
+                'numpy>=2.0',
+                'setuptools >= 77.0.3'
                ]
 
 [tool.setuptools.packages.find]
