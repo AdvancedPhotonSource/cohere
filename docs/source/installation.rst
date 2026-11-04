@@ -7,15 +7,8 @@ Official Release Installation
 =============================
 Create and activate conda environment::
 
-    conda create -n <env_name> -c conda-forge python=3.14
+    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
     conda activate <env_name>
-
-Note: When installing the cohere project with newer python versions it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project. We found the following packages needed to be installed.::
-
-    mamba install -c conda-forge mpi4py pyzmq  # Linux
-    conda install -c conda-forge PyQt6  # Linux
-    conda install -c conda-forge mpi4py pyzmq xrayutilities  # Mac
-    conda install -c conda-forge mpi4py pyzmq xrayutilities matplotlib  # Windows
 
 The cohere project consists of three modules and each of them is a separate package in PyPi.::
 
@@ -25,11 +18,9 @@ If using cupy library (for Linux and Windows)::
 
     pip install cupy-cuda13x    # where cuda major version is 13
 
-If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac).
-Install the nightly version with the corresponding CUDA driver (example CUDA 13.2) support using the following command::
+If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac).::
 
-    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu132
-    Note: make sure your CUDA driver matches this command
+    pip install torch torchvision torchaudio
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 
@@ -50,15 +41,8 @@ This will install the latest development. This installation might be right for a
 Create conda environment, activate it and clone cohere repository. Cohere project has cohere_core module and three submodules: cohere-ui, cohere_beamlines, and cohere_examples.
 Run the following commands::
 
-    conda create -n <env_name> -c conda-forge python=3.14
+    conda create -n <env_name> -c conda-forge python=3.14 mpi4py pyzmq
     conda activate <env_name>
-
-    Note: When installing the cohere project with newer python versions it is possible that some dependencies may not be available. In this case, the user can install the necessary packages using conda before installing the cohere project. We found the following packages needed to be installed.
-
-    mamba install -c conda-forge mpi4py pyzmq  # Linux
-    conda install -c conda-forge PyQt6  # Linux
-    conda install -c conda-forge mpi4py pyzmq xrayutilities  # Mac
-    conda install -c conda-forge mpi4py pyzmq xrayutilities matplotlib  # Windows
 
     git clone https://github.com/advancedPhotonSource/cohere --recurse-submodules
     cd cohere
@@ -75,11 +59,9 @@ If using cupy library (for Linux and Windows)::
 
     pip install cupy-cuda13x    # where cuda major version is 13
 
-If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac).
-Install the nightly version with the corresponding CUDA driver (example CUDA 13.2) support using the following command::
+If using torch library (Linux and Windows; torch installation is included in cohere_core Pypi installation for Mac).::
 
-    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu132
-    Note: make sure your CUDA driver matches this command
+    pip install torch torchvision torchaudio
 
 After installation you may start using scripts as described in  :ref:`api_cohere_ui`, for example::
 

@@ -357,11 +357,30 @@ Parsed parameters
 
 - DetZ:
 
-| Detector distance in mm
+| DetZ motor position in mm
 
 ::
 
     DetZ = 990.0
+
+| samRy motor position in mm
+
+::
+
+    samRy = 0.0
+
+- detdist:
+
+| detector distance in mm. Defaults to 0.
+
+::
+
+    detdist = 0.0
+
+// if detector is BSE the following three parameters apply
+remove_band_background = True
+rbb_smooth_sigma = 50
+rbb_robust = True
 
 beamline aps_34idc
 ------------------
