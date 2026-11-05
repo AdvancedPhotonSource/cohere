@@ -66,7 +66,7 @@ MP_FIELDS = [
         'description': 'Initial relative confidence threshold required for shrinkwrap to prevent bad datasets from constantly derailing the reconstruction.',
     },
     {
-        'key': 'adapt_threshold_iters', 'label': 'adapt threshold iterations', 'type': 'list', 'element_type': 'int',
+        'key': 'adapt_threshold_iters', 'label': 'adapt threshold iterations', 'type': 'list', 'element_type': 'float',
         'group': 'adapt_trigger',
         'description': 'Iterations to change the adapt threshold value.',
     },
