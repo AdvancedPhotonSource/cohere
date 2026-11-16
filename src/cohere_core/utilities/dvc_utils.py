@@ -102,12 +102,12 @@ def align_arrays_pixel(ref, arr, shift=None, CC=None):
 
     :return: aligned array
     """
+    shape = devlib.dims(arr)
     if shift is None:
         if CC is None:
             CC = devlib.correlate(ref, arr, mode='same', method='fft')
         # err = correlation_err(ref, arr, CC)
         CC_shifted = devlib.ifftshift(CC)
-        shape = devlib.dims(arr)
         amp = devlib.absolute(CC_shifted)
         shift = devlib.unravel_index(devlib.argmax(amp), shape)
     if devlib.sum(shift) == 0:
@@ -144,14 +144,17 @@ def all_metrics(image, errs):
     if type(eval) != float:
         eval = eval.item()
     metrics['chi'] = eval
+
     eval = devlib.sum(devlib.square(devlib.square(devlib.absolute(image))))
     if type(eval) != float:
         eval = eval.item()
     metrics['sharpness'] = eval
+
     eval = devlib.sum(abs(shift_phase(image, 0)))
     if type(eval) != float:
         eval = eval.item()
     metrics['summed_phase'] = eval
+
     eval = devlib.sum(shrink_wrap(image, .2, .5))
     if type(eval) != float:
         eval = eval.item()
@@ -193,14 +196,28 @@ def breed(breed_mode, alpha, image):
     alpha = zero_phase(alpha)
 
     # load image file
+    # beta = image
+    # beta = zero_phase(beta)
+    # alpha = check_get_conj_reflect(beta, alpha)
+    # alpha = align_arrays_subpixel(beta, alpha)
+    # alpha = zero_phase(alpha)
+    # ph_alpha = devlib.angle(alpha)
+    # beta = zero_phase_cc(beta, alpha)
+    # ph_beta = devlib.angle(beta)
+
     beta = image
-    beta = zero_phase(beta)
     alpha = check_get_conj_reflect(beta, alpha)
     alpha = align_arrays_subpixel(beta, alpha)
+
+    # Set alpha's phase convention after alignment.
     alpha = zero_phase(alpha)
-    ph_alpha = devlib.angle(alpha)
+
+    # Set beta's global phase relative to alpha.
     beta = zero_phase_cc(beta, alpha)
+
+    ph_alpha = devlib.angle(alpha)
     ph_beta = devlib.angle(beta)
+
     if breed_mode == 'sqrt_ab':
         beta = devlib.sqrt(devlib.absolute(alpha) * devlib.absolute(beta)) * devlib.exp(0.5j * (ph_beta + ph_alpha))
 
@@ -387,7 +404,7 @@ def dftregistration(ref_arr, arr, usfac=2):
     # Embed Fourier data in a 2x larger array
     shape = ref_arr.shape
     large_shape = tuple(2 * x for x in ref_arr.shape)
-    c_c = pad_around(devlib.fftshift(ref_arr) * devlib.conj(devlib.fftshift(arr)), large_shape, val=0j)
+    c_c = pad_around(devlib.fftshift(ref_arr) * devlib.conj(devlib.fftshift(arr)), large_shape)
 
     # Compute crosscorrelation and locate the peak
     c_c = devlib.ifft(devlib.ifftshift(c_c))
@@ -422,7 +439,7 @@ def dftregistration(ref_arr, arr, usfac=2):
 
         ups = devlib.from_numpy(ups_np, device=arr.device)
         c_c = devlib.conj(ups) / \
-              (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ^ 2)
+              (int(math.trunc(shape[0] / 2)) * int(math.trunc(shape[1] / 2)) * usfac ** 2)
         # Locate maximum and map back to original pixel grid
 
         max_coord = devlib.unravel_index(devlib.argmax(devlib.absolute(c_c)), devlib.dims(c_c))
@@ -629,7 +646,7 @@ def lucy_deconvolution(pristine, blurred, kernel, iterations, diffbreak=0):
     return devlib.absolute(kernel) / coh_sum
 
 
-def pad_around(arr, shape, val=0):
+def pad_around(arr, shape):
     """
     Pads an array evenly at each side, to the given shape. It is assumed that the new shape is greater than shape of the array in each dimension.
 
@@ -753,12 +770,15 @@ def shift_phase(arr, val=0):
 
     :param arr: array to adjust phase
     :param val: float, a value to adjust the phase toward
-    :return: input array with adjusted phase
+    :return: adjusted phase values
     """
     ph = devlib.angle(arr)
-    support = shrink_wrap(devlib.absolute(arr), .2, .5)  # get just the crystal, i.e very tight support
-    avg_ph = devlib.sum(ph * support) / devlib.sum(support)
-    return arr * devlib.exp(-1j * (avg_ph - val))
+    support = shrink_wrap(devlib.absolute(arr), .2, .5)
+
+    mean_ph = devlib.angle(devlib.sum(support * devlib.exp(1j * ph)))
+    adjusted_ph = devlib.angle(devlib.exp(1j * (ph - mean_ph + val)))
+
+    return adjusted_ph
 
 
 def shrink_wrap(arr, threshold, sigma):
@@ -809,9 +829,11 @@ def zero_phase(arr):
     :param arr: array to adjust phase
     :return: input array with adjusted phase
     """
-    ph = shift_phase(arr, 0)
-    return devlib.absolute(arr) * devlib.exp(1j * ph)
+    ph = devlib.angle(arr)
+    support = shrink_wrap(devlib.absolute(arr), .2, .5)
+    mean_ph = devlib.angle(devlib.sum(support * devlib.exp(1j * ph)))
 
+    return arr * devlib.exp(-1j * mean_ph)
 
 
 def zero_phase_cc(arr1, arr2):

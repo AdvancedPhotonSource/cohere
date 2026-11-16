@@ -250,7 +250,7 @@ class Rec:
         if dir is None or not os.path.isfile(ut.join(dir, 'support.npy')):
             init_support = [int(self.params['initial_support_area'][i] * self.dims[i]) for i in range(len(self.dims))]
             center = devlib.full(init_support, 1, device=self.dev)
-            self.support = dvut.pad_around(center, self.dims, 0)
+            self.support = dvut.pad_around(center, self.dims)
         else:
             self.support = devlib.load(ut.join(dir, 'support.npy'), device=self.dev)
 
@@ -504,9 +504,10 @@ class Rec:
         title = f"Iteration: {self.iter}/{self.iter_no}\nError: {self.errs[-1]}"
         self.viewer.update_singlepeak(ds, self.errs, sup, title)
 
-    def get_ratio(self, divident, divisor):
-        ratio = devlib.where((divisor > 1e-9), divident / divisor, 0.0)
-        return ratio
+    def get_ratio(self, dividend, divisor):
+        invalid = divisor <= 1e-9
+        safe_divisor = devlib.where(invalid, 1.0, divisor)
+        return devlib.where(invalid, 0.0, dividend / safe_divisor)
 
     def get_image(self):
         """

@@ -187,7 +187,7 @@ def test_fast_shift_negative_shift(dvc_utils):
 
 def test_pad_around_centers_array(dvc_utils):
     arr = np.array([[1, 2], [3, 4]])
-    padded = dvc_utils.pad_around(arr, (4, 4), val=0)
+    padded = dvc_utils.pad_around(arr, (4, 4))
 
     expected = np.array([
         [0, 0, 0, 0],
@@ -272,17 +272,10 @@ def test_pad_to_cube_pads_small_array(dvc_utils):
     assert result[1:3, 1:3, 1:3].sum() == 8
 
 
-def test_shift_phase_preserves_magnitude(dvc_utils, monkeypatch):
-    monkeypatch.setattr(dvc_utils, "shrink_wrap", lambda arr, t, s: np.ones_like(arr))
-
-    arr = np.array([1 + 1j, 1 - 1j])
-    shifted = dvc_utils.shift_phase(arr, val=0)
-
-    np.testing.assert_allclose(np.abs(shifted), np.abs(arr))
-
-
 def test_zero_phase_preserves_magnitude(dvc_utils, monkeypatch):
-    monkeypatch.setattr(dvc_utils, "shift_phase", lambda arr, val=0: np.array([1j, 1j]))
+    monkeypatch.setattr(
+        dvc_utils, "shift_phase", lambda arr: np.array([1.0, 1.0])
+    )
 
     arr = np.array([3 + 4j, 1 + 0j])
     result = dvc_utils.zero_phase(arr)
@@ -297,6 +290,45 @@ def test_zero_phase_cc_aligns_global_phase(dvc_utils):
     result = dvc_utils.zero_phase_cc(arr1, arr2)
 
     np.testing.assert_allclose(result, np.array([1j, 1j]))
+
+
+def test_shift_phase_adjusts_phases_toward_value(dvc_utils, monkeypatch):
+    arr = np.array([1 + 0j, 1j])
+    support = np.array([1.0, 1.0])
+    target = 0.2
+
+    monkeypatch.setattr(
+        dvc_utils, "shrink_wrap", lambda *_args: support
+    )
+
+    original_phases = np.angle(arr)
+    avg_phase = np.sum(original_phases * support) / np.sum(support)
+    expected = original_phases - avg_phase + target
+
+    result = dvc_utils.shift_phase(arr, val=target)
+
+    np.testing.assert_allclose(result, expected)
+
+
+def test_zero_phase_preserves_magnitude_and_uses_adjusted_phase(
+        dvc_utils, monkeypatch
+):
+    arr = np.array([1 + 0j, 1j])
+    support = np.array([1.0, 1.0])
+
+    monkeypatch.setattr(
+        dvc_utils, "shrink_wrap", lambda *_args: support
+    )
+
+    original_phases = np.angle(arr)
+    avg_phase = np.sum(original_phases * support) / np.sum(support)
+    adjusted_phases = original_phases - avg_phase
+
+    result = dvc_utils.zero_phase(arr)
+    expected = np.abs(arr) * np.exp(1j * adjusted_phases)
+
+    np.testing.assert_allclose(np.abs(result), np.abs(arr))
+    np.testing.assert_allclose(result, expected)
 
 # Notes
 # A few things to be aware of with this module:

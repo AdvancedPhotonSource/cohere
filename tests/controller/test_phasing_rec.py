@@ -1,78 +1,3 @@
-# import numpy as np
-# import pytest
-# import cohere_core.controller.phasing as phasing
-#
-#
-# class FakeDevLib:
-#     def __init__(self):
-#         self.device_set = None
-#
-#     def set_device(self, device_id):
-#         self.device_set = device_id
-#         return f"gpu:{device_id}"
-#
-#     def load(self, path, device=None):
-#         return np.ones((4, 4, 4), dtype=np.complex64)
-#
-#     def from_numpy(self, arr, device=None):
-#         return np.array(arr)
-#
-#     def fftshift(self, arr):
-#         return arr
-#
-#     def ifftshift(self, arr):
-#         return arr
-#
-#     def dims(self, arr):
-#         return arr.shape
-#
-#     def copy(self, arr):
-#         return np.copy(arr)
-#
-#     def random(self, dims, dtype=None, device=None):
-#         dtype = np.dtype(dtype) if dtype is not None else np.complex64
-#         if np.issubdtype(dtype, np.complexfloating):
-#             return np.ones(dims, dtype=dtype) + 1j * np.ones(dims, dtype=dtype)
-#         return np.ones(dims, dtype=np.float32)
-#
-#     def full(self, shape, fill_value, device=None):
-#         return np.full(shape, fill_value)
-#
-#     def amax(self, arr):
-#         return np.max(arr)
-#
-#     def absolute(self, arr):
-#         return np.abs(arr)
-#
-#     def where(self, cond, x, y):
-#         return np.where(cond, x, y)
-#
-#     def ifft(self, arr):
-#         return arr
-#
-#     def fft(self, arr):
-#         return arr
-#
-#     def hasnan(self, arr):
-#         return np.isnan(arr).any()
-#
-#     def to_numpy(self, arr):
-#         return np.array(arr)
-#
-#
-# @pytest.fixture
-# def fake_devlib(monkeypatch):
-#     fake = FakeDevLib()
-#     monkeypatch.setattr(phasing, "devlib", fake)
-#     monkeypatch.setattr(phasing, "set_lib_from_pkg", lambda pkg: None)
-#     return fake
-#
-#
-# @pytest.fixture
-# def basic_params():
-#     return {"algorithm_sequence": "ER"}
-#
-
 import numpy as np
 import pytest
 
@@ -175,7 +100,7 @@ def test_init_iter_loop_creates_random_image_and_support(monkeypatch, fake_devli
 
     monkeypatch.setattr(phasing.os.path, "isfile", lambda path: False)
     monkeypatch.setattr(phasing.ut, "join", lambda *parts: "/".join(parts))
-    monkeypatch.setattr(phasing.dvut, "pad_around", lambda center, dims, val: np.ones(dims))
+    monkeypatch.setattr(phasing.dvut, "pad_around", lambda center, dims: np.ones(dims))
     monkeypatch.setattr(phasing.dvut, "get_norm", lambda arr: 1.0)
 
     def fake_get_flow_arr(params, flow_items_list, gen):
@@ -236,7 +161,7 @@ def test_init_iter_loop_returns_minus_one_when_flow_generation_fails(monkeypatch
 
     monkeypatch.setattr(phasing.os.path, "isfile", lambda path: False)
     monkeypatch.setattr(phasing.ut, "join", lambda *parts: "/".join(parts))
-    monkeypatch.setattr(phasing.dvut, "pad_around", lambda center, dims, val: np.ones(dims))
+    monkeypatch.setattr(phasing.dvut, "pad_around", lambda center, dims: np.ones(dims, dtype=center.dtype))
     monkeypatch.setattr(phasing.dvut, "get_norm", lambda arr: 1.0)
 
     def raise_error(params, flow_items_list, gen):
