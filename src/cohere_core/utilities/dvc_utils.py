@@ -195,17 +195,8 @@ def breed(breed_mode, alpha, image):
         return zero_phase(image)
     alpha = zero_phase(alpha)
 
-    # load image file
-    # beta = image
-    # beta = zero_phase(beta)
-    # alpha = check_get_conj_reflect(beta, alpha)
-    # alpha = align_arrays_subpixel(beta, alpha)
-    # alpha = zero_phase(alpha)
-    # ph_alpha = devlib.angle(alpha)
-    # beta = zero_phase_cc(beta, alpha)
-    # ph_beta = devlib.angle(beta)
-
     beta = image
+    beta = zero_phase(beta)
     alpha = check_get_conj_reflect(beta, alpha)
     alpha = align_arrays_subpixel(beta, alpha)
 
